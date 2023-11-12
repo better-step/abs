@@ -7,16 +7,19 @@ class CurveSampler(Sampler):
     Sampler for curve entities.
     """
 
-    def __init__(self, spacing, method='poisson_disk'):
+    def __init__(self, curve, spacing, method='poisson_disk'):
         """
         Initialize the curve sampler.
 
         Args:
+        curve: The curve entity to be sampled.
         spacing (float): The spacing parameter for sampling.
         method (str): The method to use for sampling, e.g., 'poisson_disk'.
         """
         super().__init__(spacing)
+        self.curve = curve
         self.method = method
+        self.cell_size = self._calculate_cell_size()
 
     def sample(self, curve):
         """
@@ -102,7 +105,7 @@ class CurveSampler(Sampler):
         random_index = np.random.randint(len(active))
         return active[random_index], random_index
 
-    def _generate_new_point_around(self, point, curve):
+    def _generate_new_point_around_old(self, point, curve):
         """
         Generate a new point around the given point.
 
@@ -117,6 +120,27 @@ class CurveSampler(Sampler):
         theta = np.random.uniform(0, 2 * np.pi)
         new_point_param = curve.parameterize_point(point) + r * np.cos(theta)
         return curve.sample(np.array([[new_point_param]]))[0]
+
+    def _generate_new_point_around(self, point, curve):
+        """
+        Generate a new point around the given point.
+
+        Args:
+        point: The point around which to generate a new point.
+        curve: The curve entity.
+
+        Returns:
+        A new point generated around the given point.
+        """
+        r = np.random.uniform(self.spacing, 2 * self.spacing)
+        theta = np.random.uniform(0, 2 * np.pi)
+        new_param = curve.parameterize_point(point) + r * np.cos(theta)
+
+        # Ensuring new parameter is within the curve's interval
+        min_i, max_i = curve._interval
+        new_param = np.clip(new_param, min_i, max_i)
+
+        return curve.sample(np.array([[new_param]]))[0]
 
     def _is_valid_point(self, point, curve, grid):
         """
@@ -137,6 +161,14 @@ class CurveSampler(Sampler):
             if neighbour in grid and np.linalg.norm(grid[neighbour] - point) < self.spacing:
                 return False
         return True
+
+    def _calculate_cell_size(self):
+        # Calculate cell size based on curve length and spacing
+        curve_length = self.curve.length()
+        if self.spacing <= 0:
+            raise ValueError("Spacing must be greater than zero")
+        return curve_length / np.sqrt(self.spacing)
+       # return curve_length / np.sqrt(curve_length / self.spacing) // or
 
     def _get_cell_index(self, point, cell_size):
         """

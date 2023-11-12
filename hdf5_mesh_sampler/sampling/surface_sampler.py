@@ -33,7 +33,7 @@ class SurfaceSampler(Sampler):
         if self.method == 'poisson_disk':
             return self._poisson_disk_sampling(surface)
 
-    def _calculate_cell_size(self):
+    def _calculate_cell_size(self, surface):
         # Calculate an appropriate cell size based on the surface properties
         # and desired spacing. This implementation will vary depending on the
         # surface's characteristics.
@@ -80,7 +80,7 @@ class SurfaceSampler(Sampler):
         surface: The surface entity.
         """
         sample_points.append(point)
-        cell_index = self._get_cell_index(point, self.cell_size)
+        cell_index = self._get_cell_index(point, self._calculate_cell_size(surface) )
         grid[cell_index] = point
         active.append(point)
 
@@ -207,5 +207,6 @@ class SurfaceSampler(Sampler):
         Returns:
         The parameterized point (u, v).
         """
+        #TODO: Fix it
         pass
         # return surface.parameterize_point(point)
