@@ -5,7 +5,7 @@ class Curve:
     def sample(self, points):
         raise NotImplementedError("Sample method must be implemented by subclasses")
 
-    def derivative(self, points, order=1):
+    def derivative(self, points, order=1): # commented out = 1
         raise NotImplementedError("Derivative method must be implemented by subclasses")
 
 
@@ -19,7 +19,7 @@ class Line(Curve):
     def sample(self, sample_points):
         return self._location + sample_points * self._direction
 
-    def derivative(self, sample_points, order):
+    def derivative(self, sample_points, order=1):
         if order == 1:
             return np.tile(self._direction, (sample_points.shape[0], 1))
         return np.zeros([sample_points.shape[0], self._location.shape[1]])
@@ -41,7 +41,7 @@ class Circle(Curve):
                 np.cos(sample_points) * self._x_axis + np.sin(sample_points) * self._y_axis)
         return circle_points
 
-    def derivative(self, sample_points, order):
+    def derivative(self, sample_points, order=1):
         if order % 4 == 0:
             return self.sample(sample_points)
         elif order % 4 == 1:
@@ -78,7 +78,7 @@ class Ellipse(Curve):
                          self._min_radius * np.sin(sample_points) * self._y_axis
         return ellipse_points
 
-    def derivative(self, sample_points, order):
+    def derivative(self, sample_points, order=1):
         if order % 4 == 0:
             if order == 0:
                 return self.sample(sample_points)
@@ -117,9 +117,14 @@ class BSplineCurve(Curve):
             self._curveObject.weights = self._weights.flatten().tolist()
 
     def sample(self, sample_points):
+        # TODO: Check if this is correct with Teseo
+        # # If curve is closed and sample_points are the start and end of the interval, add the midpoint
+        # if self._closed and np.array_equal(sample_points, self._interval):
+        #     midpoint = np.array([(self._interval[0] + self._interval[1]) / 2]).reshape(-1, 1)
+        #     sample_points = np.vstack([self._interval[0], midpoint, self._interval[1]])
         return np.array(self._curveObject.evaluate_list(sample_points[:, 0].tolist()))
 
-    def derivative(self, sample_points, order):
+    def derivative(self, sample_points, order=1):
         return np.array([
             self._curveObject.derivatives(sample_points[i, 0], order)[-1] for i in range(sample_points.shape[0])
         ])
