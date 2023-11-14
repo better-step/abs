@@ -22,6 +22,18 @@ def main():
 
         # Initialize the shape with geometry and topology data
         shape = ShapeSampling(data_path_geo, data_path_topo)
+
+        spacing = 1
+
+        # Initialize samplers
+        curve_sampler = CurveSampler(spacing=spacing)
+        surface_sampler = SurfaceSampler(spacing=spacing)
+
+        # Sample the shape
+        shape.sample_all_shapes(surface_sampler, curve_sampler)
+
+
+
         print("Shape initialized")
 
 

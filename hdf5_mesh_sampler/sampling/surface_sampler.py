@@ -38,53 +38,50 @@ class SurfaceSampler(Sampler):
         # and desired spacing. This implementation will vary depending on the
         # surface's characteristics.
         # For instance, you might use the surface's bounding box dimensions.
-        bbox = surface.bounding_box()
+        bbox = surface._trim_domain
         bbox_diagonal = np.linalg.norm(bbox[1] - bbox[0])
         return bbox_diagonal / np.sqrt(self.spacing)
 
     def _poisson_disk_sampling(self, surface):
-        """
-        Implement Poisson disk sampling specific to surfaces.
-
-        Args:
-        surface: The surface entity to be sampled.
-
-        Returns:
-        An array of sampled points.
-        """
         sample_points = []
-        grid, active = {}, []
+        grid, active = {}, {}
 
         # Initialize the sampling process
         first_point = self._get_random_point_on_surface(surface)
-        self._insert_point(sample_points, first_point, grid, active, surface)
+        sample_points, grid, active = self._insert_point(sample_points, first_point, grid, active, surface)
 
         # Continue sampling until no active points remain
         while active:
-            point, index = self._choose_random_active_point(active)
-            new_point = self._generate_new_point_around(point, surface)
-            if self._is_valid_point(new_point, surface, grid):
-                self._insert_point(sample_points, new_point, grid, active, surface)
+            point, index = self._get_random_point(active)
+            new_points = self._get_random_points_around(point, surface)
+            for new_point in new_points:
+                if self._is_valid_point(new_point, grid, surface):
+                    sample_points, grid, active = self._insert_point(sample_points, new_point, grid, active, surface)
+
+            if not new_points:
+                active.pop(index)
 
         return np.array(sample_points)
 
-    def _insert_point(self, sample_points, point, grid, active, surface):
-        """
-        Insert a new point into the sample points, grid, and active list.
+    def _get_random_point_on_surface(self, surface):
+        u_range = surface._trim_domain[:, 0]
+        v_range = surface._trim_domain[:, 1]
+        u = np.random.uniform(*u_range)
+        v = np.random.uniform(*v_range)
+        return np.array([u, v])  # Return parameterized point
 
-        Args:
-        sample_points: List of sampled points.
-        point: New point to be inserted.
-        grid: Spatial grid for efficient searching.
-        active: List of active points.
-        surface: The surface entity.
-        """
-        sample_points.append(point)
-        cell_index = self._get_cell_index(point, self._calculate_cell_size(surface) )
+    def _insert_point(self, sample_points, point, grid, active, surface):
+        sample_points.append(surface.sample(np.array([point])))
+        cell_index = self._get_cell_index(point, surface)
         grid[cell_index] = point
         active.append(point)
+        return sample_points, grid, active
 
-    def _choose_random_active_point(self, active):
+    def _get_cell_index(self, point, surface):
+        # Assuming point is a parameterized (u, v) point on the surface
+        return tuple(np.floor(point / self._calculate_cell_size(surface)).astype(int))
+
+    def _get_random_point(self, active):
         """
         Randomly select an active point.
 
@@ -97,116 +94,34 @@ class SurfaceSampler(Sampler):
         random_index = np.random.randint(len(active))
         return active[random_index], random_index
 
-    def _get_random_point_on_surface(self, surface):
+    def _get_random_points_around(self, point, surface):
         """
-        Get a random point on the surface within its trimming domain.
+        Generate new points around the given point on the surface.
 
         Args:
+        point: The point around which to generate new points.
         surface: The surface entity.
 
         Returns:
-        A random point on the surface.
+        List of new points generated around the given point.
         """
-        u_min, v_min, u_max, v_max = surface._trim_domain.reshape(-1)
-        random_u = np.random.uniform(u_min, u_max)
-        random_v = np.random.uniform(v_min, v_max)
-        return surface.sample(np.array([[random_u, random_v]]))[0]
+        new_points = []
+        for _ in range(self.k):  # 'self.k' is the number of new points to generate
+            r = np.random.uniform(self.spacing, 2 * self.spacing)
+            theta = np.random.uniform(0, 2 * np.pi)
+            new_u = point[0] + r * np.cos(theta)
+            new_v = point[1] + r * np.sin(theta)
+            if self._is_within_domain([new_u, new_v], surface):
+                new_points.append([new_u, new_v])
+        return new_points
 
-    def _generate_new_point_around(self, point, surface):
-        """
-        Generate a new point around the given point on the surface.
-
-        Args:
-        point: The point around which to generate a new point.
-        surface: The surface entity.
-
-        Returns:
-        A new point generated around the given point.
-        """
-        r = np.random.uniform(self.spacing, 2 * self.spacing)
-        theta = np.random.uniform(0, 2 * np.pi)
-        u, v = surface.parameterize_point(point)
-        new_u = u + r * np.cos(theta)
-        new_v = v + r * np.sin(theta)
-        return surface.sample(np.array([[new_u, new_v]]))[0]
-
-    def _is_valid_point(self, point, surface, grid):
-        """
-        Check if the generated point is valid (i.e., not too close to existing points).
-
-        Args:
-        point: The point to validate.
-        surface: The surface entity.
-        grid: Spatial grid for efficient searching.
-
-        Returns:
-        Boolean indicating if the point is valid.
-        """
-        cell_index = self._get_cell_index(point, self.cell_size)
-        neighbours = self._get_neighbours(cell_index, self.spacing / self.cell_size)
+    def _is_valid_point(self, new_point, grid, surface):
+        cell_index = self._get_cell_index(new_point, surface)
+        neighbours = self._get_neighbours(cell_index, int(np.ceil(self.spacing / self._calculate_cell_size(surface))))
 
         for neighbour in neighbours:
-            if neighbour in grid and np.linalg.norm(grid[neighbour] - point) < self.spacing:
+            if neighbour in grid and np.linalg.norm(
+                surface.sample(np.array([grid[neighbour]])) - surface.sample(np.array([new_point]))) < self.spacing:
                 return False
-        return True
 
-    def _get_cell_index(self, point, cell_size):
-        """
-        Calculate the cell index for a point in the spatial grid.
 
-        Args:
-        point: The point for which the cell index is calculated.
-        cell_size: Size of each cell in the grid.
-
-        Returns:
-        Tuple representing the cell index.
-        """
-        # Assuming point is already parameterized (u, v) on the surface
-        return tuple(np.floor(point / cell_size).astype(int))
-
-    def _get_neighbours(self, cell_index, r):
-        """
-        Generate neighboring cells around a given cell index.
-
-        Args:
-        cell_index: The cell index.
-        r: The radius to search for neighboring cells.
-
-        Returns:
-        List of tuples representing neighboring cell indices.
-        """
-        neighbours = []
-        for i in range(cell_index[0] - r, cell_index[0] + r + 1):
-            for j in range(cell_index[1] - r, cell_index[1] + r + 1):
-                neighbours.append((i, j))
-        return neighbours
-
-    def _is_within_domain(self, point, surface):
-        """
-        Check if a point is within the trimming domain of the surface.
-
-        Args:
-        point: The point to check.
-        surface: The surface entity.
-
-        Returns:
-        Boolean indicating if the point is within the domain.
-        """
-        u, v = surface.parameterize_point(point)
-        u_min, v_min, u_max, v_max = surface._trim_domain.reshape(-1)
-        return u_min <= u <= u_max and v_min <= v <= v_max
-
-    def _parameterize_point(self, point, surface):
-        """
-        Convert a 3D point to its parameterized form (u, v) on the surface.
-
-        Args:
-        point: The 3D point.
-        surface: The surface entity.
-
-        Returns:
-        The parameterized point (u, v).
-        """
-        #TODO: Fix it
-        pass
-        # return surface.parameterize_point(point)

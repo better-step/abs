@@ -7,7 +7,7 @@ class CurveSampler(Sampler):
     Sampler for curve entities.
     """
 
-    def __init__(self, curve, spacing, method='poisson_disk'):
+    def __init__(self, spacing, method='poisson_disk'):
         """
         Initialize the curve sampler.
 
@@ -17,9 +17,9 @@ class CurveSampler(Sampler):
         method (str): The method to use for sampling, e.g., 'poisson_disk'.
         """
         super().__init__(spacing)
-        self.curve = curve
+        self.curve = None
+        self.cell_size = None
         self.method = method
-        self.cell_size = self._calculate_cell_size()
 
     def sample(self, curve):
         """
@@ -34,6 +34,8 @@ class CurveSampler(Sampler):
         # Implementation of the sampling method
         # This can be expanded to include various sampling strategies
         if self.method == 'poisson_disk':
+            self.curve = curve
+            self.cell_size = self._calculate_cell_size()
             return self._poisson_disk_sampling(curve)
 
     def _poisson_disk_sampling(self, curve):
