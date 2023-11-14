@@ -1,6 +1,8 @@
 # shape_sampling.py
 import numpy as np
 from shape_core import ShapeCore
+from winding_number.winding_number import calculate_winding_numbers
+
 
 class ShapeSampling(ShapeCore):
     def sample_curve(self, curve_index, sampler):
@@ -71,16 +73,18 @@ class ShapeSampling(ShapeCore):
             # Convert the curve points to 3D points
             curve_points = curve.sample(curve_uv_points)
 
-            if not modified_orientation: # Surface orientation is opposite to curve orientation
-                # Reverse the curve points
-                curve_points = curve_points[::-1]
+            # Calculate the nearest UV values on the surface for the curve points
+            closest_surface_uv_values_of_curve = self.find_surface_uv_for_curve(surface_points, surface_uv_values, curve_points)
 
+            if not modified_orientation:  # Surface orientation is opposite to curve orientation
+                # Reverse the curve points
+                closest_surface_uv_values_of_curve = closest_surface_uv_values_of_curve[::-1]
 
             # Determine the periodicity of the surface
             period_u, period_v = self._determine_surface_periodicity(surface)
 
             # Calculate the winding number for the curve
-            wn = calculate_winding_numbers(curve_points, surface_points, surface_uv_values, period_u, period_v)
+            wn = calculate_winding_numbers(closest_surface_uv_values_of_curve, surface_uv_values, period_u, period_v)
 
             # Add winding numbers from this curve to the total
             total_winding_numbers += wn.squeeze()
@@ -90,52 +94,41 @@ class ShapeSampling(ShapeCore):
 
         return final_points
 
+    def find_surface_uv_for_curve(self, surface_points, surface_uv_values, curve_points):
+        """
+        Calculate the nearest UV values on a surface for a given set of curve points.
 
-    # def sample_surface(self, surface_index, sampler, winding_number_calculator):
-    #     """
-    #     Sample points on a surface, considering trimming curves and winding numbers.
-    #
-    #     Args:
-    #     surface_index (int): Index of the surface to be sampled.
-    #     sampler (SurfaceSampler): An instance of a SurfaceSampler.
-    #     winding_number_calculator (function): A function to calculate winding numbers.
-    #
-    #     Returns:
-    #     numpy.ndarray: Array of sampled points on the surface.
-    #     """
-    #     assert 0 <= surface_index < len(self._surfaces), "Invalid surface_index"
-    #     surface = self._surfaces[surface_index]
-    #
-    #     # Sample points on the surface
-    #     sampled_points = sampler.sample(surface)
-    #
-    #     # Filter points based on winding number
-    #     filtered_points = []
-    #     for point in sampled_points:
-    #         wn = winding_number_calculator(point, self._trimming_curves[surface_index])
-    #         if wn > 0.5:  # Assuming the winding number threshold is 0.5
-    #             filtered_points.append(point)
-    #
-    #     return np.array(filtered_points)
-    #
-    # def sample_surface(self, surface_index, samples):
-    #     """
-    #     Sample points on a surface considering trimming curves and winding numbers.
-    #     """
-    #     assert 0 <= surface_index < len(self._surfaces), "Invalid surface_index"
-    #     surface = self._surfaces[surface_index]
-    #     wn = np.zeros((samples.shape[0], 1))
-    #
-    #     # Compute the period values for the current surface type
-    #     period_u, period_v = self._determine_surface_periodicity(surface)
-    #
-    #     for polyline in self._trimming_curves[surface_index]:
-    #         wn += optimized_winding_number(polyline, samples, period_u, period_v)
-    #
-    #     sampled_points = surface.sample(samples[wn[:, 0] > 0.5, :])
-    #     if sampled_points.size == 0:  # If the array is empty
-    #         return np.zeros((0, 3))  # Return an empty array
-    #     return sampled_points
+        Args:
+        surface_points (np.ndarray): Points on the surface.
+        surface_uv_values (np.ndarray): UV values on the surface.
+        curve_points (np.ndarray): Points on the curve.
+
+        Returns:
+        np.ndarray: UV values on the surface closest to the curve points.
+        """
+        # Calculate the nearest surface point for each curve point
+        nearest_3d_surface_points, curve_indexes = self._calculate_nearest_surface_points(surface_points, curve_points)
+
+        # Retrieve the UV values corresponding to the nearest points
+        surface_uv_near_curve = surface_uv_values[curve_indexes]
+
+        return surface_uv_near_curve
+
+    def _calculate_nearest_surface_points(self, surface_points, curve_points):
+        """
+        Calculate the nearest surface points for a given set of curve points using a KDTree.
+
+        Args:
+        surface_points (np.ndarray): Points on the surface.
+        curve_points (np.ndarray): Points on the curve.
+
+        Returns:
+        np.ndarray: Surface points closest to the curve points.
+        """
+        from scipy.spatial import KDTree
+        tree = KDTree(surface_points)
+        _, nearest_surface_point_indices = tree.query(curve_points)
+        return surface_points[nearest_surface_point_indices], nearest_surface_point_indices
 
     def _determine_surface_periodicity(self, surface):
         """
