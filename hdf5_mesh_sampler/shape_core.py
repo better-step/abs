@@ -6,11 +6,11 @@ from topology.topology import Topology
 class ShapeCore:
     def __init__(self, geometry_data, topology_data):
         # Initialization of Geometry and Topology
-        self._curves2d, self._curves3d, self._surfaces = self.__init_geometry(geometry_data)
+        self._curves2d, self._curves3d, self._surfaces, self._bbox= self.__init_geometry(geometry_data)
         self._topology = self.__init_topology(topology_data)
 
     def __init_geometry(self, data):
-        curves2d, curves3d, surfaces = [], [], []
+        curves2d, curves3d, surfaces, bbox = [], [], [], []
 
         for part in data:
             for curve_data in part.get('2dcurves', []):
@@ -22,7 +22,9 @@ class ShapeCore:
             for surface_data in part.get('surfaces', []):
                 surfaces.append(self.__create_surface(surface_data))
 
-        return curves2d, curves3d, surfaces
+            bbox.append(part.get('bbox'))
+
+        return curves2d, curves3d, surfaces, bbox
 
     def __create_curve(self, curve_data):
         curve_type = curve_data['type']

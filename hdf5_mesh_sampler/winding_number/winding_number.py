@@ -39,7 +39,11 @@ def optimized_winding_number(polyline, surface_uv_values, period_u=None, period_
     winding_number_result = np.sum(np.arctan2(det, dot), axis=0) / (2 * np.pi)
     return winding_number_result.reshape(-1, 1)
 
-def calculate_winding_numbers(polyline, surface_points, period_u=None, period_v=None):
+def calculate_winding_numbers(polyline, surface_points, surface_uv_values, period_u=None, period_v=None):
     """ Public API function to calculate winding numbers for a given set of surface points. """
-    surface_uv_values = [surface.point_to_parametric(p) for p in surface_points]
+
+
+    # input for winding number calculation -> curve_uv_values, surface_uv_values, period_u, period_v
+
+
     return optimized_winding_number(polyline, surface_uv_values, period_u, period_v)

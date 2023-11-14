@@ -4,13 +4,6 @@ from topology.topology import Topology
 import numpy as np
 from winding_number import calculate_winding_numbers
 
-'''
-for reference
-def calculate_winding_numbers(polyline, surface_points, period_u=None, period_v=None):
-    """ Public API function to calculate winding numbers for a given set of surface points. """
-    surface_uv_values = [surface.point_to_parametric(p) for p in surface_points]
-    return optimized_winding_number(polyline, surface_uv_values, period_u, period_v)
-'''
 
 
 
