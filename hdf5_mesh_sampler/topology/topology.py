@@ -141,7 +141,7 @@ class Topology:
                 if isinstance(item, h5py.Group):
                     data_dict[key] = recursive_hdf5_to_dict(item)
                 else:
-                    data_dict[key] = item[()]
+                    data_dict[key] = item[()]  # Convert dataset to a numpy array
             return data_dict
 
         data_dict = [(int(k), recursive_hdf5_to_dict(hdf5_file[entity][k])) for k in hdf5_file[entity].keys()]
