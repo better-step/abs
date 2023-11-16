@@ -4,6 +4,11 @@ def compute_position(point, period_u, period_v):
     """ Compute the 3D position of a point from its UV coordinates and periods. """
     u, v = point[:2]
     position = np.zeros(3)
+
+    if period_u == 0 or period_v == 0:
+        print("Warning: Periodicity is 0, returning 0 vector.")
+        return position
+
     if period_u is not None and period_v is not None:
         position[0] = np.cos(u / period_u * 2 * np.pi) * np.cos(v / period_v * 2 * np.pi)
         position[1] = np.cos(u / period_u * 2 * np.pi) * np.sin(v / period_v * 2 * np.pi)

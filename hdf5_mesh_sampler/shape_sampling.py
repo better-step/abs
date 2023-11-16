@@ -66,8 +66,13 @@ class ShapeSampling(ShapeCore):
 
         # Process each curve related to the surface
         trimming_curves = self.retrieve_trimming_curves(surface_index)
+
+        if len(trimming_curves) == 0:
+            return surface_points
+
+
         for curve, modified_orientation in trimming_curves:
-            # Sample the curve points
+            # Sample the curve points to get UV values
             curve_uv_points = curve_sampler.sample(curve)
 
             # Convert the curve points to 3D points
@@ -164,7 +169,7 @@ class ShapeSampling(ShapeCore):
                     for face_info in shell['faces']:
                         face = t.faces[face_info['face_index']]
                         if face['surface'] == surface_index:
-                            surface_orientation = face.surface_orientation
+                            surface_orientation = face['surface_orientation']
                             for loop_id in face['loops']:
                                 loop = t.loops[loop_id]
                                 for he in loop['halfedges']:

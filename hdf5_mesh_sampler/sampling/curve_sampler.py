@@ -38,163 +38,86 @@ class CurveSampler(Sampler):
             self.cell_size = self._calculate_cell_size()
             return self._poisson_disk_sampling(curve)
 
+        elif self.method == 'uniform':
+            return self._uniform_sampling(curve)
+
+        elif self.method == 'random':
+            return self._random_sampling(curve)
+
+        else:
+            raise ValueError(f"Invalid sampling method: {self.method}")
+
+    def _uniform_sampling(self, curve):
+        num_samples = max(int(abs(curve._interval[1] - curve._interval[0]) / self.spacing), 1)
+        return np.linspace(curve._interval[0], curve._interval[1], num_samples)
+
+    def _random_sampling(self, curve):
+        num_samples = max(int(abs(curve._interval[1] - curve._interval[0]) / self.spacing), 1)
+        return np.random.uniform(curve._interval[0], curve._interval[1], num_samples)
+
+
     def _poisson_disk_sampling(self, curve):
-        """
-        Implement Poisson disk sampling specific to curves.
+            grid = {}
+            active = []
+            sample_points = []
 
-        Args:
-        curve: The curve entity to be sampled.
+            cell_size = self._calculate_cell_size(curve)
+            first_point = np.random.uniform(*curve._interval)
+            sample_points, grid, active = self._insert_sample(sample_points, first_point, grid, active, cell_size)
 
-        Returns:
-        An array of sampled points.
-        """
-        sample_points = []
-        grid, active = {}, []
+            while active:
+                point, index = self._get_random_point(active)
+                k_points = self._get_random_points_around(point, self.spacing, self.k, curve._interval)
 
-        # Initialize the sampling process
-        first_point = self._get_random_point_on_curve(curve)
-        self._insert_point(sample_points, first_point, grid, active, curve)
+                insert_flag = False
+                for k_point in k_points:
+                    closest_point = self._get_closest_point(k_point, grid, cell_size, self.spacing)
+                    if closest_point is None or np.linalg.norm(closest_point - k_point) > self.spacing:
+                        sample_points, grid, active = self._insert_sample(sample_points, k_point, grid, active, cell_size)
+                        insert_flag = True
 
-        # Continue sampling until no active points remain
-        while active:
-            point, index = self._choose_random_active_point(active)
-            new_point = self._generate_new_point_around(point, curve)
-            if self._is_valid_point(new_point, curve, grid):
-                self._insert_point(sample_points, new_point, grid, active, curve)
+                if not insert_flag:
+                    active.pop(index)
 
-        return np.array(sample_points)
+            return np.array(sample_points)
 
-    def _get_random_point_on_curve(self, curve):
-        """
-        Get a random point on the curve within its defined interval.
-
-        Args:
-        curve: The curve entity.
-
-        Returns:
-        A random point on the curve.
-        """
-        min_i, max_i = curve._interval
-        random_param = np.random.uniform(min_i, max_i)
-        return curve.sample(np.array([[random_param]]))[0]
-
-    def _insert_point(self, sample_points, point, grid, active, curve):
-        """
-        Insert a new point into the sample points, grid, and active list.
-
-        Args:
-        sample_points: List of sampled points.
-        point: New point to be inserted.
-        grid: Spatial grid for efficient searching.
-        active: List of active points.
-        curve: The curve entity.
-        """
+    def _insert_sample(self, sample_points, point, grid, active, cell_size):
         sample_points.append(point)
-        cell_index = self._get_cell_index(point, self.cell_size)
+        cell_index = self._get_cell_index(point, cell_size)
         grid[cell_index] = point
         active.append(point)
-
-    def _choose_random_active_point(self, active):
-        """
-        Randomly select an active point.
-
-        Args:
-        active: List of active points.
-
-        Returns:
-        A randomly chosen point and its index.
-        """
-        random_index = np.random.randint(len(active))
-        return active[random_index], random_index
-
-    def _generate_new_point_around_old(self, point, curve):
-        """
-        Generate a new point around the given point.
-
-        Args:
-        point: The point around which to generate a new point.
-        curve: The curve entity.
-
-        Returns:
-        A new point generated around the given point.
-        """
-        r = np.random.uniform(self.spacing, 2 * self.spacing)
-        theta = np.random.uniform(0, 2 * np.pi)
-        new_point_param = curve.parameterize_point(point) + r * np.cos(theta)
-        return curve.sample(np.array([[new_point_param]]))[0]
-
-    def _generate_new_point_around(self, point, curve):
-        """
-        Generate a new point around the given point.
-
-        Args:
-        point: The point around which to generate a new point.
-        curve: The curve entity.
-
-        Returns:
-        A new point generated around the given point.
-        """
-        r = np.random.uniform(self.spacing, 2 * self.spacing)
-        theta = np.random.uniform(0, 2 * np.pi)
-        new_param = curve.parameterize_point(point) + r * np.cos(theta)
-
-        # Ensuring new parameter is within the curve's interval
-        min_i, max_i = curve._interval
-        new_param = np.clip(new_param, min_i, max_i)
-
-        return curve.sample(np.array([[new_param]]))[0]
-
-    def _is_valid_point(self, point, curve, grid):
-        """
-        Check if the generated point is valid (i.e., not too close to existing points).
-
-        Args:
-        point: The point to validate.
-        curve: The curve entity.
-        grid: Spatial grid for efficient searching.
-
-        Returns:
-        Boolean indicating if the point is valid.
-        """
-        cell_index = self._get_cell_index(point, self.cell_size)
-        neighbours = self._get_neighbours(cell_index, self.spacing / self.cell_size)
-
-        for neighbour in neighbours:
-            if neighbour in grid and np.linalg.norm(grid[neighbour] - point) < self.spacing:
-                return False
-        return True
-
-    def _calculate_cell_size(self):
-        # Calculate cell size based on curve length and spacing
-        curve_length = self.curve.length()
-        if self.spacing <= 0:
-            raise ValueError("Spacing must be greater than zero")
-        return curve_length / np.sqrt(self.spacing)
-       # return curve_length / np.sqrt(curve_length / self.spacing) // or
+        return sample_points, grid, active
 
     def _get_cell_index(self, point, cell_size):
-        """
-        Calculate the cell index for a given point based on the cell size.
-
-        Args:
-        point: A point on the curve.
-        cell_size: The size of the cell in the grid.
-
-        Returns:
-        The index of the cell in the grid.
-        """
-        # Assuming the point is a 1D parameter value on the curve
         return int(np.floor(point / cell_size))
 
+    def _get_random_point(self, active):
+        random_index = np.random.randint(0, len(active))
+        return active[random_index], random_index
+
+    def _get_random_points_around(self, point, spacing, k, interval):
+        r_values = np.random.uniform(spacing, 2 * spacing, k)
+        points = point + np.concatenate((r_values, -r_values))
+        return np.clip(points, *interval)
+
+    def _get_closest_point(self, point, grid, cell_size, spacing):
+        cell_index = self._get_cell_index(point, cell_size)
+        r = int(np.ceil(spacing / cell_size))
+        neighbours = self._get_neighbours(cell_index, r)
+
+        min_distance = np.inf
+        closest_point = None
+        for neighbour in neighbours:
+            if neighbour in grid:
+                distance = np.linalg.norm(grid[neighbour] - point)
+                if distance < min_distance:
+                    min_distance = distance
+                    closest_point = grid[neighbour]
+        return closest_point
+
     def _get_neighbours(self, cell_index, r):
-        """
-        Get neighboring cells around a given cell index within a radius.
+        return range(max(cell_index - r, 0), min(cell_index + r + 1, int(1 / self.spacing)))
 
-        Args:
-        cell_index: Index of the cell.
-        r: Radius to consider for neighboring cells.
-
-        Returns:
-        A list of indices for neighboring cells.
-        """
-        return [cell_index + i for i in range(-r, r + 1)]
+    def _calculate_cell_size(self, curve):
+        curve_length = np.abs(curve._interval[1] - curve._interval[0])
+        return curve_length / np.sqrt(curve_length / self.spacing)

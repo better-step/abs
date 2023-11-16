@@ -15,8 +15,30 @@ class SurfaceSampler(Sampler):
         spacing (float): The spacing parameter for sampling.
         method (str): The method to use for sampling, e.g., 'poisson_disk'.
         """
+        if spacing <= 0:
+            raise ValueError("Spacing must be a positive number.")
+
         super().__init__(spacing)
         self.method = method
+
+        if self.method == 'poisson_disk':
+            self.k = 100  # Default value for k, specific to Poisson disk sampling
+
+    def set_poisson_disk_k(self, k):
+        """
+        Set the 'k' value for Poisson disk sampling.
+
+        Args:
+            k (int): The number of new points to generate around each point.
+        """
+        if self.method != 'poisson_disk':
+            raise ValueError("The 'k' value can only be set for Poisson disk sampling.")
+
+        if not isinstance(k, int) or k <= 0:
+            raise ValueError("The 'k' value must be a positive integer.")
+
+        self.k = k
+
 
     def sample(self, surface):
         """
@@ -33,95 +55,131 @@ class SurfaceSampler(Sampler):
         if self.method == 'poisson_disk':
             return self._poisson_disk_sampling(surface)
 
+        elif self.method == 'uniform':
+            return self._uniform_sampling(surface)
+
+        elif self.method == 'random':
+            return self._random_sampling(surface)
+
+        else:
+            raise ValueError(f"Invalid sampling method: {self.method}")
+
+    def _uniform_sampling(self, surface):
+        u_range, v_range = surface._trim_domain
+        num_u_samples = max(int(abs(u_range[1] - u_range[0]) / self.spacing), 1)
+        num_v_samples = max(int(abs(v_range[1] - v_range[0]) / self.spacing), 1)
+        u = np.linspace(u_range[0], u_range[1], num_u_samples)
+        v = np.linspace(v_range[0], v_range[1], num_v_samples)
+        u, v = np.meshgrid(u, v)
+        uv_values = np.column_stack((u.ravel(), v.ravel()))
+        return uv_values
+
+    def _random_sampling(self, surface):
+        u_range, v_range = surface._trim_domain
+        num_u_samples = max(int(abs(u_range[1] - u_range[0]) / self.spacing), 1)
+        num_v_samples = max(int(abs(v_range[1] - v_range[0]) / self.spacing), 1)
+        u = np.random.uniform(u_range[0], u_range[1], num_u_samples)
+        v = np.random.uniform(v_range[0], v_range[1], num_v_samples)
+        uv_values = np.column_stack((u, v))
+        return uv_values
+
+
     def _calculate_cell_size(self, surface):
-        # Calculate an appropriate cell size based on the surface properties
-        # and desired spacing. This implementation will vary depending on the
-        # surface's characteristics.
-        # For instance, you might use the surface's bounding box dimensions.
-        bbox = surface._trim_domain
-        bbox_diagonal = np.linalg.norm(bbox[1] - bbox[0])
-        return bbox_diagonal / np.sqrt(self.spacing)
+        # Extract the range of u and v from the trimming domain
+        u_range, v_range = surface._trim_domain
+        u_size = u_range[1] - u_range[0]
+        v_size = v_range[1] - v_range[0]
+
+        # Calculate the number of cells along each axis
+        u_cells = int(u_size / self.spacing)
+        v_cells = int(v_size / self.spacing)
+
+        # Ensure there is at least one cell along each axis
+        u_cells = max(u_cells, 1)
+        v_cells = max(v_cells, 1)
+
+        # Calculate cell size for each axis
+        cell_size_u = u_size / u_cells
+        cell_size_v = v_size / v_cells
+
+        return max(cell_size_u, cell_size_v)
+
+    def _get_grid_shape_old(self, surface, cell_size):
+        grid_extent = (surface._trim_domain[:, 1] - surface._trim_domain[:, 0]) / cell_size
+        grid_shape = np.ceil(grid_extent).astype(int)
+        return grid_shape + 1
+
+    def _get_grid_shape(self, surface, cell_size):
+        # Calculate the extent of the grid based on the trimming domain and the cell size
+        u_range, v_range = surface._trim_domain
+        u_size = u_range[1] - u_range[0]
+        v_size = v_range[1] - v_range[0]
+
+        # Calculate the number of cells along each axis
+        u_cells = max(int(np.ceil(u_size / cell_size)), 1)
+        v_cells = max(int(np.ceil(v_size / cell_size)), 1)
+
+        return np.array([u_cells, v_cells])
+
+    # Add a buffer to avoid negative indices
+
+    def _get_random_point_in_domain(self, surface):
+        u_range, v_range = surface._trim_domain
+        u = np.random.uniform(*u_range)
+        v = np.random.uniform(*v_range)
+        return np.array([u, v])
 
     def _poisson_disk_sampling(self, surface):
-        sample_points = []
-        grid, active = {}, {}
+        cell_size = self._calculate_cell_size(surface)
+        grid_shape = self._get_grid_shape(surface, cell_size)
+        grid = np.full(grid_shape, -1, dtype=int)
 
-        # Initialize the sampling process
-        first_point = self._get_random_point_on_surface(surface)
-        sample_points, grid, active = self._insert_point(sample_points, first_point, grid, active, surface)
+        active_list = []
+        initial_point = self._get_random_point_in_domain(surface)
+        grid_index = (initial_point // cell_size).astype(int)
+        grid[tuple(grid_index)] = 0
+        sample_points = [initial_point]
+        active_list.append(initial_point)
 
-        # Continue sampling until no active points remain
-        while active:
-            point, index = self._get_random_point(active)
-            new_points = self._get_random_points_around(point, surface)
-            for new_point in new_points:
-                if self._is_valid_point(new_point, grid, surface):
-                    sample_points, grid, active = self._insert_point(sample_points, new_point, grid, active, surface)
+        while active_list:
+            point_index = np.random.choice(len(active_list))
+            current_point = active_list[point_index]
+            found = False
 
-            if not new_points:
-                active.pop(index)
+            for _ in range(self.k):
+                new_point = self._generate_random_point_around(current_point, self.spacing)
+                if self._is_valid(new_point, surface, grid, cell_size, sample_points):
+                    sample_points.append(new_point)
+                    active_list.append(new_point)
+                    grid_index = (new_point // cell_size).astype(int)
+                    grid[tuple(grid_index)] = len(sample_points) - 1
+                    found = True
+                    break
+
+            if not found:
+                active_list.pop(point_index)
 
         return np.array(sample_points)
 
-    def _get_random_point_on_surface(self, surface):
-        u_range = surface._trim_domain[:, 0]
-        v_range = surface._trim_domain[:, 1]
-        u = np.random.uniform(*u_range)
-        v = np.random.uniform(*v_range)
-        return np.array([u, v])  # Return parameterized point
+    def _generate_random_point_around(self, point, min_dist):
+        r = np.random.uniform(min_dist, 2 * min_dist)
+        theta = np.random.uniform(0, 2 * np.pi)
+        new_point = point + r * np.array([np.cos(theta), np.sin(theta)])
+        return new_point
 
-    def _insert_point(self, sample_points, point, grid, active, surface):
-        sample_points.append(surface.sample(np.array([point])))
-        cell_index = self._get_cell_index(point, surface)
-        grid[cell_index] = point
-        active.append(point)
-        return sample_points, grid, active
+    def _is_valid(self, point, surface, grid, cell_size, sample_points):
+        if not self._is_within_domain(point, surface):
+            return False
 
-    def _get_cell_index(self, point, surface):
-        # Assuming point is a parameterized (u, v) point on the surface
-        return tuple(np.floor(point / self._calculate_cell_size(surface)).astype(int))
+        grid_index = np.clip((point // cell_size).astype(int), 0, grid.shape - 1)
+        for i in range(max(grid_index[0] - 2, 0), min(grid_index[0] + 3, grid.shape[0])):
+            for j in range(max(grid_index[1] - 2, 0), min(grid_index[1] + 3, grid.shape[1])):
+                if grid[i, j] != -1 and np.linalg.norm(point - sample_points[grid[i, j]]) < self.spacing:
+                    return False
 
-    def _get_random_point(self, active):
-        """
-        Randomly select an active point.
+        return True
 
-        Args:
-        active: List of active points.
-
-        Returns:
-        A randomly chosen point and its index.
-        """
-        random_index = np.random.randint(len(active))
-        return active[random_index], random_index
-
-    def _get_random_points_around(self, point, surface):
-        """
-        Generate new points around the given point on the surface.
-
-        Args:
-        point: The point around which to generate new points.
-        surface: The surface entity.
-
-        Returns:
-        List of new points generated around the given point.
-        """
-        new_points = []
-        for _ in range(self.k):  # 'self.k' is the number of new points to generate
-            r = np.random.uniform(self.spacing, 2 * self.spacing)
-            theta = np.random.uniform(0, 2 * np.pi)
-            new_u = point[0] + r * np.cos(theta)
-            new_v = point[1] + r * np.sin(theta)
-            if self._is_within_domain([new_u, new_v], surface):
-                new_points.append([new_u, new_v])
-        return new_points
-
-    def _is_valid_point(self, new_point, grid, surface):
-        cell_index = self._get_cell_index(new_point, surface)
-        neighbours = self._get_neighbours(cell_index, int(np.ceil(self.spacing / self._calculate_cell_size(surface))))
-
-        for neighbour in neighbours:
-            if neighbour in grid and np.linalg.norm(
-                surface.sample(np.array([grid[neighbour]])) - surface.sample(np.array([new_point]))) < self.spacing:
-                return False
-
-
+    def _is_within_domain(self, point, surface):
+        u_min, u_max = surface._trim_domain[0]
+        v_min, v_max = surface._trim_domain[1]
+        return u_min <= point[0] <= u_max and v_min <= point[1] <= v_max
