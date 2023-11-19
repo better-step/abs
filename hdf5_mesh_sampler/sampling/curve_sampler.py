@@ -48,7 +48,15 @@ class CurveSampler(Sampler):
             raise ValueError(f"Invalid sampling method: {self.method}")
 
     def _uniform_sampling(self, curve):
-        num_samples = max(int(abs(curve._interval[1] - curve._interval[0]) / self.spacing), 1)
+
+        curve_box = curve.sample(curve._interval)
+        curve_diag = np.linalg.norm(curve_box[0, :] - curve_box[1, :])
+        # For closed curves, the number of samples is determined by the curve length
+        if curve_diag == 0.0:
+            num_samples = max(int(curve.length() / self.spacing), 1)
+        else:
+            num_samples = max(int(abs(curve._interval[1] - curve._interval[0]) / self.spacing), 1)
+
         return np.linspace(curve._interval[0], curve._interval[1], num_samples)
 
     def _random_sampling(self, curve):

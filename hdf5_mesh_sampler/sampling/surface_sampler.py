@@ -65,22 +65,44 @@ class SurfaceSampler(Sampler):
             raise ValueError(f"Invalid sampling method: {self.method}")
 
     def _uniform_sampling(self, surface):
-        u_range, v_range = surface._trim_domain
+        # Extracting u_range and v_range from the trimming domain
+        u_range = [min(surface._trim_domain[0][0], surface._trim_domain[1][0]),
+                   max(surface._trim_domain[0][0], surface._trim_domain[1][0])]
+        v_range = [min(surface._trim_domain[0][1], surface._trim_domain[1][1]),
+                   max(surface._trim_domain[0][1], surface._trim_domain[1][1])]
+
+        # Calculating the number of samples for u and v
         num_u_samples = max(int(abs(u_range[1] - u_range[0]) / self.spacing), 1)
         num_v_samples = max(int(abs(v_range[1] - v_range[0]) / self.spacing), 1)
+
+        # Generating u and v values
         u = np.linspace(u_range[0], u_range[1], num_u_samples)
         v = np.linspace(v_range[0], v_range[1], num_v_samples)
+
+        # Creating a meshgrid and processing into uv_values
         u, v = np.meshgrid(u, v)
         uv_values = np.column_stack((u.ravel(), v.ravel()))
+
         return uv_values
 
-    def _random_sampling(self, surface):
-        u_range, v_range = surface._trim_domain
+    def _random_sampling(self,surface, spacing):
+        # Extracting u_range and v_range correctly
+        u_range = [min(surface._trim_domain[0][0], surface._trim_domain[1][0]),
+                   max(surface._trim_domain[0][0], surface._trim_domain[1][0])]
+        v_range = [min(surface._trim_domain[0][1], surface._trim_domain[1][1]),
+                   max(surface._trim_domain[0][1], surface._trim_domain[1][1])]
+
+        # Calculating the number of samples for u and v
         num_u_samples = max(int(abs(u_range[1] - u_range[0]) / self.spacing), 1)
         num_v_samples = max(int(abs(v_range[1] - v_range[0]) / self.spacing), 1)
-        u = np.random.uniform(u_range[0], u_range[1], num_u_samples)
-        v = np.random.uniform(v_range[0], v_range[1], num_v_samples)
-        uv_values = np.column_stack((u, v))
+
+        # Random Sampling for u and v values
+        u_samples = np.random.uniform(u_range[0], u_range[1], num_u_samples * num_v_samples)
+        v_samples = np.random.uniform(v_range[0], v_range[1], num_u_samples * num_v_samples)
+
+        # Creating uv_values array
+        uv_values = np.column_stack((u_samples, v_samples))
+
         return uv_values
 
 

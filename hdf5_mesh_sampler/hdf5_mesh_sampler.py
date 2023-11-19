@@ -13,7 +13,7 @@ import os
 def main():
 
     root_folder = os.getcwd()
-    input_file_name = 'Cone.hdf5'
+    input_file_name = 'Box.hdf5'
     file_path = os.path.join(root_folder, "data", "sample_hdf5", input_file_name)
     try:
         Data = read_file(file_path)
@@ -23,7 +23,7 @@ def main():
         # Initialize the shape with geometry and topology data
         shape = ShapeSampling(data_path_geo, data_path_topo)
 
-        spacing = 0.1
+        spacing = 1
 
         # Initialize samplers
         curve_sampler = CurveSampler(spacing=spacing, method="uniform")
@@ -34,18 +34,10 @@ def main():
 
         for shape_id, shape_points in sampled_shapes.items():
             file_name = f"shape_{shape_id}.obj"
+            print(f"Saving shape {shape_id} to {file_name}")
             save_points(shape_points, file_name)
 
         save_combined_shapes(sampled_shapes, "combined_shapes.obj")
-
-        print("Shape sampled")
-
-
-
-
-
-
-
 
         print("Shape initialized")
 

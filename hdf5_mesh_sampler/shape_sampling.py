@@ -97,6 +97,8 @@ class ShapeSampling(ShapeCore):
         # Filter points based on total winding number
         final_points = surface_points[total_winding_numbers > 0.5]
 
+
+
         return final_points
 
     def find_surface_uv_for_curve(self, surface_points, surface_uv_values, curve_points):
@@ -140,7 +142,7 @@ class ShapeSampling(ShapeCore):
         Determine the periodicity of a surface based on its type and properties.
         """
         flatten_trim_domain = surface._trim_domain.flatten()
-        if surface._type in ["Plane", "BSpline", "Other"]:
+        if surface._type in ["Plane", "BSpline", "Extrusion", "Other"]:
             return None, None
         elif surface._type in ["Cylinder", "Cone", "Revolution"]:
             return flatten_trim_domain[1] - flatten_trim_domain[0], None
@@ -168,6 +170,8 @@ class ShapeSampling(ShapeCore):
                     shell = t.shells[shell_index]
                     for face_info in shell['faces']:
                         face = t.faces[face_info['face_index']]
+                        # got the surface and its sampled points
+                        # initilized polygons
                         if face['surface'] == surface_index:
                             surface_orientation = face['surface_orientation']
                             for loop_id in face['loops']:
@@ -176,6 +180,7 @@ class ShapeSampling(ShapeCore):
                                     half_edge = t.halfedges[he]
                                     edge = t.edges[half_edge['edge']]
                                     curve = self._curves3d[edge['3dcurve']]
+                                    # got the curve and its sampled points
                                     orientation_wrt_edge = half_edge['orientation_wrt_edge']
                                     if not surface_orientation:
                                         orientation_wrt_edge = not orientation_wrt_edge
