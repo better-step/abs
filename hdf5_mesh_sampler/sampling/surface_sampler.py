@@ -65,6 +65,114 @@ class SurfaceSampler(Sampler):
             raise ValueError(f"Invalid sampling method: {self.method}")
 
     def _uniform_sampling(self, surface):
+        """
+            General function to sample UV points on various surface types.
+
+            :param Surface: Dictionary containing surface patch information.
+            :return: UV sample points for the given surface patch.
+        """
+        type_to_function = {
+            'Cylinder': self.sample_cylinder,
+            'Cone': self.sample_cone,
+            'Sphere': self.sample_sphere,
+            'Torus': self.sample_torus,
+            'Plane': self.sample_plane,
+            'Revolution': self._other_sampling,  # Implementation would be specific to the curve
+            'Extrusion': self._other_sampling,    # Implementation would be specific to the curve
+            'BSpline': self._other_sampling         # Implementation would be specific to knot vectors and control points
+        }
+
+        sampling_function = type_to_function.get(surface._type)
+        if sampling_function:
+            return sampling_function(surface)
+        else:
+            raise ValueError(f"Unknown surface type: {surface['type']}")
+
+    def sample_cylinder(self, patch):
+        radius = patch._radius
+        trim_domain_u = sorted(patch._trim_domain[0])
+        trim_domain_v = sorted(patch._trim_domain[1])
+
+        if radius <= 0:
+            print("Radius must be greater than zero for cylinder sampling.")
+            return []
+
+
+        angular_spacing = self.spacing / radius
+        num_points_u = int(np.ceil((trim_domain_u[1] - trim_domain_u[0]) / angular_spacing))
+        num_points_v = int(np.ceil(abs(trim_domain_v[1] - trim_domain_v[0]) / self.spacing))
+
+        u_values = np.linspace(trim_domain_u[0], trim_domain_u[1], num_points_u, endpoint=False)
+        v_values = np.linspace(trim_domain_v[0], trim_domain_v[1], num_points_v)
+
+        return np.array(np.meshgrid(u_values, v_values)).T.reshape(-1, 2)
+
+    def sample_cone(self, patch):
+        radius = patch._radius
+        angle = patch._angle
+        height = 2 * radius * np.tan(angle / 2)
+        trim_domain_u = [0, 2 * np.pi]
+        trim_domain_v = [0, height]
+
+        num_points_u = int(np.ceil((trim_domain_u[1] - trim_domain_u[0]) / (self.spacing / radius)))
+        num_points_v = int(np.ceil((trim_domain_v[1] - trim_domain_v[0]) / self.spacing))
+
+        u_values = np.linspace(trim_domain_u[0], trim_domain_u[1], num_points_u, endpoint=False)
+        v_values = np.linspace(trim_domain_v[0], trim_domain_v[1], num_points_v)
+
+        return np.array(np.meshgrid(u_values, v_values)).T.reshape(-1, 2)
+
+    def sample_sphere(self, patch):
+        radius = patch._radius
+        trim_domain_u = [0, 2 * np.pi]
+        trim_domain_v = [-np.pi / 2, np.pi / 2]
+        if radius <= 0:
+            print("Radius must be greater than zero for sphere sampling.")
+            return []
+
+        angular_spacing_u = self.spacing / radius
+        angular_spacing_v = self.spacing / radius
+        num_points_u = int(np.ceil((trim_domain_u[1] - trim_domain_u[0]) / angular_spacing_u))
+        num_points_v = int(np.ceil((trim_domain_v[1] - trim_domain_v[0]) / angular_spacing_v))
+
+        u_values = np.linspace(trim_domain_u[0], trim_domain_u[1], num_points_u, endpoint=False)
+        v_values = np.linspace(trim_domain_v[0], trim_domain_v[1], num_points_v)
+
+        return np.array(np.meshgrid(u_values, v_values)).T.reshape(-1, 2)
+
+    def sample_torus(self, patch):
+        max_radius = patch._max_radius
+        min_radius = patch._min_radius
+        trim_domain_u = [0, 2 * np.pi]
+        trim_domain_v = [0, 2 * np.pi]
+
+        if max_radius <= 0 or min_radius <= 0:
+            print("Both max_radius and min_radius must be greater than zero for torus sampling.")
+            return []
+
+
+
+        num_points_u = int(np.ceil((trim_domain_u[1] - trim_domain_u[0]) / (self.spacing / max_radius)))
+        num_points_v = int(np.ceil((trim_domain_v[1] - trim_domain_v[0]) / (self.spacing / min_radius)))
+
+        u_values = np.linspace(trim_domain_u[0], trim_domain_u[1], num_points_u, endpoint=False)
+        v_values = np.linspace(trim_domain_v[0], trim_domain_v[1], num_points_v)
+
+        return np.array(np.meshgrid(u_values, v_values)).T.reshape(-1, 2)
+
+    def sample_plane(self, patch):
+        trim_domain_u = sorted(patch._trim_domain[0])
+        trim_domain_v = sorted(patch._trim_domain[1])
+
+        num_points_u = int(np.ceil(abs(trim_domain_u[1] - trim_domain_u[0]) / self.spacing))
+        num_points_v = int(np.ceil(abs(trim_domain_v[1] - trim_domain_v[0]) / self.spacing))
+
+        u_values = np.linspace(trim_domain_u[0], trim_domain_u[1], num_points_u)
+        v_values = np.linspace(trim_domain_v[0], trim_domain_v[1], num_points_v)
+
+        return np.array(np.meshgrid(u_values, v_values)).T.reshape(-1, 2)
+
+    def _other_sampling(self, surface):
         # Extracting u_range and v_range from the trimming domain
         u_range = [min(surface._trim_domain[0][0], surface._trim_domain[1][0]),
                    max(surface._trim_domain[0][0], surface._trim_domain[1][0])]
