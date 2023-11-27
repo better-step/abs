@@ -84,6 +84,8 @@ class CurveSampler(Sampler):
     def sample_line(self, curve):
         interval = sorted(curve._interval)
         length = interval[1] - interval[0]
+        if length == 0:
+            return np.array([curve._location])
         num_points = int(np.ceil(length / self.spacing))
 
         return np.linspace(interval[0], interval[1], num_points)
@@ -91,6 +93,11 @@ class CurveSampler(Sampler):
     def sample_circle(self, curve):
         radius = curve._radius
         interval = curve._interval
+        # Edge case: Zero or negative radius
+        if radius <= 0:
+            print("Radius must be positive for circle sampling")
+            return []
+
         circumference = 2 * np.pi * radius
         num_points = int(np.ceil(circumference / self.spacing))
 
@@ -98,7 +105,17 @@ class CurveSampler(Sampler):
     def sample_ellipse(self,curve):
         maj_radius = curve._maj_radius
         min_radius = curve._min_radius
+
+        # Edge case: Zero or negative radii
+        if maj_radius <= 0 or min_radius <= 0:
+            print("Radii must be positive for ellipse sampling")
+            return []
         interval = curve._interval
+
+        # Edge case: Major and minor radii are equal (circle)
+        if maj_radius == min_radius:
+            return self.sample_circle(curve)
+
         # Approximate circumference of the ellipse
         h = ((maj_radius - min_radius) ** 2) / ((maj_radius + min_radius) ** 2)
         circumference = np.pi * (maj_radius + min_radius) * (1 + (3 * h) / (10 + np.sqrt(4 - 3 * h)))

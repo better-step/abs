@@ -160,17 +160,41 @@ class SurfaceSampler(Sampler):
 
         return np.array(np.meshgrid(u_values, v_values)).T.reshape(-1, 2)
 
+    # def sample_plane(self, patch):
+    #     trim_domain_u = sorted(patch._trim_domain[0])
+    #     trim_domain_v = sorted(patch._trim_domain[1])
+    #
+    #     num_points_u = int(np.ceil(abs(trim_domain_u[1] - trim_domain_u[0]) / self.spacing))
+    #     num_points_v = int(np.ceil(abs(trim_domain_v[1] - trim_domain_v[0]) / self.spacing))
+    #
+    #     u_values = np.linspace(trim_domain_u[0], trim_domain_u[1], num_points_u)
+    #     v_values = np.linspace(trim_domain_v[0], trim_domain_v[1], num_points_v)
+    #
+    #     return np.array(np.meshgrid(u_values, v_values)).T.reshape(-1, 2)
+
+
     def sample_plane(self, patch):
+        # Sort the trim domain to ensure proper ordering
         trim_domain_u = sorted(patch._trim_domain[0])
         trim_domain_v = sorted(patch._trim_domain[1])
 
-        num_points_u = int(np.ceil(abs(trim_domain_u[1] - trim_domain_u[0]) / self.spacing))
-        num_points_v = int(np.ceil(abs(trim_domain_v[1] - trim_domain_v[0]) / self.spacing))
+        # Calculate the number of points based on the length of the trim domain and the specified spacing
+        length_u = abs(trim_domain_u[1] - trim_domain_u[0])
+        length_v = abs(trim_domain_v[1] - trim_domain_v[0])
+
+        num_points_u = max(int(np.ceil(length_u / self.spacing)), 2)  # At least 2 points for meaningful sampling
+        num_points_v = max(int(np.ceil(length_v / self.spacing)), 2)
 
         u_values = np.linspace(trim_domain_u[0], trim_domain_u[1], num_points_u)
         v_values = np.linspace(trim_domain_v[0], trim_domain_v[1], num_points_v)
 
-        return np.array(np.meshgrid(u_values, v_values)).T.reshape(-1, 2)
+        gridX, gridY = np.meshgrid(u_values, v_values)
+        flat_u_values = gridX.ravel()  # flatten the array
+        flat_v_values = gridY.ravel()
+
+        # Pair up the U and V values
+        sample_points = np.column_stack((flat_u_values, flat_v_values))
+        return sample_points
 
     def _other_sampling(self, surface):
         # Extracting u_range and v_range from the trimming domain

@@ -14,7 +14,7 @@ class Plane(Surface):
     def __init__(self, plane):
         self._location = np.array(plane.get('location')[()]).reshape(-1, 1).T
         self._coefficients = np.array(plane.get('coefficients')[()]).reshape(-1, 1).T
-        self._trim_domain = np.array(plane.get('trim_domain')[()]).reshape(-1, 2).T
+        self._trim_domain = np.array(plane.get('trim_domain')[()])
         self._x_axis = np.array(plane.get('x_axis')[()]).reshape(-1, 1).T
         self._y_axis = np.array(plane.get('y_axis')[()]).reshape(-1, 1).T
         self._z_axis = np.array(plane.get('z_axis')[()]).reshape(-1, 1).T
@@ -43,7 +43,7 @@ class Cylinder(Surface):
         self._location = np.array(cylinder.get('location')[()]).reshape(-1, 1).T
         self._radius = cylinder.get('radius')[()]
         self._coefficients = np.array(cylinder.get('coefficients')[()]).reshape(-1, 1).T
-        self._trim_domain = np.array(cylinder.get('trim_domain')[()]).reshape(-1, 2).T
+        self._trim_domain = np.array(cylinder.get('trim_domain')[()])
         self._x_axis = np.array(cylinder.get('x_axis')[()]).reshape(-1, 1).T
         self._y_axis = np.array(cylinder.get('y_axis')[()]).reshape(-1, 1).T
         self._z_axis = np.array(cylinder.get('z_axis')[()]).reshape(-1, 1).T
@@ -78,7 +78,7 @@ class Cone(Surface):
         self._location = np.array(cone.get('location')[()]).reshape(-1, 1).T
         self._radius = cone.get('radius')[()]
         self._coefficients = np.array(cone.get('coefficients')[()]).reshape(-1, 1).T
-        self._trim_domain = np.array(cone.get('trim_domain')[()]).reshape(-1, 2).T
+        self._trim_domain = np.array(cone.get('trim_domain')[()])
         self._apex = np.array(cone.get('apex')[()]).reshape(-1, 1).T
         self._angle = cone.get('angle')[()]
         self._x_axis = np.array(cone.get('x_axis')[()]).reshape(-1, 1).T
@@ -121,7 +121,7 @@ class Sphere(Surface):
         self._location = np.array(sphere.get('location')[()]).reshape(-1, 1).T
         self._radius = sphere.get('radius')[()]
         self._coefficients = np.array(sphere.get('coefficients')[()]).reshape(-1, 1).T
-        self._trim_domain = np.array(sphere.get('trim_domain')[()]).reshape(-1, 2).T
+        self._trim_domain = np.array(sphere.get('trim_domain')[()])
         self._x_axis = np.array(sphere.get('x_axis')[()]).reshape(-1, 1).T
         self._y_axis = np.array(sphere.get('y_axis')[()]).reshape(-1, 1).T
         if hasattr(sphere, 'z_axis'):
@@ -167,7 +167,7 @@ class Torus(Surface):
         self._location = np.array(torus.get('location')[()]).reshape(-1, 1).T
         self._max_radius = torus.get('max_radius')[()]
         self._min_radius = torus.get('min_radius')[()]
-        self._trim_domain = np.array(torus.get('trim_domain')[()]).reshape(-1, 2).T
+        self._trim_domain = np.array(torus.get('trim_domain')[()])
         self._x_axis = np.array(torus.get('x_axis')[()]).reshape(-1, 1).T
         self._y_axis = np.array(torus.get('y_axis')[()]).reshape(-1, 1).T
         self._z_axis = np.array(torus.get('z_axis')[()]).reshape(-1, 1).T
@@ -214,7 +214,7 @@ class BSplineSurface(Surface):
         self._face_domain = np.array(bspline_surface.get('face_domain')[()]).reshape(-1, 1).T
         self._is_trimmed = bspline_surface.get('is_trimmed')[()]
         self._poles = np.array(bspline_surface.get('poles')[()])
-        self._trim_domain = np.array(bspline_surface.get('trim_domain')[()]).reshape(-1, 2).T
+        self._trim_domain = np.array(bspline_surface.get('trim_domain')[()])
         self._u_closed = bspline_surface.get('u_closed')[()]
         self._u_degree = bspline_surface.get('u_degree')[()]
         self._u_knots = np.array(bspline_surface.get('u_knots')[()]).reshape(-1, 1).T

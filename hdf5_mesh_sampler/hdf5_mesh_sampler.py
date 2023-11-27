@@ -13,7 +13,7 @@ import os
 def main():
 
     root_folder = os.getcwd()
-    input_file_name = 'Cylinder.hdf5'
+    input_file_name = 'Box.hdf5'
     file_path = os.path.join(root_folder, "data", "sample_hdf5", input_file_name)
     try:
         Data = read_file(file_path)

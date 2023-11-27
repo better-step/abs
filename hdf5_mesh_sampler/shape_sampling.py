@@ -70,6 +70,10 @@ class ShapeSampling(ShapeCore):
 
         print("surface_points shape: " + str(surface_points.shape))
 
+        if surface_points.size == 0:
+            print("surface_points size is 0" + str(surface_index))
+            return surface_points
+
         total_winding_numbers = np.zeros(len(surface_uv_values))
 
         # Process trimming curves
@@ -87,13 +91,12 @@ class ShapeSampling(ShapeCore):
                 # Convert the curve points to 3D points
                 curve_points = curve.sample(curve_uv_points)
 
+                if not modified_orientation:
+                    curve_points = curve_points[::-1]
+
                 # Calculate the nearest UV values on the surface for the curve points
                 closest_surface_uv_values_of_curve = self.find_surface_uv_for_curve(surface_points, surface_uv_values,
                                                                                     curve_points)
-
-                if not modified_orientation:  # Surface orientation is opposite to curve orientation
-                    # Reverse the curve points
-                    closest_surface_uv_values_of_curve = closest_surface_uv_values_of_curve[::-1]
 
                 # Determine the periodicity of the surface
                 period_u, period_v = self._determine_surface_periodicity(surface)
