@@ -49,6 +49,8 @@ class CurveSampler(Sampler):
 
     def _other_uniform_sampling(self, curve):
 
+        # TODO: Fix for zero case
+
         curve_box = curve.sample(curve._interval)
         curve_diag = np.linalg.norm(curve_box[0, :] - curve_box[1, :])
         # For closed curves, the number of samples is determined by the curve length
@@ -85,7 +87,7 @@ class CurveSampler(Sampler):
         interval = sorted(curve._interval)
         length = interval[1] - interval[0]
         if length == 0:
-            return np.array([curve._location])
+            return np.array([])
         num_points = int(np.ceil(length / self.spacing))
 
         return np.linspace(interval[0], interval[1], num_points)
@@ -93,10 +95,8 @@ class CurveSampler(Sampler):
     def sample_circle(self, curve):
         radius = curve._radius
         interval = curve._interval
-        # Edge case: Zero or negative radius
         if radius <= 0:
-            print("Radius must be positive for circle sampling")
-            return []
+            return np.array([])
 
         circumference = 2 * np.pi * radius
         num_points = int(np.ceil(circumference / self.spacing))
@@ -108,8 +108,8 @@ class CurveSampler(Sampler):
 
         # Edge case: Zero or negative radii
         if maj_radius <= 0 or min_radius <= 0:
-            print("Radii must be positive for ellipse sampling")
-            return []
+            return np.array([])
+
         interval = curve._interval
 
         # Edge case: Major and minor radii are equal (circle)

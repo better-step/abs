@@ -101,6 +101,10 @@ class ShapeSampling(ShapeCore):
                 # Determine the periodicity of the surface
                 period_u, period_v = self._determine_surface_periodicity(surface)
 
+                if closest_surface_uv_values_of_curve.size == 0:
+                    print("closest_surface_uv_values_of_curve size is 0" + str(curve3d_index))
+                    continue
+
                 # Calculate the winding number for the curve
                 wn = calculate_winding_numbers(closest_surface_uv_values_of_curve, surface_uv_values, period_u,
                                                    period_v)
@@ -219,8 +223,13 @@ class ShapeSampling(ShapeCore):
         # Calculate the nearest surface point for each curve point
         nearest_3d_surface_points, curve_indexes = self._calculate_nearest_surface_points(surface_points, curve_points)
 
-        # Retrieve the UV values corresponding to the nearest points
-        surface_uv_near_curve = surface_uv_values[curve_indexes]
+        if surface_uv_values.size > 0 and max(curve_indexes) < len(surface_uv_values):
+            surface_uv_near_curve = surface_uv_values[curve_indexes]
+        else:
+            # Handle the case where surface_uv_values is empty or too small
+            # This could be setting surface_uv_near_curve to an empty array
+            # or some other default value, depending on your application's needs
+            surface_uv_near_curve = np.array([])
 
         return surface_uv_near_curve
 

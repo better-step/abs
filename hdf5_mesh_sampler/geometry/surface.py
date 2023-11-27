@@ -21,6 +21,8 @@ class Plane(Surface):
         self._type = plane.get('type')[()].decode('utf8')
 
     def sample(self, sample_points):
+        if sample_points.size == 0:
+            return self._location
         plane_points = self._location.T + sample_points[:, 0] * self._x_axis.T + sample_points[:, 1] * self._y_axis.T
         return plane_points.T
 
@@ -50,6 +52,10 @@ class Cylinder(Surface):
         self._type = cylinder.get('type')[()].decode('utf8')
 
     def sample(self, sample_points):
+
+        if sample_points.size == 0:
+            return self._location
+
         cylinder_points = self._location.T + self._radius * np.cos(sample_points[:, 0]) * self._x_axis.T + \
                           self._radius * np.sin(sample_points[:, 0]) * self._y_axis.T + sample_points[:, 1] * \
                           self._z_axis.T
@@ -87,6 +93,9 @@ class Cone(Surface):
         self._type = cone.get('type')[()].decode('utf8')
 
     def sample(self, sample_points):
+
+        if sample_points.size == 0:
+            return self._apex  #TODO: check this may be to location
         cone_points = self._location.T + (self._radius + sample_points[:, 1] * np.sin(self._angle)) * \
                       (np.cos(sample_points[:, 0]) * self._x_axis.T + np.sin(sample_points[:, 0]) * self._y_axis.T) \
                       + sample_points[:, 1] * np.cos(self._angle) * self._z_axis.T
@@ -131,6 +140,8 @@ class Sphere(Surface):
         self._type = sphere.get('type')[()].decode('utf8')
 
     def sample(self, sample_points):
+        if sample_points.size == 0:
+            return self._location
         sphere_points = self._location.T + self._radius * np.cos(sample_points[:, 1]) * \
                         (np.cos(sample_points[:, 0]) * self._x_axis.T + np.sin(sample_points[:, 0]) * self._y_axis.T) \
                         + self._radius * np.sin(sample_points[:, 1]) * self._z_axis.T
@@ -174,6 +185,8 @@ class Torus(Surface):
         self._type = torus.get('type')[()].decode('utf8')
 
     def sample(self, sample_points):
+        if sample_points.size == 0:
+            return self._location
         torus_points = self._location.T + (self._max_radius + self._min_radius * np.cos(sample_points[:, 1])) * \
                        (np.cos(sample_points[:, 0]) * self._x_axis.T + np.sin(sample_points[:, 0]) * self._y_axis.T) \
                        + self._min_radius * np.sin(sample_points[:, 1]) * self._z_axis.T
@@ -237,6 +250,9 @@ class BSplineSurface(Surface):
         self._surface_obj.ctrlpts = self._poles.reshape((-1, 1, 3)).squeeze().tolist()
 
     def sample(self, sample_points):
+        if sample_points.size == 0:
+            # Returning the first control point for simplicity
+            return self._poles[0, 0]
         uv_pairs = [(sample_points[i, 0], sample_points[i, 1]) for i in range(len(sample_points[:, 0]))]
         return np.array(self._surface_obj.evaluate_list(uv_pairs))
 
