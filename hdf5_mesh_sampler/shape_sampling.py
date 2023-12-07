@@ -60,7 +60,7 @@ class ShapeSampling(ShapeCore):
             numpy.ndarray: Array of sampled points on the surface.
         """
         surface_index = face['surface']
-        surface = self._surfaces[surface_index]
+        surface = self._surfaces[surface_index]  # Todo: Handle for different parts
         print("")
 
         # Sample the surface to get UV values and corresponding 3D points

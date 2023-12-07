@@ -11,9 +11,9 @@ from utilities import save_points,read_file, save_combined_shapes
 import os
 
 def main():
-
+    # TODO: Fix direction/interval in 2d curves
     root_folder = os.getcwd()
-    input_file_name = 'Cylinder_Hole_Fillet_Chamfer.hdf5'
+    input_file_name = 'Cone.hdf5'
     file_path = os.path.join(root_folder, "data", "sample_hdf5", input_file_name)
     try:
         Data = read_file(file_path)
@@ -23,7 +23,7 @@ def main():
         # Initialize the shape with geometry and topology data
         shape = ShapeSampling(data_path_geo, data_path_topo)   # TODO: Addd some class like part geometry for each part on top
 
-        spacing = 1
+        spacing = 0.1
 
         # Initialize samplers
         curve_sampler = CurveSampler(spacing=spacing, method="uniform")

@@ -73,7 +73,7 @@ class SurfaceSampler(Sampler):
         """
         type_to_function = {
             'Cylinder': self.sample_cylinder,
-            'Cone': self.sample_cone,
+            'Cone': self._other_sampling,
             'Sphere': self.sample_sphere,
             'Torus': self.sample_torus,
             'Plane': self.sample_plane,
@@ -107,22 +107,25 @@ class SurfaceSampler(Sampler):
         return np.array(np.meshgrid(u_values, v_values)).T.reshape(-1, 2)
 
     def sample_cone(self, patch):
-        radius = patch._radius
-        angle = patch._angle
+        radius = patch.radius
+        angle = patch.angle
 
         if radius <= 0:
             return np.array([])
 
         height = 2 * radius * np.tan(angle / 2)
         trim_domain_u = [0, 2 * np.pi]
-        trim_domain_v = [0, height]
+        trim_domain_v = sorted(patch._trim_domain[1])  # Assuming these are the v bounds
 
+        # Calculate the number of points based on the spacing
         num_points_u = int(np.ceil((trim_domain_u[1] - trim_domain_u[0]) / (self.spacing / radius)))
         num_points_v = int(np.ceil((trim_domain_v[1] - trim_domain_v[0]) / self.spacing))
 
+        # Generate uniformly spaced values in u and v dimensions
         u_values = np.linspace(trim_domain_u[0], trim_domain_u[1], num_points_u, endpoint=False)
         v_values = np.linspace(trim_domain_v[0], trim_domain_v[1], num_points_v)
 
+        # Create a grid of points and reshape it into a 2D array where each row is a point
         return np.array(np.meshgrid(u_values, v_values)).T.reshape(-1, 2)
 
     def sample_sphere(self, patch):
