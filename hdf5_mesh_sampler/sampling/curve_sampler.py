@@ -47,9 +47,81 @@ class CurveSampler(Sampler):
         else:
             raise ValueError(f"Invalid sampling method: {self.method}")
 
-    def _uniform_sampling(self, curve):
-        num_samples = max(int(abs(curve._interval[1] - curve._interval[0]) / self.spacing), 1)
+    def _other_uniform_sampling(self, curve):
+
+        # TODO: Fix for zero case
+
+        curve_box = curve.sample(curve._interval)
+        curve_diag = np.linalg.norm(curve_box[0, :] - curve_box[1, :])
+        # For closed curves, the number of samples is determined by the curve length
+        if curve_diag == 0.0:
+            num_samples = max(int(curve.length() / self.spacing), 1)
+        else:
+            num_samples = max(int(abs(curve._interval[1] - curve._interval[0]) / self.spacing), 1)
+
         return np.linspace(curve._interval[0], curve._interval[1], num_samples)
+
+    def _uniform_sampling(self, curve):
+        """
+            General function to sample points on various curve types.
+            :param curve: Dictionary containing curve information.
+            :return: Sample points for the given curve.
+        """
+        type_to_function = {
+            'Line': self.sample_line,
+            'Circle': self.sample_circle,
+            'Ellipse': self.sample_ellipse,
+            'BSpline': self._other_uniform_sampling,
+            'Other': self._other_uniform_sampling
+        }
+
+        sampling_function = type_to_function.get(curve._type)
+        if sampling_function:
+            return sampling_function(curve)
+        else:
+            raise ValueError(f"Unknown curve type: {curve._type}")
+
+        return uv_values
+
+    def sample_line(self, curve):
+        interval = sorted(curve._interval)
+        length = interval[1] - interval[0]
+        if length == 0:
+            return np.array([])
+        num_points = int(np.ceil(length / self.spacing))
+
+        return np.linspace(interval[0], interval[1], num_points)
+
+    def sample_circle(self, curve):
+        radius = curve._radius
+        interval = curve._interval
+        if radius <= 0:
+            return np.array([])
+
+        circumference = 2 * np.pi * radius
+        num_points = int(np.ceil(circumference / self.spacing))
+
+        return np.linspace(interval[0], interval[1], num_points)
+    def sample_ellipse(self,curve):
+        maj_radius = curve._maj_radius
+        min_radius = curve._min_radius
+
+        # Edge case: Zero or negative radii
+        if maj_radius <= 0 or min_radius <= 0:
+            return np.array([])
+
+        interval = curve._interval
+
+        # Edge case: Major and minor radii are equal (circle)
+        if maj_radius == min_radius:
+            return self.sample_circle(curve)
+
+        # Approximate circumference of the ellipse
+        h = ((maj_radius - min_radius) ** 2) / ((maj_radius + min_radius) ** 2)
+        circumference = np.pi * (maj_radius + min_radius) * (1 + (3 * h) / (10 + np.sqrt(4 - 3 * h)))
+        num_points = int(np.ceil(circumference / self.spacing))
+        return np.linspace(interval[0], interval[1], num_points)
+
 
     def _random_sampling(self, curve):
         num_samples = max(int(abs(curve._interval[1] - curve._interval[0]) / self.spacing), 1)

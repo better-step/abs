@@ -11,7 +11,7 @@ from utilities import save_points,read_file, save_combined_shapes
 import os
 
 def main():
-
+    # TODO: Fix direction/interval in 2d curves
     root_folder = os.getcwd()
     input_file_name = 'Cone.hdf5'
     file_path = os.path.join(root_folder, "data", "sample_hdf5", input_file_name)
@@ -21,7 +21,7 @@ def main():
         data_path_topo = Data.get('topology/parts')
 
         # Initialize the shape with geometry and topology data
-        shape = ShapeSampling(data_path_geo, data_path_topo)
+        shape = ShapeSampling(data_path_geo, data_path_topo)   # TODO: Addd some class like part geometry for each part on top
 
         spacing = 0.1
 
@@ -32,26 +32,28 @@ def main():
         # Sample the shape
         sampled_shapes = shape.sample_all_shapes(surface_sampler, curve_sampler)
 
-        for shape_id, shape_points in sampled_shapes.items():
-            file_name = f"shape_{shape_id}.obj"
-            save_points(shape_points, file_name)
+
+
+        for part_index, part in sampled_shapes.items():
+            print("")
+            print("Part: {}".format(part_index))
+
+            for shape_id, shape_points in part.items():
+                print("Shape: {}".format(shape_id))
+                file_name = f"shape_{shape_id}.obj"
+                if shape_points is None or shape_points.size == 0:
+                    print(f"Warning: No points to save in {file_name}.")
+                    continue
+
+                print(f"Saving shape {shape_id} to {file_name}")
+                save_points(shape_points, file_name)
 
         save_combined_shapes(sampled_shapes, "combined_shapes.obj")
-
-        print("Shape sampled")
-
-
-
-
-
-
-
 
         print("Shape initialized")
 
     except Exception as e:
         raise RuntimeError(f"Error in data retrieval or object initialization: {str(e)}")
-
 
 
 if __name__ == "__main__":

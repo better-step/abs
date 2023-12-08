@@ -21,6 +21,8 @@ class Line(Curve):
         self._type = line.get('type')[()].decode('utf8')
 
     def sample(self, sample_points):
+        if sample_points.size == 0:
+            return self._location
         return self._location + sample_points * self._direction
 
     def length(self):
@@ -47,6 +49,8 @@ class Circle(Curve):
             self._z_axis = np.array(circle.get('z_axis')[()]).reshape(-1, 1).T
 
     def sample(self, sample_points):
+        if sample_points.size == 0:
+            return self._location
         circle_points = self._location + self._radius * (
             np.cos(sample_points) * self._x_axis + np.sin(sample_points) * self._y_axis)
         return circle_points
@@ -84,6 +88,10 @@ class Ellipse(Curve):
         self._center = (self._focus1 + self._focus2) / 2
 
     def sample(self, sample_points):
+
+        if sample_points.size == 0:
+            return self._center
+
         # Check if sample_points are the start and end of the interval, add the midpoint
         if np.array_equal(sample_points, self._interval):
             midpoint = np.array([(self._interval[0] + self._interval[1]) / 2]).reshape(-1, 1)
@@ -141,6 +149,10 @@ class BSplineCurve(Curve):
 
     def sample(self, sample_points):
         # TODO: Check if this is correct with Teseo
+
+        if sample_points.size == 0:
+            return np.array(self._curveObject.evaluate_single(self._interval[0]))
+
         # If the curve is closed and sample_points are the start and end of the interval, add the midpoint
         if self._closed and np.array_equal(sample_points.flatten(), np.array([self._interval[0], self._interval[1]])):
             midpoint = np.array([(self._interval[0] + self._interval[1]) / 2])

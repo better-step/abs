@@ -33,12 +33,119 @@ class ShapeSampling(ShapeCore):
         """
         sampled_shapes = {}
 
-        for surface_index, surface in enumerate(self._surfaces):
-            sampled_points = self.sample_single_surface(surface_index, surface_sampler, curve_sampler)
-            sampled_shapes[surface_index] = sampled_points
+        for part_index, part in enumerate(self._topology):
+            part_shapes = {}
+            for solid_index, solid in enumerate(part.solids):
+                for shell_index in solid['shells']:
+                    shell = part.shells[shell_index]
+                    for (face_index,_) in shell['faces']:
+                        face = part.faces[face_index]
+                        sampled_surface_points = self.sample_single_surface(part_index,face, surface_sampler, curve_sampler)
+                        if sampled_surface_points.size == 0:
+                            part_shapes[face['surface']] = None
+                            continue
+                        part_shapes[face['surface']] = sampled_surface_points
+            sampled_shapes[part_index] = part_shapes
         return sampled_shapes
 
-    def sample_single_surface(self, surface_index, surface_sampler, curve_sampler):
+    def sample_single_surface(self, part_index, face, surface_sampler, curve_sampler):
+        """
+        Sample a single surface based on face information, considering trimming curves.
+
+        Args:
+            part (Part): The part object containing the surface.
+            face (dict): Information about the face to be sampled.
+
+        Returns:
+            numpy.ndarray: Array of sampled points on the surface.
+        """
+        surface_index = face['surface']
+        surface = self._surfaces[surface_index]  # Todo: Handle for different parts
+        print("")
+
+        # Sample the surface to get UV values and corresponding 3D points
+
+        surface_uv_values = surface_sampler.sample(surface)
+        surface_points = surface.sample(surface_uv_values)
+
+        print("surface_points shape: " + str(surface_points.shape))
+
+        if surface_points.size == 0:
+            print("surface_points size is 0" + str(surface_index))
+            return surface_points
+
+        total_winding_numbers = np.zeros(len(surface_uv_values))
+
+        # Process trimming curves
+        for loop_id in face['loops']:
+            loop = self._topology[part_index].loops[loop_id]
+            for halfedge_index in loop['halfedges']:
+                halfedge = self._topology[part_index].halfedges[halfedge_index]
+                curve3d_index = halfedge['edge']
+                curve = self._curves3d[curve3d_index]
+                modified_orientation = self.determine_curve_orientation(face, halfedge)
+
+                # Sample the curve points to get UV values
+                curve_uv_points = curve_sampler.sample(curve)
+
+                # Convert the curve points to 3D points
+                curve_points = curve.sample(curve_uv_points)
+
+                if not modified_orientation:
+                    curve_points = curve_points[::-1]
+
+                # Calculate the nearest UV values on the surface for the curve points
+                closest_surface_uv_values_of_curve = self.find_surface_uv_for_curve(surface_points, surface_uv_values,
+                                                                                    curve_points)
+
+                # Determine the periodicity of the surface
+                period_u, period_v = self._determine_surface_periodicity(surface)
+
+                if closest_surface_uv_values_of_curve.size == 0:
+                    print("closest_surface_uv_values_of_curve size is 0" + str(curve3d_index))
+                    continue
+
+                # Calculate the winding number for the curve
+                wn = calculate_winding_numbers(closest_surface_uv_values_of_curve, surface_uv_values, period_u,
+                                                   period_v)
+
+                if any(wn > 0.5):
+                    print("curve contains points on the surface" + str(curve3d_index))
+
+                total_winding_numbers += wn.squeeze()
+
+        # Filter points based on total winding number
+        final_points = surface_points[total_winding_numbers > 0.5]
+
+        return final_points
+
+    def determine_curve_orientation(self, face, halfedge):
+        """
+        Determine the orientation of a curve relative to a surface.
+
+        Args:
+            face (dict): The face information.
+            halfedge (dict): The halfedge information.
+
+        Returns:
+            bool: The modified orientation of the curve.
+        """
+        orientation_wrt_edge = halfedge['orientation_wrt_edge']
+        if not face['surface_orientation']:
+            orientation_wrt_edge = not orientation_wrt_edge
+        return orientation_wrt_edge
+
+
+
+
+
+
+
+
+
+
+
+    def sample_single_surface_old(self, surface_index, surface_sampler, curve_sampler):
         """
         Sample a single surface in the model.
 
@@ -97,6 +204,8 @@ class ShapeSampling(ShapeCore):
         # Filter points based on total winding number
         final_points = surface_points[total_winding_numbers > 0.5]
 
+
+
         return final_points
 
     def find_surface_uv_for_curve(self, surface_points, surface_uv_values, curve_points):
@@ -114,8 +223,13 @@ class ShapeSampling(ShapeCore):
         # Calculate the nearest surface point for each curve point
         nearest_3d_surface_points, curve_indexes = self._calculate_nearest_surface_points(surface_points, curve_points)
 
-        # Retrieve the UV values corresponding to the nearest points
-        surface_uv_near_curve = surface_uv_values[curve_indexes]
+        if surface_uv_values.size > 0 and max(curve_indexes) < len(surface_uv_values):
+            surface_uv_near_curve = surface_uv_values[curve_indexes]
+        else:
+            # Handle the case where surface_uv_values is empty or too small
+            # This could be setting surface_uv_near_curve to an empty array
+            # or some other default value, depending on your application's needs
+            surface_uv_near_curve = np.array([])
 
         return surface_uv_near_curve
 
@@ -140,7 +254,7 @@ class ShapeSampling(ShapeCore):
         Determine the periodicity of a surface based on its type and properties.
         """
         flatten_trim_domain = surface._trim_domain.flatten()
-        if surface._type in ["Plane", "BSpline", "Other"]:
+        if surface._type in ["Plane", "BSpline", "Extrusion", "Other"]:
             return None, None
         elif surface._type in ["Cylinder", "Cone", "Revolution"]:
             return flatten_trim_domain[1] - flatten_trim_domain[0], None
@@ -168,6 +282,8 @@ class ShapeSampling(ShapeCore):
                     shell = t.shells[shell_index]
                     for face_info in shell['faces']:
                         face = t.faces[face_info['face_index']]
+                        # got the surface and its sampled points
+                        # initilized polygons
                         if face['surface'] == surface_index:
                             surface_orientation = face['surface_orientation']
                             for loop_id in face['loops']:
@@ -176,6 +292,7 @@ class ShapeSampling(ShapeCore):
                                     half_edge = t.halfedges[he]
                                     edge = t.edges[half_edge['edge']]
                                     curve = self._curves3d[edge['3dcurve']]
+                                    # got the curve and its sampled points
                                     orientation_wrt_edge = half_edge['orientation_wrt_edge']
                                     if not surface_orientation:
                                         orientation_wrt_edge = not orientation_wrt_edge

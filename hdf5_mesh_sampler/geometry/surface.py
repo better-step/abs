@@ -14,13 +14,15 @@ class Plane(Surface):
     def __init__(self, plane):
         self._location = np.array(plane.get('location')[()]).reshape(-1, 1).T
         self._coefficients = np.array(plane.get('coefficients')[()]).reshape(-1, 1).T
-        self._trim_domain = np.array(plane.get('trim_domain')[()]).reshape(-1, 2).T
+        self._trim_domain = np.array(plane.get('trim_domain')[()])
         self._x_axis = np.array(plane.get('x_axis')[()]).reshape(-1, 1).T
         self._y_axis = np.array(plane.get('y_axis')[()]).reshape(-1, 1).T
         self._z_axis = np.array(plane.get('z_axis')[()]).reshape(-1, 1).T
         self._type = plane.get('type')[()].decode('utf8')
 
     def sample(self, sample_points):
+        if sample_points.size == 0:
+            return self._location
         plane_points = self._location.T + sample_points[:, 0] * self._x_axis.T + sample_points[:, 1] * self._y_axis.T
         return plane_points.T
 
@@ -43,13 +45,17 @@ class Cylinder(Surface):
         self._location = np.array(cylinder.get('location')[()]).reshape(-1, 1).T
         self._radius = cylinder.get('radius')[()]
         self._coefficients = np.array(cylinder.get('coefficients')[()]).reshape(-1, 1).T
-        self._trim_domain = np.array(cylinder.get('trim_domain')[()]).reshape(-1, 2).T
+        self._trim_domain = np.array(cylinder.get('trim_domain')[()])
         self._x_axis = np.array(cylinder.get('x_axis')[()]).reshape(-1, 1).T
         self._y_axis = np.array(cylinder.get('y_axis')[()]).reshape(-1, 1).T
         self._z_axis = np.array(cylinder.get('z_axis')[()]).reshape(-1, 1).T
         self._type = cylinder.get('type')[()].decode('utf8')
 
     def sample(self, sample_points):
+
+        if sample_points.size == 0:
+            return self._location
+
         cylinder_points = self._location.T + self._radius * np.cos(sample_points[:, 0]) * self._x_axis.T + \
                           self._radius * np.sin(sample_points[:, 0]) * self._y_axis.T + sample_points[:, 1] * \
                           self._z_axis.T
@@ -78,7 +84,7 @@ class Cone(Surface):
         self._location = np.array(cone.get('location')[()]).reshape(-1, 1).T
         self._radius = cone.get('radius')[()]
         self._coefficients = np.array(cone.get('coefficients')[()]).reshape(-1, 1).T
-        self._trim_domain = np.array(cone.get('trim_domain')[()]).reshape(-1, 2).T
+        self._trim_domain = np.array(cone.get('trim_domain')[()])
         self._apex = np.array(cone.get('apex')[()]).reshape(-1, 1).T
         self._angle = cone.get('angle')[()]
         self._x_axis = np.array(cone.get('x_axis')[()]).reshape(-1, 1).T
@@ -87,6 +93,9 @@ class Cone(Surface):
         self._type = cone.get('type')[()].decode('utf8')
 
     def sample(self, sample_points):
+
+        if sample_points.size == 0:
+            return self._apex  #TODO: check this may be to location
         cone_points = self._location.T + (self._radius + sample_points[:, 1] * np.sin(self._angle)) * \
                       (np.cos(sample_points[:, 0]) * self._x_axis.T + np.sin(sample_points[:, 0]) * self._y_axis.T) \
                       + sample_points[:, 1] * np.cos(self._angle) * self._z_axis.T
@@ -121,7 +130,7 @@ class Sphere(Surface):
         self._location = np.array(sphere.get('location')[()]).reshape(-1, 1).T
         self._radius = sphere.get('radius')[()]
         self._coefficients = np.array(sphere.get('coefficients')[()]).reshape(-1, 1).T
-        self._trim_domain = np.array(sphere.get('trim_domain')[()]).reshape(-1, 2).T
+        self._trim_domain = np.array(sphere.get('trim_domain')[()])
         self._x_axis = np.array(sphere.get('x_axis')[()]).reshape(-1, 1).T
         self._y_axis = np.array(sphere.get('y_axis')[()]).reshape(-1, 1).T
         if hasattr(sphere, 'z_axis'):
@@ -131,6 +140,8 @@ class Sphere(Surface):
         self._type = sphere.get('type')[()].decode('utf8')
 
     def sample(self, sample_points):
+        if sample_points.size == 0:
+            return self._location
         sphere_points = self._location.T + self._radius * np.cos(sample_points[:, 1]) * \
                         (np.cos(sample_points[:, 0]) * self._x_axis.T + np.sin(sample_points[:, 0]) * self._y_axis.T) \
                         + self._radius * np.sin(sample_points[:, 1]) * self._z_axis.T
@@ -167,13 +178,15 @@ class Torus(Surface):
         self._location = np.array(torus.get('location')[()]).reshape(-1, 1).T
         self._max_radius = torus.get('max_radius')[()]
         self._min_radius = torus.get('min_radius')[()]
-        self._trim_domain = np.array(torus.get('trim_domain')[()]).reshape(-1, 2).T
+        self._trim_domain = np.array(torus.get('trim_domain')[()])
         self._x_axis = np.array(torus.get('x_axis')[()]).reshape(-1, 1).T
         self._y_axis = np.array(torus.get('y_axis')[()]).reshape(-1, 1).T
         self._z_axis = np.array(torus.get('z_axis')[()]).reshape(-1, 1).T
         self._type = torus.get('type')[()].decode('utf8')
 
     def sample(self, sample_points):
+        if sample_points.size == 0:
+            return self._location
         torus_points = self._location.T + (self._max_radius + self._min_radius * np.cos(sample_points[:, 1])) * \
                        (np.cos(sample_points[:, 0]) * self._x_axis.T + np.sin(sample_points[:, 0]) * self._y_axis.T) \
                        + self._min_radius * np.sin(sample_points[:, 1]) * self._z_axis.T
@@ -214,7 +227,7 @@ class BSplineSurface(Surface):
         self._face_domain = np.array(bspline_surface.get('face_domain')[()]).reshape(-1, 1).T
         self._is_trimmed = bspline_surface.get('is_trimmed')[()]
         self._poles = np.array(bspline_surface.get('poles')[()])
-        self._trim_domain = np.array(bspline_surface.get('trim_domain')[()]).reshape(-1, 2).T
+        self._trim_domain = np.array(bspline_surface.get('trim_domain')[()])
         self._u_closed = bspline_surface.get('u_closed')[()]
         self._u_degree = bspline_surface.get('u_degree')[()]
         self._u_knots = np.array(bspline_surface.get('u_knots')[()]).reshape(-1, 1).T
@@ -237,6 +250,9 @@ class BSplineSurface(Surface):
         self._surface_obj.ctrlpts = self._poles.reshape((-1, 1, 3)).squeeze().tolist()
 
     def sample(self, sample_points):
+        if sample_points.size == 0:
+            # Returning the first control point for simplicity
+            return self._poles[0, 0]
         uv_pairs = [(sample_points[i, 0], sample_points[i, 1]) for i in range(len(sample_points[:, 0]))]
         return np.array(self._surface_obj.evaluate_list(uv_pairs))
 

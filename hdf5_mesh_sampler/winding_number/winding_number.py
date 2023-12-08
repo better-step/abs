@@ -6,7 +6,7 @@ def compute_position(point, period_u, period_v):
     position = np.zeros(3)
 
     if period_u == 0 or period_v == 0:
-        print("Warning: Periodicity is 0, returning 0 vector.")
+       # print("Warning: Periodicity is 0, returning 0 vector.")
         return position
 
     if period_u is not None and period_v is not None:
