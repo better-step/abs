@@ -13,8 +13,8 @@ import os
 def main():
     # TODO: Fix direction/interval in 2d curves
     root_folder = os.getcwd()
-    input_file_name = 'Cone.hdf5'
-    file_path = os.path.join(root_folder, "data", "sample_hdf5", input_file_name)
+    input_file_name = '20230_21cfb69e_0007_1.hdf5'
+    file_path = os.path.join(root_folder, "data", "hdf5", input_file_name)
     try:
         Data = read_file(file_path)
         data_path_geo = Data.get('geometry/parts')
@@ -23,7 +23,7 @@ def main():
         # Initialize the shape with geometry and topology data
         shape = ShapeSampling(data_path_geo, data_path_topo)   # TODO: Addd some class like part geometry for each part on top
 
-        spacing = 0.1
+        spacing = 0.4
 
         # Initialize samplers
         curve_sampler = CurveSampler(spacing=spacing, method="uniform")
