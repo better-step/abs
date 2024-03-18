@@ -10,6 +10,7 @@ import numpy as np
 from utilities import save_points,read_file, save_combined_shapes
 import os
 
+
 def main():
     # TODO: Fix direction/interval in 2d curves
     root_folder = os.getcwd()
