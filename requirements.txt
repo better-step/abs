@@ -1,5 +1,11 @@
-numpy>=1.19.2
-scipy>=1.5.2
-matplotlib>=3.3.2  # Optional, remove if not needed for visualization
-h5py>=2.10.0
-geomdl>=5.0.0
+# numpy>=1.19.2
+# scipy>=1.5.2
+# matplotlib>=3.3.2  # Optional, remove if not needed for visualization
+# h5py>=2.10.0
+# geomdl>=5.0.0
+numpy
+geomdl
+h5py
+scipy
+munch
+point-cloud-utils

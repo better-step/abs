@@ -7,7 +7,7 @@ class SurfaceSampler(Sampler):
     Sampler for surface entities.
     """
 
-    def __init__(self, spacing, method='poisson_disk'):
+    def __init__(self, spacing, method='uniform'):
         """
         Initialize the surface sampler.
 
@@ -52,10 +52,10 @@ class SurfaceSampler(Sampler):
         """
         # Implementation of the sampling method
         # This can be expanded to include various sampling strategies
-        if self.method == 'poisson_disk':
-            return self._poisson_disk_sampling(surface)
+        # if self.method == 'poisson_disk':
+        #     return self._poisson_disk_sampling(surface)
 
-        elif self.method == 'uniform':
+        if self.method == 'uniform':
             return self._uniform_sampling(surface)
 
         elif self.method == 'random':

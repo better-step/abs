@@ -1,13 +1,9 @@
 """Main module."""
 
 from shape_sampling import ShapeSampling
-from geometry.curve import Line, Circle, Ellipse, BSplineCurve
-from geometry.surface import Plane, Cylinder, Cone, Sphere, Torus, BSplineSurface
-from topology.topology import Topology
 from sampling.curve_sampler import CurveSampler
 from sampling.surface_sampler import SurfaceSampler
-import numpy as np
-from utilities import save_points,read_file, save_combined_shapes
+from utilities import *
 import os
 
 
@@ -25,6 +21,9 @@ def main():
         shape = ShapeSampling(data_path_geo, data_path_topo)   # TODO: Addd some class like part geometry for each part on top
 
         spacing = 0.4
+        save_individual_shapes = False
+        use_pcu = True
+        save_original_sampled_model = True
 
         # Initialize samplers
         curve_sampler = CurveSampler(spacing=spacing, method="uniform")
@@ -32,26 +31,21 @@ def main():
 
         # Sample the shape
         sampled_shapes = shape.sample_all_shapes(surface_sampler, curve_sampler)
+        combined_points = combine_shapes(sampled_shapes)
 
+        downsampled_points = []
+        if use_pcu:
+            downsampled_points = down_sample_point_cloud_pcu(combined_points, target_num_points=10000)
+        else:
+            downsampled_points = down_sample_point_cloud(combined_points, target_num_points=10000)
 
+        # Save the combined and downsampled points
+        save_points_to_file(downsampled_points, (input_file_name.split(".")[0] or "shape") + "_downsampled.obj")
+        if save_individual_shapes:
+            extract_and_save_individual_shapes(sampled_shapes, base_file_name=input_file_name.split(".")[0] or "shape")
+        if save_original_sampled_model:
+            save_combined_shapes(sampled_shapes, input_file_name.split(".")[0] + "_combined_shapes.obj")
 
-        for part_index, part in sampled_shapes.items():
-            print("")
-            print("Part: {}".format(part_index))
-
-            for shape_id, shape_points in part.items():
-                print("Shape: {}".format(shape_id))
-                file_name = f"shape_{shape_id}.obj"
-                if shape_points is None or shape_points.size == 0:
-                    print(f"Warning: No points to save in {file_name}.")
-                    continue
-
-                print(f"Saving shape {shape_id} to {file_name}")
-                save_points(shape_points, file_name)
-
-        save_combined_shapes(sampled_shapes, "combined_shapes.obj")
-
-        print("Shape initialized")
 
     except Exception as e:
         raise RuntimeError(f"Error in data retrieval or object initialization: {str(e)}")

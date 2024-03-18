@@ -7,7 +7,7 @@ class CurveSampler(Sampler):
     Sampler for curve entities.
     """
 
-    def __init__(self, spacing, method='poisson_disk'):
+    def __init__(self, spacing, method='uniform'):
         """
         Initialize the curve sampler.
 
