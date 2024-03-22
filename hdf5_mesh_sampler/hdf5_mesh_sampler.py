@@ -6,7 +6,26 @@ from sampling.surface_sampler import SurfaceSampler
 from utilities import *
 import os
 
+# For pipeline integration, you can use the following function
+def sample_shape(file_path, config):
+    """Sample a single shape based on the provided configuration."""
 
+    Data = read_file(file_path)
+    data_path_geo = Data.get('geometry/parts')
+    data_path_topo = Data.get('topology/parts')
+
+    shape = ShapeSampling(data_path_geo, data_path_topo)
+    curve_sampler = CurveSampler(spacing=config['properties']['point_distance']['value'], method="uniform")  # Adjust based on config
+    surface_sampler = SurfaceSampler(spacing=config['properties']['point_distance']['value'], method="uniform")  # Adjust based on config
+
+    sampled_shapes = shape.sample_all_shapes(surface_sampler, curve_sampler)
+    combined_points = combine_shapes(sampled_shapes)
+    downsampled_points = down_sample_point_cloud_pcu(combined_points, target_num_points=config['properties']['target_sample_points']['value']) if config['properties']['use_pcu']['value'] else down_sample_point_cloud(combined_points, target_num_points=config['properties']['target_sample_points']['value'])
+
+    return downsampled_points
+
+
+# To work locally, you can use the following main function
 def main():
     # TODO: Fix direction/interval in 2d curves
     root_folder = os.getcwd()
