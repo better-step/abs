@@ -74,7 +74,10 @@ def validate_output(output):
 
 def ensure_output_dirs_exist(paths):
     """Ensures that the specified output directories exist, creating them if necessary."""
-    for path in paths.values():
+    # Filter out the 'description' key or any non-path value
+    valid_paths = {k: v for k, v in paths.items() if k.endswith("_path")}
+
+    for path in valid_paths.values():
         if path and not os.path.exists(path):
             try:
                 os.makedirs(path)
