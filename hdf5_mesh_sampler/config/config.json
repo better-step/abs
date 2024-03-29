@@ -12,12 +12,12 @@
     },
     "properties": {
       "labels": {
-        "enabled": false,
+        "enabled": true,
         "data_type": "",
         "description": "Labels are not processed in this experiment."
       },
       "normals": {
-        "enabled": false,
+        "enabled": true,
         "description": "Normals computation is not required for this experiment."
       },
       "target_sample_points": {
