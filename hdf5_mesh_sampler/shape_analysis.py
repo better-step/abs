@@ -3,6 +3,17 @@ import numpy as np
 from shape_core import ShapeCore
 
 class ShapeAnalysis(ShapeCore):
+
+    def __init__(self, shape_core_instance):
+        if not isinstance(shape_core_instance, ShapeCore):
+            raise ValueError("Expected an instance of ShapeCore")
+        # Initialize with existing base class properties
+        super().__init__({}, {})
+        self._curves2d = shape_core_instance._curves2d
+        self._curves3d = shape_core_instance._curves3d
+        self._surfaces = shape_core_instance._surfaces
+        self._bbox = shape_core_instance._bbox
+        self._topology = shape_core_instance._topology
     def calculate_surface_area(self):
         """
         Compute the area of each surface in the shape.

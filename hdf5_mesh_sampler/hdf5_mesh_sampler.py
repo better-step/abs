@@ -3,6 +3,7 @@
 from shape_sampling import ShapeSampling
 from sampling.curve_sampler import CurveSampler
 from sampling.surface_sampler import SurfaceSampler
+from shape_analysis import ShapeAnalysis
 from utilities import *
 import os
 
@@ -29,15 +30,15 @@ def sample_shape(file_path, config):
 def main():
     # TODO: Fix direction/interval in 2d curves
     root_folder = os.getcwd()
-    input_file_name = '20230_21cfb69e_0007_1.hdf5'
-    file_path = os.path.join(root_folder, "data", "hdf5", input_file_name)
+    input_file_name = 'Box.hdf5'
+    file_path = os.path.join(root_folder, "data", "sample_hdf5", input_file_name)
     try:
         Data = read_file(file_path)
         data_path_geo = Data.get('geometry/parts')
         data_path_topo = Data.get('topology/parts')
 
         # Initialize the shape with geometry and topology data
-        shape = ShapeSampling(data_path_geo, data_path_topo)   # TODO: Addd some class like part geometry for each part on top
+        shape_core = ShapeSampling(data_path_geo, data_path_topo)   # TODO: Addd some class like part geometry for each part on top
 
         spacing = 0.4
         save_individual_shapes = False
@@ -49,7 +50,9 @@ def main():
         surface_sampler = SurfaceSampler(spacing=spacing, method="uniform")
 
         # Sample the shape
-        sampled_shapes = shape.sample_all_shapes(surface_sampler, curve_sampler)
+        sampled_shapes = shape_core.sample_all_shapes(surface_sampler, curve_sampler)
+
+        shape_analysis = ShapeAnalysis(shape_core)
         combined_points = combine_shapes(sampled_shapes)
 
         downsampled_points = []
