@@ -53,13 +53,23 @@ def main():
         sampled_shapes = shape_core.sample_all_shapes(surface_sampler, curve_sampler)
 
         shape_analysis = ShapeAnalysis(shape_core)
-        combined_points = combine_shapes(sampled_shapes)
+
+        combined_points, indexes_range = combine_shapes_with_index(sampled_shapes)
+
 
         downsampled_points = []
+        indexes = []
         if use_pcu:
-            downsampled_points = down_sample_point_cloud_pcu(combined_points, target_num_points=10000)
+            downsampled_points, indexes = down_sample_point_cloud_pcu(combined_points, target_num_points=10000)
         else:
-            downsampled_points = down_sample_point_cloud(combined_points, target_num_points=10000)
+            downsampled_points, indexes = down_sample_point_cloud(combined_points, target_num_points=10000)
+
+        sorted_downsampled_points = sorted(list(zip(indexes, downsampled_points)))
+
+        mapped_downsampled_points = map_points_to_ranges(indexes_range, sorted_downsampled_points)
+        # Get associated keys for each point
+
+
 
         # Save the combined and downsampled points
         save_points_to_file(downsampled_points, (input_file_name.split(".")[0] or "shape") + "_downsampled.obj")
@@ -67,7 +77,6 @@ def main():
             extract_and_save_individual_shapes(sampled_shapes, base_file_name=input_file_name.split(".")[0] or "shape")
         if save_original_sampled_model:
             save_combined_shapes(sampled_shapes, input_file_name.split(".")[0] + "_combined_shapes.obj")
-
 
     except Exception as e:
         raise RuntimeError(f"Error in data retrieval or object initialization: {str(e)}")

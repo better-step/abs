@@ -95,12 +95,16 @@ def down_sample_point_cloud_pcu(points, target_num_points=None, radius=None):
     elif radius is None:
         raise ValueError("Either target_num_points or radius must be provided.")
 
+    indexes = []
     # Downsample the point cloud
     if target_num_points is not None:
         idx = pcu.downsample_point_cloud_poisson_disk(points, radius=radius, target_num_samples=target_num_points)
         downsampled_points = points[idx]
+        indexes = idx
     else:
         # If no target number of points is provided, downsample using only the radius
-        downsampled_points = pcu.downsample_point_cloud_poisson_disk(points, radius=radius)
+        idx = pcu.downsample_point_cloud_poisson_disk(points, radius=radius)
+        downsampled_points = points[idx]
+        indexes = idx
 
-    return downsampled_points
+    return downsampled_points, indexes

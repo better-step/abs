@@ -104,6 +104,86 @@ def combine_shapes(sampled_shapes):
 
     return np.vstack(all_shapes) if all_shapes else np.array([])
 
+def combine_shapes_with_index(sampled_shapes):
+    """
+    Combine numpy arrays from a nested dictionary structure into a single numpy array,
+    and keep track of the indexes of values for each sub-dictionary key.
+
+    Args:
+        sampled_shapes (dict): A dictionary of dictionaries containing numpy arrays of shape points.
+
+    Returns:
+        np.ndarray: Combined numpy array of all shape points.
+        dict: Dictionary of sub-dictionary keys and their index ranges in the combined array.
+    """
+    all_shapes = []
+    index_ranges = {}
+    current_index = 0
+
+    for outer_key, part_shapes in sampled_shapes.items():
+        for inner_key, shape in part_shapes.items():
+            if isinstance(shape, np.ndarray) and shape.size > 0:
+                if current_index > 0:
+                    start_index = current_index + 1
+                else:
+                    start_index = current_index  # Start index for the current inner_key
+                all_shapes.append(shape)
+                current_index += shape.shape[0]  # Update current index by the number of rows in shape
+                end_index = current_index  # End index for the current inner_key (non-inclusive)
+                if inner_key not in index_ranges:
+                    index_ranges[inner_key] = []
+                index_ranges[inner_key].append((start_index, end_index))
+
+    combined_array = np.vstack(all_shapes) if all_shapes else np.array([])
+    return combined_array, index_ranges
+
+
+# def find_range(index_ranges, index):
+#     # Convert the index_ranges dictionary to a sorted list of tuples (range_start, range_end, key)
+#     sorted_ranges = sorted((start, end, key) for key, ranges in index_ranges.items() for start, end in ranges)
+#     low, high = 0, len(sorted_ranges) - 1
+#
+#     # Binary search to find the correct range
+#     while low <= high:
+#         mid = (low + high) // 2
+#         start, end, _ = sorted_ranges[mid]
+#         if start <= index <= end:
+#             return sorted_ranges[mid][2]
+#         elif index < start:
+#             high = mid - 1
+#         else:
+#             low = mid + 1
+#     return None  # If no range is found
+
+def find_range(index_ranges, index):
+    """
+    Finds the range a given index belongs to.
+
+    Args:
+        index_ranges (dict): Index ranges for each shape key.
+        index (int): The index to locate within the ranges.
+
+    Returns:
+        str or None: The key of the range if found, else None.
+    """
+    for key, ranges in index_ranges.items():
+        for start, end in ranges:
+            if start <= index < end:
+                return key
+    return None
+
+def map_points_to_ranges(index_ranges, downsampled_points):
+    # Initialize a new dictionary to store the mapped points
+    mapped_points = {key: [] for key in index_ranges}
+
+    # Map each point to the correct range
+    for index, point in downsampled_points:
+        range_key = find_range(index_ranges, index)
+        if range_key is not None:
+            mapped_points[range_key].append(point)
+
+    return mapped_points
+
 
 def prepare_points_for_saving(points):
     """
