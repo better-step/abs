@@ -137,24 +137,6 @@ def combine_shapes_with_index(sampled_shapes):
     combined_array = np.vstack(all_shapes) if all_shapes else np.array([])
     return combined_array, index_ranges
 
-
-# def find_range(index_ranges, index):
-#     # Convert the index_ranges dictionary to a sorted list of tuples (range_start, range_end, key)
-#     sorted_ranges = sorted((start, end, key) for key, ranges in index_ranges.items() for start, end in ranges)
-#     low, high = 0, len(sorted_ranges) - 1
-#
-#     # Binary search to find the correct range
-#     while low <= high:
-#         mid = (low + high) // 2
-#         start, end, _ = sorted_ranges[mid]
-#         if start <= index <= end:
-#             return sorted_ranges[mid][2]
-#         elif index < start:
-#             high = mid - 1
-#         else:
-#             low = mid + 1
-#     return None  # If no range is found
-
 def find_range(index_ranges, index):
     """
     Finds the range a given index belongs to.

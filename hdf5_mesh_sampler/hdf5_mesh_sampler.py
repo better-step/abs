@@ -6,6 +6,8 @@ from sampling.surface_sampler import SurfaceSampler
 from shape_analysis import ShapeAnalysis
 from utilities import *
 import os
+import json
+import pickle
 
 # For pipeline integration, you can use the following function
 def sample_shape(file_path, config):
@@ -67,8 +69,34 @@ def main():
         sorted_downsampled_points = sorted(list(zip(indexes, downsampled_points)))
 
         mapped_downsampled_points = map_points_to_ranges(indexes_range, sorted_downsampled_points)
-        # Get associated keys for each point
 
+        normals_dict = {}
+        for surface_index, surface_points in mapped_downsampled_points.items():
+            if isinstance(surface_points, list) and len(surface_points) > 0:
+                # normals_dict[f"{part_name}_{shape_name}"] = calculate_normals(shape)
+                normals_dict[surface_index] = normals_dict.get(surface_index, [])
+                normals_dict[surface_index] = shape_analysis.get_surface_normal(surface_index, surface_points)
+
+        surface_labes = {}
+        for surface_index, surface_points in sampled_shapes[0].items():
+            if isinstance(surface_points, np.ndarray) and surface_points.size > 0:
+                surface_labes[surface_index] = shape_analysis.get_surface_label(surface_index)
+        print("")
+
+
+        # combine downsampled points, normals and labels to one dictionary with nested dictionaries
+        output_data = [mapped_downsampled_points, normals_dict, surface_labes]
+
+        # Save as a JSON file
+        # with open('output_data.json', 'w') as file:
+        #     json.dump(output_data, file)
+
+        # Save as Pickle file
+        with open('output_data.pkl', 'wb') as file:
+            pickle.dump(output_data, file)
+
+
+        print("")
 
 
         # Save the combined and downsampled points

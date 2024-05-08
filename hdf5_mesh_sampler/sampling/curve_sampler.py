@@ -123,9 +123,9 @@ class CurveSampler(Sampler):
         return np.linspace(interval[0], interval[1], num_points)
 
 
-    def _random_sampling(self, curve):
-        num_samples = max(int(abs(curve._interval[1] - curve._interval[0]) / self.spacing), 1)
-        return np.random.uniform(curve._interval[0], curve._interval[1], num_samples)
+    # def _random_sampling(self, curve):
+    #     num_samples = max(int(abs(curve._interval[1] - curve._interval[0]) / self.spacing), 1)
+    #     return np.random.uniform(curve._interval[0], curve._interval[1], num_samples)
 
     #
     # def _poisson_disk_sampling(self, curve):

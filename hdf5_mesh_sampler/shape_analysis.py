@@ -81,3 +81,16 @@ class ShapeAnalysis(ShapeCore):
         assert 0 <= surface_index < len(self._surfaces), "Invalid surface_index"
         surface = self._surfaces[surface_index]
         return np.array([surface.normal(p) for p in sample_points])
+
+    def get_surface_label(self, shape_index):
+        """
+        Get the label of a shape.
+
+        Args:
+        shape_index (int): The index of the shape.
+
+        Returns:
+        str: The label of the shape.
+        """
+        assert 0 <= shape_index < len(self._surfaces), "Invalid shape_index"
+        return self._surfaces[shape_index].shape_type()
