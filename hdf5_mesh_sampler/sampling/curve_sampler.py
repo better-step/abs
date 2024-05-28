@@ -17,8 +17,8 @@ class CurveSampler(Sampler):
         method (str): The method to use for sampling, e.g., 'poisson_disk'.
         """
         super().__init__(spacing)
-        self.curve = None
-        self.cell_size = None
+        # self.curve = None
+        # self.cell_size = None
         self.method = method
 
     def sample(self, curve):
@@ -38,16 +38,20 @@ class CurveSampler(Sampler):
         #     self.cell_size = self._calculate_cell_size()
         #     return self._poisson_disk_sampling(curve)
 
-        if self.method == 'uniform':
-            return self._uniform_sampling(curve)
-
-        elif self.method == 'random':
-            return self._random_sampling(curve)
-
+        if self.method == 'uniform' or self.method == 'random':
+            return self._sampling_based_on_curve(curve)
         else:
             raise ValueError(f"Invalid sampling method: {self.method}")
 
-    def _other_uniform_sampling(self, curve):
+    def _uniform_or_random_sampling(self, interval, num_samples, method='uniform'):
+        if method == 'uniform':
+            return np.linspace(interval[0], interval[1], num_samples)
+        elif method == 'random':
+            return np.random.uniform(low=interval[0], high=interval[1], size=num_samples)
+        else:
+            raise ValueError("Unsupported sampling method")
+
+    def _other_shapes_sampling(self, curve, method):
 
         # TODO: Fix for zero case
 
@@ -59,9 +63,9 @@ class CurveSampler(Sampler):
         else:
             num_samples = max(int(abs(curve._interval[1] - curve._interval[0]) / self.spacing), 1)
 
-        return np.linspace(curve._interval[0], curve._interval[1], num_samples)
+        return self._uniform_or_random_sampling(curve['_interval'], num_samples, method)
 
-    def _uniform_sampling(self, curve):
+    def _sampling_based_on_curve(self, curve):
         """
             General function to sample points on various curve types.
             :param curve: Dictionary containing curve information.
@@ -71,8 +75,8 @@ class CurveSampler(Sampler):
             'Line': self.sample_line,
             'Circle': self.sample_circle,
             'Ellipse': self.sample_ellipse,
-            'BSpline': self._other_uniform_sampling,
-            'Other': self._other_uniform_sampling
+            'BSpline': self._other_shapes_sampling,
+            'Other': self._other_shapes_sampling
         }
 
         sampling_function = type_to_function.get(curve._type)
@@ -83,26 +87,26 @@ class CurveSampler(Sampler):
 
         return uv_values
 
-    def sample_line(self, curve):
+    def sample_line(self, curve, method='uniform'):
         interval = sorted(curve._interval)
         length = interval[1] - interval[0]
         if length == 0:
             return np.array([])
-        num_points = int(np.ceil(length / self.spacing))
+        num_samples = int(np.ceil(length / self.spacing))
 
-        return np.linspace(interval[0], interval[1], num_points)
+        return self._uniform_or_random_sampling(interval, num_samples, method)
 
-    def sample_circle(self, curve):
+    def sample_circle(self, curve, method='uniform'):
         radius = curve._radius
         interval = curve._interval
         if radius <= 0:
             return np.array([])
 
         circumference = 2 * np.pi * radius
-        num_points = int(np.ceil(circumference / self.spacing))
+        num_samples = int(np.ceil(circumference / self.spacing))
 
-        return np.linspace(interval[0], interval[1], num_points)
-    def sample_ellipse(self,curve):
+        return self._uniform_or_random_sampling(interval, num_samples, method)
+    def sample_ellipse(self,curve,method='uniform'):
         maj_radius = curve._maj_radius
         min_radius = curve._min_radius
 
@@ -119,8 +123,9 @@ class CurveSampler(Sampler):
         # Approximate circumference of the ellipse
         h = ((maj_radius - min_radius) ** 2) / ((maj_radius + min_radius) ** 2)
         circumference = np.pi * (maj_radius + min_radius) * (1 + (3 * h) / (10 + np.sqrt(4 - 3 * h)))
-        num_points = int(np.ceil(circumference / self.spacing))
-        return np.linspace(interval[0], interval[1], num_points)
+        num_samples = int(np.ceil(circumference / self.spacing))
+
+        return self._uniform_or_random_sampling(interval, num_samples, method)
 
 
     # def _random_sampling(self, curve):
