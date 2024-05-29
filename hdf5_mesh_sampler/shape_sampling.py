@@ -61,10 +61,8 @@ class ShapeSampling(ShapeCore):
         """
         surface_index = face['surface']
         surface = self._surfaces[surface_index]  # Todo: Handle for different parts
-        print("")
 
         # Sample the surface to get UV values and corresponding 3D points
-
         surface_uv_values = surface_sampler.sample(surface)
         surface_points = surface.sample(surface_uv_values)
 
@@ -135,79 +133,6 @@ class ShapeSampling(ShapeCore):
             orientation_wrt_edge = not orientation_wrt_edge
         return orientation_wrt_edge
 
-
-
-
-
-
-
-
-
-
-
-    def sample_single_surface_old(self, surface_index, surface_sampler, curve_sampler):
-        """
-        Sample a single surface in the model.
-
-        Args:
-        surface_index (int): Index of the surface to be sampled.
-        surface_sampler (SurfaceSampler): An instance of SurfaceSampler.
-        curve_sampler (CurveSampler): An instance of CurveSampler.
-
-        Returns:
-        numpy.ndarray: Array of sampled points on the surface.
-        """
-        # Validate surface_index
-        if not 0 <= surface_index < len(self._surfaces):
-            raise ValueError(f"Invalid surface_index: {surface_index}")
-
-        # Retrieve the surface to be sampled
-        surface = self._surfaces[surface_index]
-
-        # Sample the surface to get UV values and corresponding 3D points
-        surface_uv_values = surface_sampler.sample(surface)
-        surface_points = surface.sample(surface_uv_values)
-
-        # Initialize winding number for each UV value
-        total_winding_numbers = np.zeros(surface_uv_values.shape[0])
-
-        # Process each curve related to the surface
-        trimming_curves = self.retrieve_trimming_curves(surface_index)
-
-        if len(trimming_curves) == 0:
-            return surface_points
-
-
-        for curve, modified_orientation in trimming_curves:
-            # Sample the curve points to get UV values
-            curve_uv_points = curve_sampler.sample(curve)
-
-            # Convert the curve points to 3D points
-            curve_points = curve.sample(curve_uv_points)
-
-            # Calculate the nearest UV values on the surface for the curve points
-            closest_surface_uv_values_of_curve = self.find_surface_uv_for_curve(surface_points, surface_uv_values, curve_points)
-
-            if not modified_orientation:  # Surface orientation is opposite to curve orientation
-                # Reverse the curve points
-                closest_surface_uv_values_of_curve = closest_surface_uv_values_of_curve[::-1]
-
-            # Determine the periodicity of the surface
-            period_u, period_v = self._determine_surface_periodicity(surface)
-
-            # Calculate the winding number for the curve
-            wn = calculate_winding_numbers(closest_surface_uv_values_of_curve, surface_uv_values, period_u, period_v)
-
-            # Add winding numbers from this curve to the total
-            total_winding_numbers += wn.squeeze()
-
-        # Filter points based on total winding number
-        final_points = surface_points[total_winding_numbers > 0.5]
-
-
-
-        return final_points
-
     def find_surface_uv_for_curve(self, surface_points, surface_uv_values, curve_points):
         """
         Calculate the nearest UV values on a surface for a given set of curve points.
@@ -222,6 +147,9 @@ class ShapeSampling(ShapeCore):
         """
         # Calculate the nearest surface point for each curve point
         nearest_3d_surface_points, curve_indexes = self._calculate_nearest_surface_points(surface_points, curve_points)
+
+        if type(curve_indexes) == np.int64:
+            curve_indexes = [curve_indexes]
 
         if surface_uv_values.size > 0 and max(curve_indexes) < len(surface_uv_values):
             surface_uv_near_curve = surface_uv_values[curve_indexes]
@@ -263,39 +191,101 @@ class ShapeSampling(ShapeCore):
         else:
             return None, None  # Default case for other types
 
-    def retrieve_trimming_curves(self, surface_index):
-        """
-        Extract trimming curves and their orientations for a given surface from the topology data.
-
-        Args:
-        surface_index (int): Index of the surface.
-
-        Returns:
-        list: List of tuples, each containing a trimming curve and its orientation (orientation_wrt_edge) for the specified surface.
-        """
-        assert 0 <= surface_index < len(self._surfaces), "Invalid surface_index"
-
-        trimming_curves = []
-        for t in self._topology:
-            for solid in t.solids:
-                for shell_index in solid['shells']:
-                    shell = t.shells[shell_index]
-                    for face_info in shell['faces']:
-                        face = t.faces[face_info['face_index']]
-                        # got the surface and its sampled points
-                        # initilized polygons
-                        if face['surface'] == surface_index:
-                            surface_orientation = face['surface_orientation']
-                            for loop_id in face['loops']:
-                                loop = t.loops[loop_id]
-                                for he in loop['halfedges']:
-                                    half_edge = t.halfedges[he]
-                                    edge = t.edges[half_edge['edge']]
-                                    curve = self._curves3d[edge['3dcurve']]
-                                    # got the curve and its sampled points
-                                    orientation_wrt_edge = half_edge['orientation_wrt_edge']
-                                    if not surface_orientation:
-                                        orientation_wrt_edge = not orientation_wrt_edge
-                                    trimming_curves.append((curve, orientation_wrt_edge))
-
-        return trimming_curves
+    # def sample_single_surface_old(self, surface_index, surface_sampler, curve_sampler):
+    #     """
+    #     Sample a single surface in the model.
+    #
+    #     Args:
+    #     surface_index (int): Index of the surface to be sampled.
+    #     surface_sampler (SurfaceSampler): An instance of SurfaceSampler.
+    #     curve_sampler (CurveSampler): An instance of CurveSampler.
+    #
+    #     Returns:
+    #     numpy.ndarray: Array of sampled points on the surface.
+    #     """
+    #     # Validate surface_index
+    #     if not 0 <= surface_index < len(self._surfaces):
+    #         raise ValueError(f"Invalid surface_index: {surface_index}")
+    #
+    #     # Retrieve the surface to be sampled
+    #     surface = self._surfaces[surface_index]
+    #
+    #     # Sample the surface to get UV values and corresponding 3D points
+    #     surface_uv_values = surface_sampler.sample(surface)
+    #     surface_points = surface.sample(surface_uv_values)
+    #
+    #     # Initialize winding number for each UV value
+    #     total_winding_numbers = np.zeros(surface_uv_values.shape[0])
+    #
+    #     # Process each curve related to the surface
+    #     trimming_curves = self.retrieve_trimming_curves(surface_index)
+    #
+    #     if len(trimming_curves) == 0:
+    #         return surface_points
+    #
+    #
+    #     for curve, modified_orientation in trimming_curves:
+    #         # Sample the curve points to get UV values
+    #         curve_uv_points = curve_sampler.sample(curve)
+    #
+    #         # Convert the curve points to 3D points
+    #         curve_points = curve.sample(curve_uv_points)
+    #
+    #         # Calculate the nearest UV values on the surface for the curve points
+    #         closest_surface_uv_values_of_curve = self.find_surface_uv_for_curve(surface_points, surface_uv_values, curve_points)
+    #
+    #         if not modified_orientation:  # Surface orientation is opposite to curve orientation
+    #             # Reverse the curve points
+    #             closest_surface_uv_values_of_curve = closest_surface_uv_values_of_curve[::-1]
+    #
+    #         # Determine the periodicity of the surface
+    #         period_u, period_v = self._determine_surface_periodicity(surface)
+    #
+    #         # Calculate the winding number for the curve
+    #         wn = calculate_winding_numbers(closest_surface_uv_values_of_curve, surface_uv_values, period_u, period_v)
+    #
+    #         # Add winding numbers from this curve to the total
+    #         total_winding_numbers += wn.squeeze()
+    #
+    #     # Filter points based on total winding number
+    #     final_points = surface_points[total_winding_numbers > 0.5]
+    #
+    #
+    #
+    #     return final_points
+    # def retrieve_trimming_curves(self, surface_index):
+    #     """
+    #     Extract trimming curves and their orientations for a given surface from the topology data.
+    #
+    #     Args:
+    #     surface_index (int): Index of the surface.
+    #
+    #     Returns:
+    #     list: List of tuples, each containing a trimming curve and its orientation (orientation_wrt_edge) for the specified surface.
+    #     """
+    #     assert 0 <= surface_index < len(self._surfaces), "Invalid surface_index"
+    #
+    #     trimming_curves = []
+    #     for t in self._topology:
+    #         for solid in t.solids:
+    #             for shell_index in solid['shells']:
+    #                 shell = t.shells[shell_index]
+    #                 for face_info in shell['faces']:
+    #                     face = t.faces[face_info['face_index']]
+    #                     # got the surface and its sampled points
+    #                     # initilized polygons
+    #                     if face['surface'] == surface_index:
+    #                         surface_orientation = face['surface_orientation']
+    #                         for loop_id in face['loops']:
+    #                             loop = t.loops[loop_id]
+    #                             for he in loop['halfedges']:
+    #                                 half_edge = t.halfedges[he]
+    #                                 edge = t.edges[half_edge['edge']]
+    #                                 curve = self._curves3d[edge['3dcurve']]
+    #                                 # got the curve and its sampled points
+    #                                 orientation_wrt_edge = half_edge['orientation_wrt_edge']
+    #                                 if not surface_orientation:
+    #                                     orientation_wrt_edge = not orientation_wrt_edge
+    #                                 trimming_curves.append((curve, orientation_wrt_edge))
+    #
+    #     return trimming_curves

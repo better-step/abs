@@ -12,6 +12,9 @@ class Curve:
     def derivative(self, points, order=1):  # commented out = 1
         raise NotImplementedError("Derivative method must be implemented by subclasses")
 
+    def normal(self, points):
+        raise NotImplementedError("Normal method must be implemented by subclasses")
+
 
 class Line(Curve):
     def __init__(self, line):
@@ -35,6 +38,11 @@ class Line(Curve):
         if order == 1:
             return np.tile(self._direction, (sample_points.shape[0], 1))
         return np.zeros([sample_points.shape[0], self._location.shape[1]])
+
+    def normal(self, sample_points):
+        # Assuming the direction is (dx, dy), a perpendicular direction can be (dy, -dx) or (-dy, dx).
+        normal_vector = np.array([-self._direction[0, 1], self._direction[0, 0]])
+        return np.tile(normal_vector, (sample_points.shape[0], 1))
 
 
 class Circle(Curve):
@@ -69,6 +77,13 @@ class Circle(Curve):
             return -self.sample(sample_points)
         else:
             return self._radius * (np.sin(sample_points) * self._x_axis - np.cos(sample_points) * self._y_axis)
+
+    def normal(self, sample_points):
+        # Normals are radially outward, computed as the difference from the center to the sample points.
+        circle_points = self.sample(sample_points) - self._location
+        norms = np.linalg.norm(circle_points, axis=1, keepdims=True)
+        norms[norms == 0] = 1  # Avoid division by zero
+        return circle_points / norms
 
 
 class Ellipse(Curve):
@@ -123,6 +138,13 @@ class Ellipse(Curve):
         return self._maj_radius * np.sin(sample_points) * self._x_axis - \
             self._min_radius * np.cos(sample_points) * self._y_axis
 
+    def normal(self, sample_points):
+        # Similar approach as Circle, but considering the ellipse's shape.
+        ellipse_points = self.sample(sample_points) - self._center
+        norms = np.linalg.norm(ellipse_points, axis=1, keepdims=True)
+        norms[norms == 0] = 1
+        return ellipse_points / norms
+
 
 class BSplineCurve(Curve):
     def __init__(self, bspline):
@@ -152,6 +174,8 @@ class BSplineCurve(Curve):
 
         if sample_points.size == 0:
             return np.array(self._curveObject.evaluate_single(self._interval[0]))
+        if sample_points.size == 1:
+            return np.array(self._curveObject.evaluate_single(sample_points[0]))
 
         # If the curve is closed and sample_points are the start and end of the interval, add the midpoint
         if self._closed and np.array_equal(sample_points.flatten(), np.array([self._interval[0], self._interval[1]])):
@@ -172,3 +196,11 @@ class BSplineCurve(Curve):
         return np.array([
             self._curveObject.derivatives(sample_points[i, 0], order)[-1] for i in range(sample_points.shape[0])
         ])
+
+    def normal(self, sample_points):
+        if sample_points.size == 0:
+            return np.array([])
+        # Utilize the geomdl built-in normal calculation
+        normals = [self._curve_obj.normal(u) for u in sample_points.flatten()]
+        # Extract just the vector components if normals are returned as tuples (origin, vector)
+        return np.array([norm[1] for norm in normals])

@@ -3,6 +3,17 @@ import numpy as np
 from shape_core import ShapeCore
 
 class ShapeAnalysis(ShapeCore):
+
+    def __init__(self, shape_core_instance):
+        if not isinstance(shape_core_instance, ShapeCore):
+            raise ValueError("Expected an instance of ShapeCore")
+        # Initialize with existing base class properties
+        super().__init__({}, {})
+        self._curves2d = shape_core_instance._curves2d
+        self._curves3d = shape_core_instance._curves3d
+        self._surfaces = shape_core_instance._surfaces
+        self._bbox = shape_core_instance._bbox
+        self._topology = shape_core_instance._topology
     def calculate_surface_area(self):
         """
         Compute the area of each surface in the shape.
@@ -70,3 +81,16 @@ class ShapeAnalysis(ShapeCore):
         assert 0 <= surface_index < len(self._surfaces), "Invalid surface_index"
         surface = self._surfaces[surface_index]
         return np.array([surface.normal(p) for p in sample_points])
+
+    def get_surface_label(self, shape_index):
+        """
+        Get the label of a shape.
+
+        Args:
+        shape_index (int): The index of the shape.
+
+        Returns:
+        str: The label of the shape.
+        """
+        assert 0 <= shape_index < len(self._surfaces), "Invalid shape_index"
+        return self._surfaces[shape_index].shape_type()

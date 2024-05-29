@@ -1,0 +1,56 @@
+{
+  "configurationVersion": "1.0",
+  "experimentDetails": {
+    "name": "Initial Sampling Experiment",
+    "description": "Initial test run of geometric sampling for machine learning dataset preparation.",
+    "tags": ["initial", "test", "sampling"]
+  },
+  "dataset": {
+    "name": "InitialDataset",
+    "data_source": {
+      "source_path": "/Users/chandu/Workspace/GM/HDF5MeshSampler/hdf5_mesh_sampler/data/script_test"
+    },
+    "properties": {
+      "labels": {
+        "enabled": true,
+        "data_type": "",
+        "description": "Labels are not processed in this experiment."
+      },
+      "normals": {
+        "enabled": true,
+        "description": "Normals computation is not required for this experiment."
+      },
+      "target_sample_points": {
+        "value": 10000,
+        "description": "Target number of points to sample from each model."
+      },
+     "point_distance": {
+        "value": 0.4,
+        "description": "Minimum distance between points to be sampled. 0.1 is more dense (time consuming), 0.9 is less dense."
+      },
+      "sample_type": {
+        "value": "random",
+        "options": ["random", "uniform"],
+        "description": "Random sampling method selected for this experiment. Output will be downsampled to poisson disk sampling."
+      },
+      "num_samples": {
+        "value": 15,
+        "description": "Total number of samples to be generated across the dataset."
+      }
+    },
+    "split_ratios": {
+      "train": 0.7,
+      "validation": 0.2,
+      "test": 0.1,
+      "description": "Proportions for dividing the dataset into training and validation sets."
+    }
+  },
+  "output": {
+    "paths": {
+      "train_path": "/Users/chandu/Workspace/GM/HDF5MeshSampler/hdf5_mesh_sampler/data/script_output/train",
+      "validation_path": "/Users/chandu/Workspace/GM/HDF5MeshSampler/hdf5_mesh_sampler/data/script_output/validation",
+      "test_path": "/Users/chandu/Workspace/GM/HDF5MeshSampler/hdf5_mesh_sampler/data/script_output/test",
+      "description": "Directory paths where the output data for each dataset split should be stored."
+    }
+  }
+}

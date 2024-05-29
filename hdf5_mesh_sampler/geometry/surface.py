@@ -9,6 +9,9 @@ class Surface:
     def derivative(self, points, order=1):  # commented out = 1
         raise NotImplementedError("Derivative method must be implemented by subclasses")
 
+    def normal(self, points):
+        raise NotImplementedError("Normal method must be implemented by subclasses")
+
 
 class Plane(Surface):
     def __init__(self, plane):
@@ -38,6 +41,16 @@ class Plane(Surface):
             return np.zeros((sample_points.shape[0], 3, 2, 2))
         else:
             raise ValueError("Order must be 0, 1, or 2")
+
+    def normal(self, sample_points):
+        # The normal vector is constant for a plane and can be found by crossing x_axis with y_axis
+        normal_vector = np.cross(self._x_axis.squeeze(), self._y_axis.squeeze())
+        normal_vector_normalized = normal_vector / np.linalg.norm(normal_vector)
+        normals = np.tile(normal_vector_normalized, (sample_points.shape[0], 1))
+        return normals
+
+    def shape_type(self):
+        return "Plane"
 
 
 class Cylinder(Surface):
@@ -77,6 +90,16 @@ class Cylinder(Surface):
             return dev
         else:
             raise ValueError("Order must be 0, 1, or 2")
+
+    def normal(self, sample_points):
+        # For a cylinder, compute tangent vectors and their cross product for normals
+        derivatives = self.derivative(sample_points, order=1)
+        normals = np.cross(derivatives[:, :, 0], derivatives[:, :, 1])
+        normals = normals / np.linalg.norm(normals, axis=1)[:, np.newaxis]
+        return normals
+
+    def shape_type(self):
+        return "Cylinder"
 
 
 class Cone(Surface):
@@ -123,6 +146,15 @@ class Cone(Surface):
             return dev
         else:
             raise ValueError("Order must be 0, 1, or 2")
+
+    def normal(self, sample_points):
+        # For a cylinder, compute tangent vectors and their cross product for normals
+        derivatives = self.derivative(sample_points, order=1)
+        normals = np.cross(derivatives[:, :, 0], derivatives[:, :, 1])
+        normals = normals / np.linalg.norm(normals, axis=1)[:, np.newaxis]
+        return normals
+    def shape_type(self):
+        return "Cone"
 
 
 class Sphere(Surface):
@@ -172,6 +204,18 @@ class Sphere(Surface):
         else:
             raise ValueError("Order must be 0, 1, or 2")
 
+    def normal(self, sample_points):
+        # Compute points on the sphere
+        sphere_points = self.sample(sample_points)
+        # Calculate normals as vectors from sphere center to the points, normalize these vectors
+        normals = sphere_points - self._location
+        normals = normals / np.linalg.norm(normals, axis=1)[:, np.newaxis]
+        return normals
+
+    def shape_type(self):
+        return "Sphere"
+
+
 
 class Torus(Surface):
     def __init__(self, torus):
@@ -220,6 +264,17 @@ class Torus(Surface):
         else:
             raise ValueError("Order must be 0, 1, or 2")
 
+    def normal(self, sample_points):
+        # Compute derivatives for tangent vectors
+        derivatives = self.derivative(sample_points, order=1)
+        # Compute normals through cross product and normalize
+        normals = np.cross(derivatives[:, :, 0], derivatives[:, :, 1])
+        normals = normals / np.linalg.norm(normals, axis=1)[:, np.newaxis]
+        return normals
+
+    def shape_type(self):
+        return "Torus"
+
 
 class BSplineSurface(Surface):
     def __init__(self, bspline_surface):
@@ -263,3 +318,23 @@ class BSplineSurface(Surface):
             self._surface_obj.derivatives(sample_points[i, 0], sample_points[i, 1], order)[-1] for i in
             range(sample_points.shape[0])
         ])
+
+    def normal(self, sample_points):
+        if sample_points.size == 0:
+            return np.array([])  # Handle empty input gracefully.
+
+        # Evaluate normals using the geomdl built-in function.
+        normals = np.array([self._surface_obj.normal([u, v]) for u, v in sample_points])
+
+        # The returned normals are in the form of tuples (origin, vector components).
+        # For consistency and use in graphics or further calculations, you might only need the vector components.
+        # Therefore, you may choose to only return these components.
+        normal_vectors = normals[:, 1]  # Assuming the second element of each tuple is the vector component.
+
+        return normal_vectors
+
+
+
+
+    def shape_type(self):
+        return "BSplineSurface"
