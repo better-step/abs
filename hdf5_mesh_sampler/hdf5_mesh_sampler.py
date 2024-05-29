@@ -16,15 +16,16 @@ def sample_shape(file_path, config):
     Data = read_file(file_path)
     data_path_geo = Data.get('geometry/parts')
     data_path_topo = Data.get('topology/parts')
-
     shape = ShapeSampling(data_path_geo, data_path_topo)
-    curve_sampler = CurveSampler(spacing=config['properties']['point_distance']['value'], method="uniform")  # Adjust based on config
-    surface_sampler = SurfaceSampler(spacing=config['properties']['point_distance']['value'], method="uniform")  # Adjust based on config
+    curve_sampler = CurveSampler(spacing=config['dataset']['properties']['point_distance']['value'], method=config['dataset']['properties']['sample_type']['value'])  # Adjust based on config
+    surface_sampler = SurfaceSampler(spacing=config['dataset']['properties']['point_distance']['value'], method=config['dataset']['properties']['sample_type']['value'])  # Adjust based on config
 
     sampled_shapes = shape.sample_all_shapes(surface_sampler, curve_sampler)
     combined_points = combine_shapes(sampled_shapes)
-    downsampled_points = down_sample_point_cloud_pcu(combined_points, target_num_points=config['properties']['target_sample_points']['value']) if config['properties']['use_pcu']['value'] else down_sample_point_cloud(combined_points, target_num_points=config['properties']['target_sample_points']['value'])
+    downsampled_points, indexes = down_sample_point_cloud_pcu(combined_points, target_num_points=config['dataset']['properties']['target_sample_points']['value'])
 
+    if indexes is None:
+        print("No points to downsample")
     return downsampled_points
 
 
@@ -40,16 +41,15 @@ def main():
         data_path_topo = Data.get('topology/parts')
 
         # Initialize the shape with geometry and topology data
-        shape_core = ShapeSampling(data_path_geo, data_path_topo)   # TODO: Addd some class like part geometry for each part on top
+        shape_core = ShapeSampling(data_path_geo, data_path_topo)   # TODO: This code only works for shapes with single part
 
         spacing = 0.4
         save_individual_shapes = False
-        use_pcu = True
         save_original_sampled_model = True
 
         # Initialize samplers
-        curve_sampler = CurveSampler(spacing=spacing, method="uniform")
-        surface_sampler = SurfaceSampler(spacing=spacing, method="uniform")
+        curve_sampler = CurveSampler(spacing=spacing, method="random")
+        surface_sampler = SurfaceSampler(spacing=spacing, method="random")
 
         # Sample the shape
         sampled_shapes = shape_core.sample_all_shapes(surface_sampler, curve_sampler)
@@ -61,10 +61,7 @@ def main():
 
         downsampled_points = []
         indexes = []
-        if use_pcu:
-            downsampled_points, indexes = down_sample_point_cloud_pcu(combined_points, target_num_points=10000)
-        else:
-            downsampled_points, indexes = down_sample_point_cloud(combined_points, target_num_points=10000)
+        downsampled_points, indexes = down_sample_point_cloud_pcu(combined_points, target_num_points=10000)
 
         sorted_downsampled_points = sorted(list(zip(indexes, downsampled_points)))
 
@@ -83,21 +80,12 @@ def main():
                 surface_labes[surface_index] = shape_analysis.get_surface_label(surface_index)
         print("")
 
-
         # combine downsampled points, normals and labels to one dictionary with nested dictionaries
         output_data = [mapped_downsampled_points, normals_dict, surface_labes]
-
-        # Save as a JSON file
-        # with open('output_data.json', 'w') as file:
-        #     json.dump(output_data, file)
 
         # Save as Pickle file
         with open('output_data.pkl', 'wb') as file:
             pickle.dump(output_data, file)
-
-
-        print("")
-
 
         # Save the combined and downsampled points
         save_points_to_file(downsampled_points, (input_file_name.split(".")[0] or "shape") + "_downsampled.obj")

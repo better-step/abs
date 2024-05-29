@@ -75,6 +75,7 @@ class ShapeCore:
             self._bbox.append(part.get('bbox'))
 
     def __init_topology(self, data):
+
         topology_parts = []
 
         for data_key in data.keys():

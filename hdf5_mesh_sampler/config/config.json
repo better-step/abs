@@ -29,12 +29,12 @@
         "description": "Minimum distance between points to be sampled. 0.1 is more dense (time consuming), 0.9 is less dense."
       },
       "sample_type": {
-        "value": "uniform",
+        "value": "random",
         "options": ["random", "uniform"],
-        "description": "Uniform sampling method selected for this experiment. Output will be downsampled to poisson disk sampling."
+        "description": "Random sampling method selected for this experiment. Output will be downsampled to poisson disk sampling."
       },
       "num_samples": {
-        "value": 500,
+        "value": 15,
         "description": "Total number of samples to be generated across the dataset."
       }
     },

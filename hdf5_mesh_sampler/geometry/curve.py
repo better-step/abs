@@ -174,6 +174,8 @@ class BSplineCurve(Curve):
 
         if sample_points.size == 0:
             return np.array(self._curveObject.evaluate_single(self._interval[0]))
+        if sample_points.size == 1:
+            return np.array(self._curveObject.evaluate_single(sample_points[0]))
 
         # If the curve is closed and sample_points are the start and end of the interval, add the midpoint
         if self._closed and np.array_equal(sample_points.flatten(), np.array([self._interval[0], self._interval[1]])):

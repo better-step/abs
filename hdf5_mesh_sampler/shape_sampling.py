@@ -148,6 +148,9 @@ class ShapeSampling(ShapeCore):
         # Calculate the nearest surface point for each curve point
         nearest_3d_surface_points, curve_indexes = self._calculate_nearest_surface_points(surface_points, curve_points)
 
+        if type(curve_indexes) == np.int64:
+            curve_indexes = [curve_indexes]
+
         if surface_uv_values.size > 0 and max(curve_indexes) < len(surface_uv_values):
             surface_uv_near_curve = surface_uv_values[curve_indexes]
         else:

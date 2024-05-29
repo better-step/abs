@@ -43,7 +43,7 @@ class CurveSampler(Sampler):
         else:
             raise ValueError(f"Invalid sampling method: {self.method}")
 
-    def _uniform_or_random_sampling(self, interval, num_samples, method='uniform'):
+    def _uniform_or_random_sampling(self, interval, num_samples, method='random'):
         if method == 'uniform':
             return np.linspace(interval[0], interval[1], num_samples)
         elif method == 'random':
@@ -51,9 +51,11 @@ class CurveSampler(Sampler):
         else:
             raise ValueError("Unsupported sampling method")
 
-    def _other_shapes_sampling(self, curve, method):
+    def _other_shapes_sampling(self, curve, method='random'):
 
         # TODO: Fix for zero case
+
+        method = self.method
 
         curve_box = curve.sample(curve._interval)
         curve_diag = np.linalg.norm(curve_box[0, :] - curve_box[1, :])
@@ -63,7 +65,7 @@ class CurveSampler(Sampler):
         else:
             num_samples = max(int(abs(curve._interval[1] - curve._interval[0]) / self.spacing), 1)
 
-        return self._uniform_or_random_sampling(curve['_interval'], num_samples, method)
+        return self._uniform_or_random_sampling(curve._interval, num_samples, method)
 
     def _sampling_based_on_curve(self, curve):
         """

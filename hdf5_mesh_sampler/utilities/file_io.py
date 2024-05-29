@@ -197,6 +197,9 @@ def save_points_to_file(points, file_name):
         points (np.ndarray): Numpy array of points to save.
         file_name (str): The name of the file where points will be saved.
     """
+    if type(points) == tuple:
+        points = points[1]
+
     if points.size == 0:
         print(f"Warning: No points to save in {file_name}.")
         return
