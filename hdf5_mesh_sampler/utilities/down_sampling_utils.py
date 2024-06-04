@@ -1,8 +1,10 @@
 import numpy as np
 from scipy.spatial import cKDTree
-import point_cloud_utils as pcu
+# import point_cloud_utils as pcu
 
 # Poission disk sampling code
+
+#TESEO Fix me
 
 def estimate_radius(points, target_num_points):
     """

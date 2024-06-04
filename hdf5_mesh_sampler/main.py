@@ -3,6 +3,7 @@ from common import get_file_paths, split_dataset
 from hdf5_mesh_sampler import sample_shape
 import os
 from utilities import save_points_to_file
+import argparse
 
 
 def main(config_path):
@@ -51,4 +52,8 @@ def main(config_path):
 
 
 if __name__ == "__main__":
-    main("/Users/chandu/Workspace/GM/HDF5MeshSampler/hdf5_mesh_sampler/config/config.json")
+    parser = argparse.ArgumentParser(description='Generate dataset')
+    parser.add_argument('-c','--config', type=str, help='Path to the config file')
+    args = parser.parse_args()
+    if args.config:
+        main(args.config)
