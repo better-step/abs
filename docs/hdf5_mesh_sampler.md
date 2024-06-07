@@ -1,4 +1,0 @@
- 
-# abs module
-
-::: abs.abs
