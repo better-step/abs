@@ -231,22 +231,29 @@ class Sphere(Surface):
             return self.sample(sample_points)
         elif order == 1:
             dev = np.zeros((sample_points.shape[0], 3, 2))
-            dev[:, :, 0] = (self._radius * np.cos(sample_points[:, 1]) * (
-                    -np.sin(sample_points[:, 0]) * self._x_axis + np.cos(sample_points[:, 0]) * self._y_axis))
-            dev[:, :, 1] = -self._radius * np.sin(sample_points[:, 1]) * (
-                    np.cos(sample_points[:, 0]) * self._x_axis + np.sin(sample_points[:, 0]) * self._y_axis) + \
-                           self._radius * np.cos(sample_points[:, 1]) * self._z_axis
+            dev[:, :, 0] = (self._radius * np.cos(sample_points[:, 1]))[:, np.newaxis] * \
+                           (-np.sin(sample_points[:, 0]) * self._x_axis.T +
+                            np.cos(sample_points[:, 0]) * self._y_axis.T).T
+            dev[:, :, 1] = -self._radius * np.sin(sample_points[:, 1])[:, np.newaxis] * \
+                           (np.cos(sample_points[:, 0]) * self._x_axis.T +
+                            np.sin(sample_points[:, 0]) * self._y_axis.T).T + \
+                           (self._radius * np.cos(sample_points[:, 1]) * self._z_axis.T).T
             return dev
         elif order == 2:
             dev = np.zeros((sample_points.shape[0], 3, 2, 2))
-            dev[:, :, 0, 0] = -self._radius * np.cos(sample_points[:, 1]) * (
-                    np.cos(sample_points[:, 0]) * self._x_axis + np.sin(sample_points[:, 0]) * self._y_axis)
-            dev[:, :, 0, 1] = -self._radius * np.sin(sample_points[:, 1]) * (
-                    -np.sin(sample_points[:, 0]) * self._x_axis + np.cos(sample_points[:, 0]) * self._y_axis)
-            dev[:, :, 1, 0] = dev[:, :, 0, 1]
-            dev[:, :, 1, 1] = -self._radius * np.cos(sample_points[:, 1]) * (
-                    np.cos(sample_points[:, 0]) * self._x_axis + np.sin(sample_points[:, 0]) * self._y_axis) - \
-                              self._radius * np.sin(sample_points[:, 1]) * self._z_axis
+            dev[:, :, 0, 0] = (self._radius * np.cos(sample_points[:, 1]) *
+                               (-np.cos(sample_points[:, 0]) *
+                                self._x_axis.T - np.sin(sample_points[:, 0]) * self._y_axis.T)).T
+            dev[:, :, 0, 1] = (-self._radius * np.sin(sample_points[:, 1])
+                               * (-np.sin(sample_points[:, 0]) *
+                                  self._x_axis.T + np.cos(sample_points[:, 0]) * self._y_axis.T)).T
+            dev[:, :, 1, 0] = (-self._radius * np.sin(sample_points[:, 1]) *
+                               (-np.sin(sample_points[:, 0]) * self._x_axis.T +
+                                np.cos(sample_points[:, 0]) * self._y_axis.T)).T
+            dev[:, :, 1, 1] = (-self._radius * np.cos(sample_points[:, 1]) *
+                               (np.cos(sample_points[:, 0]) * self._x_axis.T +
+                                np.sin(sample_points[:, 0]) * self._y_axis.T) -
+                               self._radius * np.sin(sample_points[:, 1]) * self._z_axis.T).T
             return dev
         else:
             raise ValueError("Order must be 0, 1, or 2")
@@ -298,25 +305,34 @@ class Torus(Surface):
             return self.sample(sample_points)
         elif order == 1:
             dev = np.zeros((sample_points.shape[0], 3, 2))
+
             dev[:, :, 0] = ((self._max_radius + self._min_radius * np.cos(sample_points[:, 1])) *
-                            (-np.sin(sample_points[:, 0]) * self._x_axis +
-                             np.cos(sample_points[:, 0]) * self._y_axis)).T
-            dev[:, :, 1] = ((-self._min_radius * np.sin(sample_points[:, 1])) *
-                            (np.cos(sample_points[:, 0]) * self._x_axis +
-                             np.sin(sample_points[:, 0]) * self._y_axis) +
-                            self._min_radius * np.cos(sample_points[:, 1]) * self._z_axis).T
+                            (-np.sin(sample_points[:, 0]) * self._x_axis.T +
+                             np.cos(sample_points[:, 0]) * self._y_axis.T)).T
+
+            dev[:, :, 1] = (((-self._min_radius * np.sin(sample_points[:, 1])) *
+                             (np.cos(sample_points[:, 0]) * self._x_axis.T +
+                              np.sin(sample_points[:, 0]) * self._y_axis.T)) +
+                            (self._min_radius * np.cos(sample_points[:, 1])) * self._z_axis.T).T
             return dev
         elif order == 2:
             dev = np.zeros((sample_points.shape[0], 3, 2, 2))
             dev[:, :, 0, 0] = ((self._max_radius + self._min_radius * np.cos(sample_points[:, 1])) *
-                               (-np.cos(sample_points[:, 0]) * self._x_axis -
-                                np.sin(sample_points[:, 0]) * self._y_axis)).T
-            dev[:, :, 0, 1] = ((-self._min_radius * np.sin(sample_points[:, 1])) *
-                               (-np.sin(sample_points[:, 0]) * self._x_axis +
-                                np.cos(sample_points[:, 0]) * self._y_axis)).T
-            dev[:, :, 1, 0] = ((-self._min_radius * np.sin(sample_points[:, 1])) *
-                               (-np.sin(sample_points[:, 0]) * self._x_axis +
-                                np.cos(sample_points[:, 0]) * self._y_axis)).T
+                               (-np.cos(sample_points[:, 0]) * self._x_axis.T -
+                                np.sin(sample_points[:, 0]) * self._y_axis.T)).T
+
+            dev[:, :, 0, 1] = (-self._min_radius * np.sin(sample_points[:, 1]) *
+                               (-np.sin(sample_points[:, 0]) * self._x_axis.T +
+                                np.cos(sample_points[:, 0]) * self._y_axis.T)).T
+
+            dev[:, :, 1, 0] = (-self._min_radius * np.sin(sample_points[:, 1]) *
+                               (-np.sin(sample_points[:, 0]) * self._x_axis.T +
+                                np.cos(sample_points[:, 0]) * self._y_axis.T)).T
+
+            dev[:, :, 1, 1] = ((-self._min_radius * np.cos(sample_points[:, 1]) *
+                                (np.cos(sample_points[:, 0]) * self._x_axis.T + np.sin(sample_points[:, 0])
+                                 * self._y_axis.T)) - (self._min_radius *
+                                                       np.sin(sample_points[:, 1]) * self._z_axis.T)).T
             return dev
         else:
             raise ValueError("Order must be 0, 1, or 2")
