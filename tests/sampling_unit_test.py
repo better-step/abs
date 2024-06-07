@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 
 from test_utilities import *
-import hdf5_mesh_sampler.sampling as cs
+import abs.sampling as cs
 
 
 

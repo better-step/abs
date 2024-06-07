@@ -82,5 +82,5 @@ nav:
     - Examples:
         - examples/intro.ipynb
     - API Reference:
-          - hdf5_mesh_sampler module: hdf5_mesh_sampler.md
+          - abs module: abs.md
           - common module: common.md

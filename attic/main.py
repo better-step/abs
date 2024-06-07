@@ -1,6 +1,6 @@
 from config_loader import load_config
 from common import get_file_paths, split_dataset
-from hdf5_mesh_sampler import sample_shape
+from abs import sample_shape
 import os
 from utilities import save_points_to_file
 import argparse

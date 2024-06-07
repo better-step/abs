@@ -88,6 +88,6 @@ def ensure_output_dirs_exist(paths):
 
 # Example usage
 if __name__ == "__main__":
-    config_path = '/Users/chandu/Workspace/GM/HDF5MeshSampler/hdf5_mesh_sampler/config/config.json'
+    config_path = '/Users/chandu/Workspace/GM/HDF5MeshSampler/abs/config/config.json'
     config = load_config(config_path)
     print("Configuration loaded, validated, and necessary directories ensured.")

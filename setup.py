@@ -38,7 +38,7 @@ setup(
     description="This project is a modular and extensible software framework designed for geometric processing, sampling, and topological analysis. It provides a comprehensive suite of tools for handling various geometric entities such as lines, circles, ellipses, and B-spline curves and surfaces",
     entry_points={
         'console_scripts': [
-            'hdf5_mesh_sampler=hdf5_mesh_sampler.cli:main',
+            'abs=abs.cli:main',
         ],
     },
     install_requires=install_requires,
@@ -47,9 +47,9 @@ setup(
     long_description=readme,
     long_description_content_type='text/markdown',
     include_package_data=True,
-    keywords='hdf5_mesh_sampler',
+    keywords='abs',
     name='HDF5MeshSampler',
-    packages=find_packages(include=['hdf5_mesh_sampler'w, 'hdf5_mesh_sampler.*']),
+    packages=find_packages(include=['abs'w, 'abs.*']),
     setup_requires=setup_requirements,
     test_suite='tests',
     tests_require=test_requirements,

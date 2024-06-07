@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from hdf5_mesh_sampler.geometry import *
+from abs.geometry import *
 
 
 def test_line3d():

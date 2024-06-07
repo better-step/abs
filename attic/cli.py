@@ -1,17 +1,17 @@
-"""Console script for hdf5_mesh_sampler."""
+"""Console script for abs."""
 import argparse
 import sys
 
 
 def main():
-    """Console script for hdf5_mesh_sampler."""
+    """Console script for abs."""
     parser = argparse.ArgumentParser()
     parser.add_argument('_', nargs='*')
     args = parser.parse_args()
 
     print("Arguments: " + str(args._))
     print("Replace this message by putting your code into "
-          "hdf5_mesh_sampler.cli.main")
+          "abs.cli.main")
     return 0
 
 
