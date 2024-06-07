@@ -18,10 +18,16 @@ class Curve:
 
 class Line(Curve):
     def __init__(self, line):
-        self._location = np.array(line.get('location')[()]).reshape(-1, 1).T
-        self._interval = np.array(line.get('interval')[()]).reshape(-1, 1)
-        self._direction = np.array(line.get('direction')[()]).reshape(-1, 1).T
-        self._type = line.get('type')[()].decode('utf8')
+        if isinstance(line, dict):
+            self._location = np.array(line['location']).reshape(-1, 1).T
+            self._interval = np.array(line['interval']).reshape(-1, 1).T
+            self._direction = np.array(line['direction']).reshape(-1, 1).T
+            self._type = line['type']
+        else:
+            self._location = np.array(line.get('location')[()]).reshape(-1, 1).T
+            self._interval = np.array(line.get('interval')[()]).reshape(-1, 1).T
+            self._direction = np.array(line.get('direction')[()]).reshape(-1, 1).T
+            self._type = line.get('type')[()].decode('utf8')
 
     def sample(self, sample_points):
         if sample_points.size == 0:
@@ -47,14 +53,24 @@ class Line(Curve):
 
 class Circle(Curve):
     def __init__(self, circle):
-        self._location = np.array(circle.get('location')[()]).reshape(-1, 1).T
-        self._radius = circle.get('radius')[()]
-        self._interval = np.array(circle.get('interval')[()]).reshape(-1, 1)
-        self._x_axis = np.array(circle.get('x_axis')[()]).reshape(-1, 1).T
-        self._y_axis = np.array(circle.get('y_axis')[()]).reshape(-1, 1).T
-        self._type = circle.get('type')[()].decode('utf8')
-        if hasattr(circle, 'z_axis'):
-            self._z_axis = np.array(circle.get('z_axis')[()]).reshape(-1, 1).T
+        if isinstance(circle, dict):
+            self._location = np.array(circle['location']).reshape(-1, 1).T
+            self._radius = circle['radius']
+            self._interval = np.array(circle['interval']).reshape(-1, 1).T
+            self._x_axis = np.array(circle['x_axis']).reshape(-1, 1).T
+            self._y_axis = np.array(circle['y_axis']).reshape(-1, 1).T
+            self._type = circle['type']
+            if 'z_axis' in circle:
+                self._z_axis = np.array(circle['z_axis']).reshape(-1, 1).T
+        else:
+            self._location = np.array(circle.get('location')[()]).reshape(-1, 1).T
+            self._radius = circle.get('radius')[()]
+            self._interval = np.array(circle.get('interval')[()]).reshape(-1, 1).T
+            self._x_axis = np.array(circle.get('x_axis')[()]).reshape(-1, 1).T
+            self._y_axis = np.array(circle.get('y_axis')[()]).reshape(-1, 1).T
+            self._type = circle.get('type')[()].decode('utf8')
+            if hasattr(circle, 'z_axis'):
+                self._z_axis = np.array(circle.get('z_axis')[()]).reshape(-1, 1).T
 
     def sample(self, sample_points):
         if sample_points.size == 0:
@@ -88,17 +104,30 @@ class Circle(Curve):
 
 class Ellipse(Curve):
     def __init__(self, ellipse):
-        self._focus1 = np.array(ellipse.get('focus1')[()]).reshape(-1, 1).T
-        self._focus2 = np.array(ellipse.get('focus2')[()]).reshape(-1, 1).T
-        self._interval = np.array(ellipse.get('interval')[()]).reshape(-1, 1)
-        self._maj_radius = ellipse.get('maj_radius')[()]
-        self._min_radius = ellipse.get('min_radius')[()]
-        self._x_axis = np.array(ellipse.get('x_axis')[()]).reshape(-1, 1).T
-        self._y_axis = np.array(ellipse.get('y_axis')[()]).reshape(-1, 1).T
-        self._type = ellipse.get('type')[()].decode('utf8')
+        if isinstance(ellipse, dict):
+            self._focus1 = np.array(ellipse['focus1']).reshape(-1, 1).T
+            self._focus2 = np.array(ellipse['focus2']).reshape(-1, 1).T
+            self._interval = np.array(ellipse['interval']).reshape(-1, 1).T
+            self._maj_radius = ellipse['maj_radius']
+            self._min_radius = ellipse['min_radius']
+            self._x_axis = np.array(ellipse['x_axis']).reshape(-1, 1).T
+            self._y_axis = np.array(ellipse['y_axis']).reshape(-1, 1).T
+            self._type = ellipse['type']
 
-        if hasattr(ellipse, 'z_axis'):
-            self._z_axis = np.array(ellipse.get('z_axis')[()]).reshape(-1, 1).T
+            if 'z_axis' in ellipse:
+                self._z_axis = np.array(ellipse['z_axis']).reshape(-1, 1).T
+        else:
+            self._focus1 = np.array(ellipse.get('focus1')[()]).reshape(-1, 1).T
+            self._focus2 = np.array(ellipse.get('focus2')[()]).reshape(-1, 1).T
+            self._interval = np.array(ellipse.get('interval')[()]).reshape(-1, 1).T
+            self._maj_radius = ellipse.get('maj_radius')[()]
+            self._min_radius = ellipse.get('min_radius')[()]
+            self._x_axis = np.array(ellipse.get('x_axis')[()]).reshape(-1, 1).T
+            self._y_axis = np.array(ellipse.get('y_axis')[()]).reshape(-1, 1).T
+            self._type = ellipse.get('type')[()].decode('utf8')
+
+            if hasattr(ellipse, 'z_axis'):
+                self._z_axis = np.array(ellipse.get('z_axis')[()]).reshape(-1, 1).T
 
         self._center = (self._focus1 + self._focus2) / 2
 
@@ -149,20 +178,33 @@ class Ellipse(Curve):
 class BSplineCurve(Curve):
     def __init__(self, bspline):
         # Attributes initialization for B-spline curve
-        self._closed = bspline.get('closed')[()]
-        self._degree = bspline.get('degree')[()]
-        self._poles = np.array(bspline.get('poles')[()])
-        self._knots = np.array(bspline.get('knots')[()]).reshape(-1, 1).T
-        self._weights = np.array(bspline.get('weights')[()]).reshape(-1, 1)
-        self._interval = np.array(bspline.get('interval')[()]).reshape(-1, 1)
-        self._rational = bspline.get('rational')[()]
-        self._type = bspline.get('type')[()].decode('utf8')
+        if isinstance(bspline, dict):
+            self._closed = bspline['closed']
+            self._degree = bspline['degree']
+            self._continuity = bspline['continuity']
+            self._poles = np.array(bspline['poles'])
+            self._knots = np.array(bspline['knots']).reshape(-1, 1).T
+            self._weights = np.array(bspline['weights']).reshape(-1, 1)
+            self._interval = np.array(bspline['interval']).reshape(-1, 1).T
+            self._rational = bspline['rational']
+            self._type = bspline['type']
+        else:
+            self._closed = bspline.get('closed')[()]
+            self._degree = bspline.get('degree')[()]
+            self._continuity = bspline.get('continuity')[()]
+            self._poles = np.array(bspline.get('poles')[()])
+            self._knots = np.array(bspline.get('knots')[()]).reshape(-1, 1).T
+            self._weights = np.array(bspline.get('weights')[()]).reshape(-1, 1)
+            self._interval = np.array(bspline.get('interval')[()]).reshape(-1, 1).T
+            self._rational = bspline.get('rational')[()]
+            self._type = bspline.get('type')[()].decode('utf8')
 
         # Create BSpline or NURBS curve object
-        if not self._rational:
-            self._curveObject = BSpline.Curve(normalize_kv=False)
-        else:
+        if  self._rational:
             self._curveObject = NURBS.Curve(normalize_kv=False)
+        else:
+            self._curveObject = BSpline.Curve(normalize_kv=False)
+
         self._curveObject.degree = self._degree
         self._curveObject.ctrlpts = self._poles.tolist()
         self._curveObject.knotvector = self._knots.flatten().tolist()
@@ -170,17 +212,8 @@ class BSplineCurve(Curve):
             self._curveObject.weights = self._weights.flatten().tolist()
 
     def sample(self, sample_points):
-        # TODO: Check if this is correct with Teseo
-
-        if sample_points.size == 0:
-            return np.array(self._curveObject.evaluate_single(self._interval[0]))
         if sample_points.size == 1:
             return np.array(self._curveObject.evaluate_single(sample_points[0]))
-
-        # If the curve is closed and sample_points are the start and end of the interval, add the midpoint
-        if self._closed and np.array_equal(sample_points.flatten(), np.array([self._interval[0], self._interval[1]])):
-            midpoint = np.array([(self._interval[0] + self._interval[1]) / 2])
-            sample_points = np.sort(np.append(sample_points.flatten(), midpoint)).reshape(-1, 1)
 
         # Evaluate the curve at the given sample points
         return np.array(self._curveObject.evaluate_list(sample_points[:, 0].tolist()))
@@ -193,6 +226,7 @@ class BSplineCurve(Curve):
         return np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1))
 
     def derivative(self, sample_points, order=1):
+        assert(sample_points.shape[1]==1)
         return np.array([
             self._curveObject.derivatives(sample_points[i, 0], order)[-1] for i in range(sample_points.shape[0])
         ])

@@ -25,11 +25,8 @@ setup_requirements = ['pytest-runner', ]
 test_requirements = ['pytest>=3', ]
 
 setup(
-    author="Sai Chandra Madduri",
-    author_email='sc.madduri@gmail.com',
     python_requires='>=3.8',
     classifiers=[
-        'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
         'Natural Language :: English',
         'Programming Language :: Python :: 3',
@@ -52,7 +49,7 @@ setup(
     include_package_data=True,
     keywords='hdf5_mesh_sampler',
     name='HDF5MeshSampler',
-    packages=find_packages(include=['hdf5_mesh_sampler', 'hdf5_mesh_sampler.*']),
+    packages=find_packages(include=['hdf5_mesh_sampler'w, 'hdf5_mesh_sampler.*']),
     setup_requires=setup_requirements,
     test_suite='tests',
     tests_require=test_requirements,
