@@ -35,10 +35,7 @@ class Line(Curve):
         return self._location + sample_points * self._direction
 
     def length(self):
-        # Length is the distance between the start and end points
-        start_point = self.sample(np.array([[self._interval[0]]]))
-        end_point = self.sample(np.array([[self._interval[1]]]))
-        return np.linalg.norm(end_point - start_point)
+        return np.linalg.norm((self._interval[0,1]-self._interval[0,0])*self._direction)
 
     def derivative(self, sample_points, order=1):
         if order == 1:
@@ -81,7 +78,7 @@ class Circle(Curve):
 
     def length(self):
         # Circumference of the circle
-        return 2 * np.pi * self._radius
+        return np.abs((self._interval[0,1]-self._interval[0,0])) * self._radius
 
     def derivative(self, sample_points, order=1):
         if order % 4 == 0:
@@ -132,25 +129,16 @@ class Ellipse(Curve):
         self._center = (self._focus1 + self._focus2) / 2
 
     def sample(self, sample_points):
-
-        if sample_points.size == 0:
-            return self._center
-
-        # Check if sample_points are the start and end of the interval, add the midpoint
-        if np.array_equal(sample_points, self._interval):
-            midpoint = np.array([(self._interval[0] + self._interval[1]) / 2]).reshape(-1, 1)
-            sample_points = np.vstack([self._interval[0], midpoint, self._interval[1]])
-
         ellipse_points = self._center + self._maj_radius * np.cos(sample_points) * self._x_axis + \
                          self._min_radius * np.sin(sample_points) * self._y_axis
         return ellipse_points
 
     def length(self):
-        # Approximation of ellipse circumference (Ramanujan's formula)
-        a = self._maj_radius
-        b = self._min_radius
-        h = ((a - b) ** 2) / ((a + b) ** 2)
-        return np.pi * (a + b) * (1 + (3 * h) / (10 + np.sqrt(4 - 3 * h)))
+        # Approximate length by summing distances between sampled points
+        num_samples = 100  # Can be adjusted for precision
+        param_range = np.linspace(self._interval[0,0], self._interval[0,1], num_samples)
+        points = self.sample(param_range.reshape(-1, 1))
+        return np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1))
 
     def derivative(self, sample_points, order=1):
         if order % 4 == 0:
@@ -198,7 +186,6 @@ class BSplineCurve(Curve):
             self._interval = np.array(bspline.get('interval')[()]).reshape(-1, 1).T
             self._rational = bspline.get('rational')[()]
             self._type = bspline.get('type')[()].decode('utf8')
-
         # Create BSpline or NURBS curve object
         if  self._rational:
             self._curveObject = NURBS.Curve(normalize_kv=False)
@@ -221,7 +208,7 @@ class BSplineCurve(Curve):
     def length(self):
         # Approximate length by summing distances between sampled points
         num_samples = 100  # Can be adjusted for precision
-        param_range = np.linspace(self._interval[0], self._interval[1], num_samples)
+        param_range = np.linspace(self._interval[0,0], self._interval[0,1], num_samples)
         points = self.sample(param_range.reshape(-1, 1))
         return np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1))
 
