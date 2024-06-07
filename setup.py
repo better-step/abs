@@ -49,7 +49,7 @@ setup(
     include_package_data=True,
     keywords='abs',
     name='A Better Step',
-    packages=find_packages(include=['abs'w, 'abs.*']),
+    packages=find_packages(include=['abs', 'abs.*']),
     setup_requires=setup_requirements,
     test_suite='tests',
     tests_require=test_requirements,
