@@ -1,8 +1,7 @@
 import unittest
-
 import numpy as np
-
 from hdf5_mesh_sampler.geometry import *
+
 
 def test_line3d():
     data = {
@@ -11,7 +10,6 @@ def test_line3d():
             "direction": [1, 0, 0],
             "interval": [0, 1]
         }
-
     return Line(data)
 
 def test_line2d():

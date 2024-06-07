@@ -98,14 +98,15 @@ class Cylinder(Surface):
             return self.sample(sample_points)
         elif order == 1:
             dev = np.zeros((sample_points.shape[0], 3, 2))
-            dev[:, :, 0] = self._radius * (
-                    -np.sin(sample_points[:, 0]) * self._x_axis + np.cos(sample_points[:, 0]) * self._y_axis)
+            dev[:, :, 0] = self._radius * \
+                           (-np.sin(sample_points[:, 0]) * self._x_axis.T +
+                            np.cos(sample_points[:, 0]) * self._y_axis.T).T
             dev[:, :, 1] = self._z_axis
             return dev
         elif order == 2:
             dev = np.zeros((sample_points.shape[0], 3, 2, 2))
-            dev[:, :, 0, 0] = -self._radius * (
-                    np.cos(sample_points[:, 0]) * self._x_axis + np.sin(sample_points[:, 0]) * self._y_axis)
+            dev[:, :, 0, 0] = (-self._radius * (np.cos(sample_points[:, 0]) * self._x_axis.T +
+                                                np.sin(sample_points[:, 0]) * self._y_axis.T)).T
             return dev
         else:
             raise ValueError("Order must be 0, 1, or 2")
@@ -161,19 +162,21 @@ class Cone(Surface):
         elif order == 1:
             dev = np.zeros((sample_points.shape[0], 3, 2))
             dev[:, :, 0] = ((self._radius + sample_points[:, 1] * np.sin(self._angle)) *
-                            (-np.sin(sample_points[:, 0]) * self._x_axis + np.cos(sample_points[:, 0]) * self._y_axis))
-            dev[:, :, 1] = (np.sin(self._angle) * (
-                    np.cos(sample_points[:, 0]) * self._x_axis + np.sin(sample_points[:, 0]) * self._y_axis) +
-                            np.cos(self._angle) * self._z_axis)
+                            (-np.sin(sample_points[:, 0]) * self._x_axis.T +
+                             np.cos(sample_points[:, 0]) * self._y_axis.T)).T
+            dev[:, :, 1] = (np.sin(self._angle) *
+                            (np.cos(sample_points[:, 0]) * self._x_axis.T + np.sin(sample_points[:, 0]) *
+                             self._y_axis.T) + np.cos(self._angle) * self._z_axis.T).T
             return dev
         elif order == 2:
             dev = np.zeros((sample_points.shape[0], 3, 2, 2))
-            dev[:, :, 0, 0] = (-(self._radius + sample_points[:, 1] * np.sin(self._angle)) *
-                               (np.cos(sample_points[:, 0]) * self._x_axis + np.sin(
-                                   sample_points[:, 0]) * self._y_axis))
-            dev[:, :, 1, 0] = (np.sin(self._angle) * (
-                    -np.sin(sample_points[:, 0]) * self._x_axis + np.cos(sample_points[:, 0]) * self._y_axis))
-            dev[:, :, 0, 1] = dev[:, :, 1, 0]
+            dev[:, :, 0, 0] = ((self._radius + sample_points[:, 1] * np.sin(self._angle)) *
+                               (-np.cos(sample_points[:, 0]) * self._x_axis.T -
+                                np.sin(sample_points[:, 0]) * self._y_axis.T)).T
+            dev[:, :, 0, 1] = (np.sin(self._angle) * (-np.sin(sample_points[:, 0]) *
+                                                      self._x_axis.T + np.cos(sample_points[:, 0]) * self._y_axis.T).T)
+            dev[:, :, 1, 0] = (np.sin(self._angle) * (-np.sin(sample_points[:, 0]) *
+                                                      self._x_axis.T + np.cos(sample_points[:, 0]) * self._y_axis.T).T)
             return dev
         else:
             raise ValueError("Order must be 0, 1, or 2")

@@ -1,7 +1,6 @@
 import unittest
 
 import numpy as np
-
 from test_utilities import *
 
 
@@ -40,8 +39,7 @@ def surface_derivative(surface, sample_points):
 
 
 def curves_derivative(curve, sample_points):
-    epsilon = (sample_points[1]-sample_points[0])*1e-5
-
+    epsilon = (sample_points[1] - sample_points[0]) * 1e-5
     sample_points_plus = sample_points.copy()
     sample_points_plus += epsilon
     deriv = (curve.sample(sample_points_plus) - curve.sample(sample_points)) / epsilon
@@ -58,7 +56,7 @@ def curves_derivative(curve, sample_points):
     return p, q
 
 
-class TestBasic(unittest.TestCase):
+class geometrytest(unittest.TestCase):
 
     def test_line3d(self):
         line = test_line3d()
@@ -66,10 +64,8 @@ class TestBasic(unittest.TestCase):
         self.assertEqual(line._direction.shape, (1, 3))
         self.assertEqual(line._interval.shape, (1, 2))
         sample_points: None = np.linspace(0, 1, 10).reshape(-1, 1)
-
         # sampling
         self.assertEqual(line.sample(sample_points).shape, (10, 3))
-
         # derivative shape
         self.assertEqual(line.derivative(sample_points, 0).shape, (10, 3))
         self.assertEqual(line.derivative(sample_points, 1).shape, (10, 3))
@@ -149,7 +145,7 @@ class TestBasic(unittest.TestCase):
         self.assertEqual(ellipse._x_axis.shape, (1, 3))
         self.assertEqual(ellipse._y_axis.shape, (1, 3))
         self.assertEqual(ellipse._z_axis.shape, (1, 3))
-        sample_points = np.linspace(0, 2*np.pi, 10).reshape(-1, 1)
+        sample_points = np.linspace(0, 2 * np.pi, 10).reshape(-1, 1)
         self.assertEqual(ellipse.sample(sample_points).shape, (10, 3))
         # derivative
         self.assertEqual(ellipse.derivative(sample_points, 0).shape, (10, 3))
@@ -171,7 +167,7 @@ class TestBasic(unittest.TestCase):
         self.assertEqual(type(ellipse._min_radius), float)
         self.assertEqual(ellipse._x_axis.shape, (1, 2))
         self.assertEqual(ellipse._y_axis.shape, (1, 2))
-        sample_points = np.linspace(0, 2*np.pi, 10).reshape(-1, 1)
+        sample_points = np.linspace(0, 2 * np.pi, 10).reshape(-1, 1)
         self.assertEqual(ellipse.sample(sample_points).shape, (10, 2))
         # derivative
         self.assertEqual(ellipse.derivative(sample_points, 0).shape, (10, 2))
@@ -211,8 +207,6 @@ class TestBasic(unittest.TestCase):
         d, d2 = curves_derivative(bspline_curve2d, sample_points)
         self.assertTrue(d < 1e-4)
         # self.assertTrue(d2 < 1e-4)
-
-# ################################################
 
     def test_plane(self):
         plane = test_plane()
@@ -350,6 +344,7 @@ class TestBasic(unittest.TestCase):
         v_values = gridY.reshape((np.prod(gridY.shape),))
         sample_points = np.column_stack((gridX, gridY)).reshape(-1, 2)
         self.assertEqual(bspline_surface.sample(sample_points).shape, (gridX.shape[0] * gridX.shape[1], 3))
+
 
 if __name__ == '__main__':
     unittest.main()

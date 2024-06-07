@@ -9,7 +9,7 @@ class Curve:
     def length(self):
         raise NotImplementedError("Length method must be implemented by subclasses")
 
-    def derivative(self, points, order=1):  # commented out = 1
+    def derivative(self, points, order=1):
         raise NotImplementedError("Derivative method must be implemented by subclasses")
 
     def normal(self, points):
@@ -238,3 +238,4 @@ class BSplineCurve(Curve):
         normals = [self._curve_obj.normal(u) for u in sample_points.flatten()]
         # Extract just the vector components if normals are returned as tuples (origin, vector)
         return np.array([norm[1] for norm in normals])
+
