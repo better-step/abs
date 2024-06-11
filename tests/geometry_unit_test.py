@@ -1,7 +1,7 @@
 import unittest
 
 import numpy as np
-from test_utilities import *
+from tests.test_utilities import *
 
 
 def surface_derivative(surface, sample_points):
@@ -51,12 +51,11 @@ def curves_derivative(curve, sample_points):
     deriv = (curve.derivative(sample_points_plus, 1) - curve.derivative(sample_points, 1)) / epsilon
     deriv1 = curve.derivative(sample_points, 2)
     q = np.abs(deriv - deriv1).max()
-    # print(np.abs(deriv - deriv1))
 
     return p, q
 
 
-class geometrytest(unittest.TestCase):
+class Geometrytest(unittest.TestCase):
 
     def test_line3d(self):
         line = test_line3d()
@@ -120,6 +119,7 @@ class geometrytest(unittest.TestCase):
         self.assertEqual(circle._interval.shape, (1, 2))
         self.assertEqual(circle._x_axis.shape, (1, 2))
         self.assertEqual(circle._y_axis.shape, (1, 2))
+
         # sampling
         sample_points = np.linspace(0, 2 * np.pi, 10).reshape(-1, 1)
         self.assertEqual(circle.sample(sample_points).shape, (10, 2))

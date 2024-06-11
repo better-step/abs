@@ -35,7 +35,7 @@ class Line(Curve):
         return self._location + sample_points * self._direction
 
     def length(self):
-        return np.linalg.norm((self._interval[0,1]-self._interval[0,0])*self._direction)
+        return np.linalg.norm((self._interval[0, 1]-self._interval[0, 0]) * self._direction)
 
     def derivative(self, sample_points, order=1):
         if order == 1:
@@ -186,6 +186,7 @@ class BSplineCurve(Curve):
             self._interval = np.array(bspline.get('interval')[()]).reshape(-1, 1).T
             self._rational = bspline.get('rational')[()]
             self._type = bspline.get('type')[()].decode('utf8')
+
         # Create BSpline or NURBS curve object
         if  self._rational:
             self._curveObject = NURBS.Curve(normalize_kv=False)
