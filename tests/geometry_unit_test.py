@@ -256,11 +256,29 @@ class Geometrytest(unittest.TestCase):
         self.assertTrue(d < 1e-4)
         self.assertTrue(d2 < 1e-4)
 
-
     def test_bspline_curve3d(self):
-        # TODO
-        pass
+        bspline_curve3d = test_bspline_curve3d()
+        self.assertEqual(type(bspline_curve3d._closed), bool)
+        self.assertEqual(type(bspline_curve3d._continuity), int)
+        self.assertEqual(type(bspline_curve3d._degree), int)
+        self.assertEqual(bspline_curve3d._interval.shape, (1, 2))
+        self.assertEqual(bspline_curve3d._knots.shape[0], 1)
+        self.assertEqual(bspline_curve3d._poles.shape[1], 3)
+        self.assertEqual(type(bspline_curve3d._rational), bool)
+        self.assertEqual(bspline_curve3d._weights.shape[1], 1)
 
+        # sample points
+        umin_value, umax_value = bspline_curve3d._interval.T
+        gridX = np.linspace(umin_value, umax_value)
+        sample_points = gridX.reshape(-1, 1)
+        self.assertEqual(bspline_curve3d.sample(sample_points).shape, (gridX.shape[0], 3))
+
+        # derivative
+        self.assertEqual(bspline_curve3d.derivative(sample_points, 0).shape, (50, 3))
+        self.assertEqual(bspline_curve3d.derivative(sample_points, 1).shape, (50, 3))
+        d, d2 = curves_derivative(bspline_curve3d, sample_points)
+        self.assertTrue(d < 1e-4)
+        self.assertTrue(d2 < 1e-4)
 
     def test_plane(self):
         plane = test_plane()
@@ -390,14 +408,37 @@ class Geometrytest(unittest.TestCase):
 
     def test_bspline_surface(self):
         bspline_surface = test_bspline_surface()
-        umin_value, umax_value, vmin_value, vmax_value = np.array(bspline_surface._trim_domain.reshape(-1, 1))
-        gridX = np.linspace(umin_value, umax_value, 2)
-        gridY = np.linspace(vmin_value, vmax_value, 2)
+
+        self.assertEqual(type(bspline_surface._continuity), int)
+        self.assertEqual(bspline_surface._face_domain.shape, (1, 4))
+        self.assertEqual(type(bspline_surface._is_trimmed), bool)
+        self.assertEqual(bspline_surface._poles.shape[2], 3)
+        self.assertEqual(bspline_surface._trim_domain.shape, (2, 2))
+        self.assertEqual(type(bspline_surface._u_closed), bool)
+        self.assertEqual(type(bspline_surface._u_degree), int)
+        self.assertEqual(bspline_surface._u_knots.shape[0], 1)
+        self.assertEqual(type(bspline_surface._u_rational), bool)
+        self.assertEqual(type(bspline_surface._v_closed), bool)
+        self.assertEqual(type(bspline_surface._v_degree), int)
+        self.assertEqual(bspline_surface._v_knots.shape[0], 1)
+        self.assertEqual(type(bspline_surface._v_rational), bool)
+
+        # TODO: check weights, thers is inconsistency when initializing weights
+
+        # sample points
+        umin_value, umax_value, vmin_value, vmax_value = bspline_surface._trim_domain.reshape(-1, 1)
+        gridX = np.linspace(umin_value, umax_value)
+        gridY = np.linspace(vmin_value, vmax_value)
         gridX, gridY = np.meshgrid(gridX, gridY)
-        u_values = gridX.reshape((np.prod(gridX.shape),))
-        v_values = gridY.reshape((np.prod(gridY.shape),))
         sample_points = np.column_stack((gridX, gridY)).reshape(-1, 2)
         self.assertEqual(bspline_surface.sample(sample_points).shape, (gridX.shape[0] * gridX.shape[1], 3))
+
+        # derivative
+        du, dv, d2u, d2v = surface_derivative(bspline_surface, sample_points)
+        self.assertTrue(du < 1e-4)
+        self.assertTrue(dv < 1e-4)
+        self.assertTrue(d2u < 1e-4)
+        self.assertTrue(d2v < 1e-4)
 
 
 if __name__ == '__main__':
