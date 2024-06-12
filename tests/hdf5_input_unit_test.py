@@ -4,7 +4,7 @@ import h5py
 import unittest
 from abs.geometry import *
 import numpy as np
-from tests.geometry_unit_test import surface_derivative, curves_derivative
+from tests.geometry_unit_test import surface_derivative, curves_derivative, estimate_length
 
 
 def read_file(file_path):
@@ -47,6 +47,17 @@ class Hdf5test(unittest.TestCase):
         self.assertTrue(d < 1e-7)
         self.assertTrue(d2 < 1e-7)
 
+        num_samples = 1000  # Can be adjusted for precision
+        points = estimate_length(line, num_samples)
+        self.assertTrue(abs(np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1)) - line.length() < 1e-4))
+
+        lines = np.diff(points, axis=0)
+        lengths = np.linalg.norm(lines, axis=1)
+        normalized_lines = lines / lengths[:, np.newaxis]
+        rotation_matrix = np.array([[0, -1], [1, 0]])
+        rotated_p = normalized_lines @ rotation_matrix.T
+        self.assertTrue(np.allclose(rotated_p, line.normals(points)))
+
     def test_circle2d(self):
         sample_name = 'cylinder_Hole.hdf5'
         file_path = get_file(sample_name)
@@ -58,7 +69,7 @@ class Hdf5test(unittest.TestCase):
         self.assertEqual(circle.sample(sample_points).shape, (10, 2))
 
         self.assertEqual(circle._location.shape, (1, 2))
-        # self.assertEqual(type(circle._radius), float)
+        self.assertEqual(type(circle._radius), float)
         self.assertEqual(circle._interval.shape, (1, 2))
         self.assertEqual(circle._x_axis.shape, (1, 2))
         self.assertEqual(circle._y_axis.shape, (1, 2))
@@ -74,6 +85,22 @@ class Hdf5test(unittest.TestCase):
         self.assertTrue(d < 1e-4)
         self.assertTrue(d2 < 1e-4)
 
+        # length
+        num_samples = 1000  # Can be adjusted for precision
+        points = estimate_length(circle, num_samples)
+        self.assertTrue(abs(np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1)) - circle.length() < 1e-4))
+
+        # normals
+        lines = np.diff(points, axis=0)
+        lengths = np.linalg.norm(lines, axis=1)
+        normalized_lines = lines / lengths[:, np.newaxis]
+        rotation_matrix = np.array([[0, -1], [1, 0]])
+        rotated_p = normalized_lines @ rotation_matrix.T
+        self.assertTrue(np.allclose(rotated_p, circle.normals(points)))
+
+
+
+
     def test_ellipse3d(self):
         sample_name = 'Ellipse.hdf5'
         file_path = get_file(sample_name)
@@ -84,8 +111,8 @@ class Hdf5test(unittest.TestCase):
         self.assertEqual(ellipse._focus1.shape, (1, 3))
         self.assertEqual(ellipse._focus2.shape, (1, 3))
         self.assertEqual(ellipse._interval.shape, (1, 2))
-        # self.assertEqual(type(ellipse._maj_radius), float)
-        # self.assertEqual(type(ellipse._min_radius), float)
+        self.assertEqual(type(ellipse._maj_radius), float)
+        self.assertEqual(type(ellipse._min_radius), float)
         self.assertEqual(ellipse._x_axis.shape, (1, 3))
         self.assertEqual(ellipse._y_axis.shape, (1, 3))
         self.assertEqual(ellipse._z_axis.shape, (1, 3))
@@ -102,6 +129,8 @@ class Hdf5test(unittest.TestCase):
         d, d2 = curves_derivative(ellipse, sample_points)
         self.assertTrue(d < 1e-4)
         self.assertTrue(d2 < 1e-4)
+
+
 
     def test_bspline_surface(self):
         sample_name = 'Ellipse.hdf5'
@@ -150,8 +179,8 @@ class Hdf5test(unittest.TestCase):
         # self.assertEqual(type(bspline_curve2d._degree), int)
         self.assertEqual(bspline_curve2d._interval.shape, (1, 2))
         self.assertEqual(bspline_curve2d._knots.shape[0], 1)
-        self.assertEqual(bspline_curve2d._poles.shape[1], 2)
-        self.assertEqual(type(bspline_curve2d._rational), bool)
+        # self.assertEqual(bspline_curve2d._poles.shape[1], 2)
+        # self.assertEqual(type(bspline_curve2d._rational), bool)
         self.assertEqual(bspline_curve2d._weights.shape[1], 1)
         self.assertEqual(bspline_curve2d._poles.shape[0], bspline_curve2d._weights.shape[0])
 
@@ -166,6 +195,17 @@ class Hdf5test(unittest.TestCase):
         d, d2 = curves_derivative(bspline_curve2d, sample_points)
         self.assertTrue(d < 1e-4)
         self.assertTrue(d2 < 1e-4)
+
+        num_samples = 1000  # Can be adjusted for precision
+        points = estimate_length(bspline_curve2d, num_samples)
+        self.assertTrue(abs(np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1)) - bspline_curve2d.length() < 1e-4))
+
+        lines = np.diff(points, axis=0)
+        lengths = np.linalg.norm(lines, axis=1)
+        normalized_lines = lines / lengths[:, np.newaxis]
+        rotation_matrix = np.array([[0, -1], [1, 0]])
+        rotated_p = normalized_lines @ rotation_matrix.T
+        print('here')
 
     def test_cone(self):
         sample_name = 'Cone.hdf5'

@@ -52,7 +52,7 @@ class Circle(Curve):
     def __init__(self, circle):
         if isinstance(circle, dict):
             self._location = np.array(circle['location']).reshape(-1, 1).T
-            self._radius = circle['radius']
+            self._radius = float(circle['radius'])
             self._interval = np.array(circle['interval']).reshape(-1, 1).T
             self._x_axis = np.array(circle['x_axis']).reshape(-1, 1).T
             self._y_axis = np.array(circle['y_axis']).reshape(-1, 1).T
@@ -61,12 +61,12 @@ class Circle(Curve):
                 self._z_axis = np.array(circle['z_axis']).reshape(-1, 1).T
         else:
             self._location = np.array(circle.get('location')[()]).reshape(-1, 1).T
-            self._radius = circle.get('radius')[()]
+            self._radius = float(circle.get('radius')[()])
             self._interval = np.array(circle.get('interval')[()]).reshape(-1, 1).T
             self._x_axis = np.array(circle.get('x_axis')[()]).reshape(-1, 1).T
             self._y_axis = np.array(circle.get('y_axis')[()]).reshape(-1, 1).T
             self._type = circle.get('type')[()].decode('utf8')
-            if hasattr(circle, 'z_axis'):
+            if 'z_axis' in circle:
                 self._z_axis = np.array(circle.get('z_axis')[()]).reshape(-1, 1).T
 
     def sample(self, sample_points):
@@ -81,14 +81,16 @@ class Circle(Curve):
         return np.abs((self._interval[0,1]-self._interval[0,0])) * self._radius
 
     def derivative(self, sample_points, order=1):
-        if order % 4 == 0:
+        if order == 0:
             return self.sample(sample_points)
+        elif order % 4 == 0 and order != 0:
+            return self._radius * (np.cos(sample_points) * self._x_axis + np.sin(sample_points) * self._y_axis)
         elif order % 4 == 1:
             return (-self._radius * np.sin(sample_points) * self._x_axis) + (
                 self._radius * np.cos(sample_points) * self._y_axis)
         elif order % 4 == 2:
-            return -self.sample(sample_points)
-        else:
+            return -(self._radius * (np.cos(sample_points) * self._x_axis + np.sin(sample_points) * self._y_axis))
+        elif order % 4 == 3:
             return self._radius * (np.sin(sample_points) * self._x_axis - np.cos(sample_points) * self._y_axis)
 
     def normal(self, sample_points):
@@ -105,8 +107,8 @@ class Ellipse(Curve):
             self._focus1 = np.array(ellipse['focus1']).reshape(-1, 1).T
             self._focus2 = np.array(ellipse['focus2']).reshape(-1, 1).T
             self._interval = np.array(ellipse['interval']).reshape(-1, 1).T
-            self._maj_radius = ellipse['maj_radius']
-            self._min_radius = ellipse['min_radius']
+            self._maj_radius = float(ellipse['maj_radius'])
+            self._min_radius = float(ellipse['min_radius'])
             self._x_axis = np.array(ellipse['x_axis']).reshape(-1, 1).T
             self._y_axis = np.array(ellipse['y_axis']).reshape(-1, 1).T
             self._type = ellipse['type']
@@ -117,13 +119,13 @@ class Ellipse(Curve):
             self._focus1 = np.array(ellipse.get('focus1')[()]).reshape(-1, 1).T
             self._focus2 = np.array(ellipse.get('focus2')[()]).reshape(-1, 1).T
             self._interval = np.array(ellipse.get('interval')[()]).reshape(-1, 1).T
-            self._maj_radius = ellipse.get('maj_radius')[()]
-            self._min_radius = ellipse.get('min_radius')[()]
+            self._maj_radius = float(ellipse.get('maj_radius')[()])
+            self._min_radius = float(ellipse.get('min_radius')[()])
             self._x_axis = np.array(ellipse.get('x_axis')[()]).reshape(-1, 1).T
             self._y_axis = np.array(ellipse.get('y_axis')[()]).reshape(-1, 1).T
             self._type = ellipse.get('type')[()].decode('utf8')
 
-            if hasattr(ellipse, 'z_axis'):
+            if 'z_axis' in ellipse:
                 self._z_axis = np.array(ellipse.get('z_axis')[()]).reshape(-1, 1).T
 
         self._center = (self._focus1 + self._focus2) / 2

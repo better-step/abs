@@ -55,6 +55,12 @@ def curves_derivative(curve, sample_points):
     return p, q
 
 
+def estimate_length(curve, num_samples=1000):
+    param_range = np.linspace(curve._interval[0, 0], curve._interval[0, 1], num_samples)
+    points = curve.sample(param_range.reshape(-1, 1))
+    return points
+
+
 class Geometrytest(unittest.TestCase):
 
     def test_line3d(self):
@@ -90,6 +96,17 @@ class Geometrytest(unittest.TestCase):
         d, d2 = curves_derivative(line, sample_points)
         self.assertTrue(d < 1e-7)
         self.assertTrue(d2 < 1e-7)
+
+        num_samples = 1000  # Can be adjusted for precision
+        points = estimate_length(line, num_samples)
+        self.assertTrue(abs(np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1)) - line.length() < 1e-4))
+
+        lines = np.diff(points, axis=0)
+        lengths = np.linalg.norm(lines, axis=1)
+        normalized_lines = lines / lengths[:, np.newaxis]
+        rotation_matrix = np.array([[0, -1], [1, 0]])
+        rotated_p = normalized_lines @ rotation_matrix.T
+        self.assertTrue(np.allclose(rotated_p, line.normals(points)))
 
     def test_circle3d(self):
         circle = test_circle3d()
@@ -135,6 +152,20 @@ class Geometrytest(unittest.TestCase):
         self.assertTrue(d < 1e-4)
         self.assertTrue(d2 < 1e-4)
 
+
+        num_samples = 5000  # Can be adjusted for precision
+        points = estimate_length(circle, num_samples)
+        self.assertTrue(abs(np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1)) - circle.length() < 1e-4))
+
+        lines = np.diff(points, axis=0)
+        lengths = np.linalg.norm(lines, axis=1)
+        normalized_lines = lines / lengths[:, np.newaxis]
+        rotation_matrix = np.array([[0, 1], [-1, 0]])
+        rotated_p = normalized_lines @ rotation_matrix.T
+        self.assertTrue(np.allclose(rotated_p, circle.normals(points)))
+
+
+
     def test_ellipse3d(self):
         ellipse = test_ellipse3d()
         self.assertEqual(ellipse._focus1.shape, (1, 3))
@@ -179,6 +210,17 @@ class Geometrytest(unittest.TestCase):
         d, d2 = curves_derivative(ellipse, sample_points)
         self.assertTrue(d < 1e-4)
         self.assertTrue(d2 < 1e-4)
+
+        num_samples = 5000  # Can be adjusted for precision
+        points = estimate_length(ellipse, num_samples)
+        self.assertTrue(abs(np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1)) - ellipse.length() < 1e-4))
+
+        lines = np.diff(points, axis=0)
+        lengths = np.linalg.norm(lines, axis=1)
+        normalized_lines = lines / lengths[:, np.newaxis]
+        rotation_matrix = np.array([[0, -1], [1, 0]])
+        rotated_p = normalized_lines @ rotation_matrix.T
+        self.assertTrue(np.allclose(rotated_p, ellipse.normals(points)))
 
     def test_bspline_curve3d(self):
         # TODO
