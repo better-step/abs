@@ -169,24 +169,24 @@ class BSplineCurve(Curve):
     def __init__(self, bspline):
         # Attributes initialization for B-spline curve
         if isinstance(bspline, dict):
-            self._closed = float(bspline['closed'])
+            self._closed = bool(bspline['closed'])
             self._degree = int(bspline['degree'])
             self._continuity = int(bspline['continuity'])
             self._poles = np.array(bspline['poles'])
             self._knots = np.array(bspline['knots']).reshape(-1, 1).T
             self._weights = np.array(bspline['weights']).reshape(-1, 1)
             self._interval = np.array(bspline['interval']).reshape(-1, 1).T
-            self._rational = bspline['rational']
+            self._rational = bool(bspline['rational'])
             self._type = bspline['type']
         else:
-            self._closed = float(bspline.get('closed')[()])
+            self._closed = bool(bspline.get('closed')[()])
             self._degree = int(bspline.get('degree')[()])
             self._continuity = int(bspline.get('continuity')[()])
             self._poles = np.array(bspline.get('poles')[()])
             self._knots = np.array(bspline.get('knots')[()]).reshape(-1, 1).T
             self._weights = np.array(bspline.get('weights')[()]).reshape(-1, 1)
             self._interval = np.array(bspline.get('interval')[()]).reshape(-1, 1).T
-            self._rational = bspline.get('rational')[()]
+            self._rational = bool(bspline.get('rational')[()])
             self._type = bspline.get('type')[()].decode('utf8')
 
         # Create BSpline or NURBS curve object
@@ -225,6 +225,6 @@ class BSplineCurve(Curve):
         if sample_points.size == 0:
             return np.array([])
         # Utilize the geomdl built-in normal calculation
-        normals = [self._curve_obj.normal(u) for u in sample_points.flatten()]
+        normals = [self._curveObject.normal(u) for u in sample_points.flatten()]
         # Extract just the vector components if normals are returned as tuples (origin, vector)
         return np.array([norm[1] for norm in normals])

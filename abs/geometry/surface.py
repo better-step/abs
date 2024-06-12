@@ -66,7 +66,7 @@ class Cylinder(Surface):
     def __init__(self, cylinder):
         if isinstance(cylinder, dict):
             self._location = np.array(cylinder['location']).reshape(-1, 1).T
-            self._radius = cylinder['radius']
+            self._radius = float(cylinder['radius'])
             self._coefficients = np.array(cylinder['coefficients']).reshape(-1, 1).T
             self._trim_domain = np.array(cylinder['trim_domain'])
             self._x_axis = np.array(cylinder['x_axis']).reshape(-1, 1).T
@@ -75,7 +75,7 @@ class Cylinder(Surface):
             self._type = cylinder['type']
         else:
             self._location = np.array(cylinder.get('location')[()]).reshape(-1, 1).T
-            self._radius = cylinder.get('radius')[()]
+            self._radius = float(cylinder.get('radius')[()])
             self._coefficients = np.array(cylinder.get('coefficients')[()]).reshape(-1, 1).T
             self._trim_domain = np.array(cylinder.get('trim_domain')[()])
             self._x_axis = np.array(cylinder.get('x_axis')[()]).reshape(-1, 1).T
@@ -126,22 +126,22 @@ class Cone(Surface):
     def __init__(self, cone):
         if isinstance(cone, dict):
             self._location = np.array(cone['location']).reshape(-1, 1).T
-            self._radius = cone['radius']
+            self._radius = float(cone['radius'])
             self._coefficients = np.array(cone['coefficients']).reshape(-1, 1).T
             self._trim_domain = np.array(cone['trim_domain'])
             self._apex = np.array(cone['apex']).reshape(-1, 1).T
-            self._angle = cone['angle']
+            self._angle = float(cone['angle'])
             self._x_axis = np.array(cone['x_axis']).reshape(-1, 1).T
             self._y_axis = np.array(cone['y_axis']).reshape(-1, 1).T
             self._z_axis = np.array(cone['z_axis']).reshape(-1, 1).T
             self._type = cone['type']
         else:
             self._location = np.array(cone.get('location')[()]).reshape(-1, 1).T
-            self._radius = cone.get('radius')[()]
+            self._radius = float(cone.get('radius')[()])
             self._coefficients = np.array(cone.get('coefficients')[()]).reshape(-1, 1).T
             self._trim_domain = np.array(cone.get('trim_domain')[()])
             self._apex = np.array(cone.get('apex')[()]).reshape(-1, 1).T
-            self._angle = cone.get('angle')[()]
+            self._angle = float(cone.get('angle')[()])
             self._x_axis = np.array(cone.get('x_axis')[()]).reshape(-1, 1).T
             self._y_axis = np.array(cone.get('y_axis')[()]).reshape(-1, 1).T
             self._z_axis = np.array(cone.get('z_axis')[()]).reshape(-1, 1).T
@@ -195,7 +195,7 @@ class Sphere(Surface):
     def __init__(self, sphere):
         if isinstance(sphere, dict):
             self._location = np.array(sphere['location']).reshape(-1, 1).T
-            self._radius = sphere['radius']
+            self._radius = float(sphere['radius'])
             self._coefficients = np.array(sphere['coefficients']).reshape(-1, 1).T
             self._trim_domain = np.array(sphere['trim_domain'])
             self._x_axis = np.array(sphere['x_axis']).reshape(-1, 1).T
@@ -207,12 +207,12 @@ class Sphere(Surface):
             self._type = sphere['type']
         else:
             self._location = np.array(sphere.get('location')[()]).reshape(-1, 1).T
-            self._radius = sphere.get('radius')[()]
+            self._radius = float(sphere.get('radius')[()])
             self._coefficients = np.array(sphere.get('coefficients')[()]).reshape(-1, 1).T
             self._trim_domain = np.array(sphere.get('trim_domain')[()])
             self._x_axis = np.array(sphere.get('x_axis')[()]).reshape(-1, 1).T
             self._y_axis = np.array(sphere.get('y_axis')[()]).reshape(-1, 1).T
-            if hasattr(sphere, 'z_axis'):
+            if 'z_axis' in sphere:
                 self._z_axis = np.array(sphere.get('z_axis')[()]).reshape(-1, 1).T
             else:
                 self._z_axis = np.zeros((1, 3))
@@ -275,8 +275,8 @@ class Torus(Surface):
     def __init__(self, torus):
         if isinstance(torus, dict):
             self._location = np.array(torus['location']).reshape(-1, 1).T
-            self._max_radius = torus['max_radius']
-            self._min_radius = torus['min_radius']
+            self._max_radius = float(torus['max_radius'])
+            self._min_radius = float(torus['min_radius'])
             self._trim_domain = np.array(torus['trim_domain'])
             self._x_axis = np.array(torus['x_axis']).reshape(-1, 1).T
             self._y_axis = np.array(torus['y_axis']).reshape(-1, 1).T
@@ -284,8 +284,8 @@ class Torus(Surface):
             self._type = torus['type']
         else:
             self._location = np.array(torus.get('location')[()]).reshape(-1, 1).T
-            self._max_radius = torus.get('max_radius')[()]
-            self._min_radius = torus.get('min_radius')[()]
+            self._max_radius = float(torus.get('max_radius')[()])
+            self._min_radius = float(torus.get('min_radius')[()])
             self._trim_domain = np.array(torus.get('trim_domain')[()])
             self._x_axis = np.array(torus.get('x_axis')[()]).reshape(-1, 1).T
             self._y_axis = np.array(torus.get('y_axis')[()]).reshape(-1, 1).T
@@ -352,35 +352,35 @@ class Torus(Surface):
 class BSplineSurface(Surface):
     def __init__(self, bspline_surface):
         if isinstance(bspline_surface, dict):
-            self._continuity = bspline_surface['continuity']
+            self._continuity = int(bspline_surface['continuity'])
             self._face_domain = np.array(bspline_surface['face_domain']).reshape(-1, 1).T
-            self._is_trimmed = bspline_surface['is_trimmed']
+            self._is_trimmed = bool(bspline_surface['is_trimmed'])
             self._poles = np.array(bspline_surface['poles'])
             self._trim_domain = np.array(bspline_surface['trim_domain'])
-            self._u_closed = bspline_surface['u_closed']
-            self._u_degree = bspline_surface['u_degree']
+            self._u_closed = bool(bspline_surface['u_closed'])
+            self._u_degree = int(bspline_surface['u_degree'])
             self._u_knots = np.array(bspline_surface['u_knots']).reshape(-1, 1).T
-            self._u_rational = bspline_surface['u_rational']
-            self._v_closed = bspline_surface['v_closed']
-            self._v_degree = bspline_surface['v_degree']
+            self._u_rational = bool(bspline_surface['u_rational'])
+            self._v_closed = bool(bspline_surface['v_closed'])
+            self._v_degree = int(bspline_surface['v_degree'])
             self._v_knots = np.array(bspline_surface['v_knots']).reshape(-1, 1).T
-            self._v_rational = bspline_surface['v_rational']
+            self._v_rational = bool(bspline_surface['v_rational'])
             self._weights = np.array(bspline_surface['weights'])
             self._type = bspline_surface['type']
         else:
-            self._continuity = bspline_surface.get('continuity')[()]
+            self._continuity = int(bspline_surface.get('continuity')[()])
             self._face_domain = np.array(bspline_surface.get('face_domain')[()]).reshape(-1, 1).T
-            self._is_trimmed = bspline_surface.get('is_trimmed')[()]
+            self._is_trimmed = bool(bspline_surface.get('is_trimmed')[()])
             self._poles = np.array(bspline_surface.get('poles')[()])
             self._trim_domain = np.array(bspline_surface.get('trim_domain')[()])
-            self._u_closed = bspline_surface.get('u_closed')[()]
-            self._u_degree = bspline_surface.get('u_degree')[()]
+            self._u_closed = bool(bspline_surface.get('u_closed')[()])
+            self._u_degree = int(bspline_surface.get('u_degree')[()])
             self._u_knots = np.array(bspline_surface.get('u_knots')[()]).reshape(-1, 1).T
-            self._u_rational = bspline_surface.get('u_rational')[()]
-            self._v_closed = bspline_surface.get('v_closed')[()]
-            self._v_degree = bspline_surface.get('v_degree')[()]
+            self._u_rational = bool(bspline_surface.get('u_rational')[()])
+            self._v_closed =bool(bspline_surface.get('v_closed')[()])
+            self._v_degree = int(bspline_surface.get('v_degree')[()])
             self._v_knots = np.array(bspline_surface.get('v_knots')[()]).reshape(-1, 1).T
-            self._v_rational = bspline_surface.get('v_rational')[()]
+            self._v_rational = bool(bspline_surface.get('v_rational')[()])
             self._weights = np.column_stack((bspline_surface.get('weights').get('0')[()],
                                             bspline_surface.get('weights').get('1')[()])).reshape(-1, 1)
             self._type = bspline_surface.get('type')[()].decode('utf8')
