@@ -35,7 +35,7 @@ class Line(Curve):
         return self._location + sample_points * self._direction
 
     def length(self):
-        return np.linalg.norm((self._interval[0, 1]-self._interval[0, 0]) * self._direction)
+        return np.linalg.norm((self._interval[0, 1] - self._interval[0, 0]) * self._direction)
 
     def derivative(self, sample_points, order=1):
         if order == 1:
@@ -78,7 +78,7 @@ class Circle(Curve):
 
     def length(self):
         # Circumference of the circle
-        return np.abs((self._interval[0,1]-self._interval[0,0])) * self._radius
+        return np.abs((self._interval[0, 1] - self._interval[0, 0])) * self._radius
 
     def derivative(self, sample_points, order=1):
         if order == 0:
@@ -138,7 +138,7 @@ class Ellipse(Curve):
     def length(self):
         # Approximate length by summing distances between sampled points
         num_samples = 100  # Can be adjusted for precision
-        param_range = np.linspace(self._interval[0,0], self._interval[0,1], num_samples)
+        param_range = np.linspace(self._interval[0, 0], self._interval[0, 1], num_samples)
         points = self.sample(param_range.reshape(-1, 1))
         return np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1))
 
@@ -169,9 +169,9 @@ class BSplineCurve(Curve):
     def __init__(self, bspline):
         # Attributes initialization for B-spline curve
         if isinstance(bspline, dict):
-            self._closed = bspline['closed']
-            self._degree = bspline['degree']
-            self._continuity = bspline['continuity']
+            self._closed = float(bspline['closed'])
+            self._degree = int(bspline['degree'])
+            self._continuity = int(bspline['continuity'])
             self._poles = np.array(bspline['poles'])
             self._knots = np.array(bspline['knots']).reshape(-1, 1).T
             self._weights = np.array(bspline['weights']).reshape(-1, 1)
@@ -179,9 +179,9 @@ class BSplineCurve(Curve):
             self._rational = bspline['rational']
             self._type = bspline['type']
         else:
-            self._closed = bspline.get('closed')[()]
-            self._degree = bspline.get('degree')[()]
-            self._continuity = bspline.get('continuity')[()]
+            self._closed = float(bspline.get('closed')[()])
+            self._degree = int(bspline.get('degree')[()])
+            self._continuity = int(bspline.get('continuity')[()])
             self._poles = np.array(bspline.get('poles')[()])
             self._knots = np.array(bspline.get('knots')[()]).reshape(-1, 1).T
             self._weights = np.array(bspline.get('weights')[()]).reshape(-1, 1)
@@ -190,7 +190,7 @@ class BSplineCurve(Curve):
             self._type = bspline.get('type')[()].decode('utf8')
 
         # Create BSpline or NURBS curve object
-        if  self._rational:
+        if self._rational:
             self._curveObject = NURBS.Curve(normalize_kv=False)
         else:
             self._curveObject = BSpline.Curve(normalize_kv=False)
@@ -211,12 +211,12 @@ class BSplineCurve(Curve):
     def length(self):
         # Approximate length by summing distances between sampled points
         num_samples = 100  # Can be adjusted for precision
-        param_range = np.linspace(self._interval[0,0], self._interval[0,1], num_samples)
+        param_range = np.linspace(self._interval[0, 0], self._interval[0, 1], num_samples)
         points = self.sample(param_range.reshape(-1, 1))
         return np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1))
 
     def derivative(self, sample_points, order=1):
-        assert(sample_points.shape[1]==1)
+        assert (sample_points.shape[1] == 1)
         return np.array([
             self._curveObject.derivatives(sample_points[i, 0], order)[-1] for i in range(sample_points.shape[0])
         ])
@@ -228,4 +228,3 @@ class BSplineCurve(Curve):
         normals = [self._curve_obj.normal(u) for u in sample_points.flatten()]
         # Extract just the vector components if normals are returned as tuples (origin, vector)
         return np.array([norm[1] for norm in normals])
-
