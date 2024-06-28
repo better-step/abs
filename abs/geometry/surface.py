@@ -10,7 +10,10 @@ class Surface:
         raise NotImplementedError("Derivative method must be implemented by subclasses")
 
     def normal(self, points):
-        raise NotImplementedError("Normal method must be implemented by subclasses")
+        derivatives = self.derivative(points, order=1)
+        normals = np.cross(derivatives[:, :, 0], derivatives[:, :, 1])
+        normals = normals / np.linalg.norm(normals, axis=1)[:, np.newaxis]
+        return normals
 
 
 class Plane(Surface):
@@ -111,12 +114,6 @@ class Cylinder(Surface):
         else:
             raise ValueError("Order must be 0, 1, or 2")
 
-    def normal(self, sample_points):
-        # For a cylinder, compute tangent vectors and their cross product for normals
-        derivatives = self.derivative(sample_points, order=1)
-        normals = np.cross(derivatives[:, :, 0], derivatives[:, :, 1])
-        normals = normals / np.linalg.norm(normals, axis=1)[:, np.newaxis]
-        return normals
 
     def shape_type(self):
         return "Cylinder"
@@ -181,12 +178,7 @@ class Cone(Surface):
         else:
             raise ValueError("Order must be 0, 1, or 2")
 
-    def normal(self, sample_points):
-        # For a cylinder, compute tangent vectors and their cross product for normals
-        derivatives = self.derivative(sample_points, order=1)
-        normals = np.cross(derivatives[:, :, 0], derivatives[:, :, 1])
-        normals = normals / np.linalg.norm(normals, axis=1)[:, np.newaxis]
-        return normals
+
     def shape_type(self):
         return "Cone"
 
@@ -270,7 +262,6 @@ class Sphere(Surface):
         return "Sphere"
 
 
-
 class Torus(Surface):
     def __init__(self, torus):
         if isinstance(torus, dict):
@@ -337,13 +328,6 @@ class Torus(Surface):
         else:
             raise ValueError("Order must be 0, 1, or 2")
 
-    def normal(self, sample_points):
-        # Compute derivatives for tangent vectors
-        derivatives = self.derivative(sample_points, order=1)
-        # Compute normals through cross product and normalize
-        normals = np.cross(derivatives[:, :, 0], derivatives[:, :, 1])
-        normals = normals / np.linalg.norm(normals, axis=1)[:, np.newaxis]
-        return normals
 
     def shape_type(self):
         return "Torus"
@@ -377,12 +361,12 @@ class BSplineSurface(Surface):
             self._u_degree = int(bspline_surface.get('u_degree')[()])
             self._u_knots = np.array(bspline_surface.get('u_knots')[()]).reshape(-1, 1).T
             self._u_rational = bool(bspline_surface.get('u_rational')[()])
-            self._v_closed =bool(bspline_surface.get('v_closed')[()])
+            self._v_closed = bool(bspline_surface.get('v_closed')[()])
             self._v_degree = int(bspline_surface.get('v_degree')[()])
             self._v_knots = np.array(bspline_surface.get('v_knots')[()]).reshape(-1, 1).T
             self._v_rational = bool(bspline_surface.get('v_rational')[()])
             self._weights = np.column_stack((bspline_surface.get('weights').get('0')[()],
-                                            bspline_surface.get('weights').get('1')[()])).reshape(-1, 1)
+                                             bspline_surface.get('weights').get('1')[()])).reshape(-1, 1)
             self._type = bspline_surface.get('type')[()].decode('utf8')
 
         self._surface_obj = BSpline.Surface(normalize_kv=False)
@@ -422,9 +406,6 @@ class BSplineSurface(Surface):
         normal_vectors = normals[:, 1]  # Assuming the second element of each tuple is the vector component.
 
         return normal_vectors
-
-
-
 
     def shape_type(self):
         return "BSplineSurface"

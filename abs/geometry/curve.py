@@ -1,5 +1,6 @@
 import numpy as np
 from geomdl import BSpline, NURBS
+from scipy.integrate import quad
 
 
 class Curve:
@@ -7,7 +8,10 @@ class Curve:
         raise NotImplementedError("Sample method must be implemented by subclasses")
 
     def length(self):
-        raise NotImplementedError("Length method must be implemented by subclasses")
+        num_samples = 100
+        param_range = np.linspace(self._interval[0, 0], self._interval[0, 1], num_samples)
+        points = self.sample(param_range.reshape(-1, 1))
+        return np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1))
 
     def derivative(self, points, order=1):
         raise NotImplementedError("Derivative method must be implemented by subclasses")
@@ -78,7 +82,12 @@ class Circle(Curve):
 
     def length(self):
         # Circumference of the circle
-        return np.abs((self._interval[0, 1] - self._interval[0, 0])) * self._radius
+        norm_x = np.linalg.norm(self._x_axis)
+        norm_y = np.linalg.norm(self._y_axis)
+        integrand = lambda t: np.sqrt(
+            (-self._radius * np.sin(t) * norm_x) ** 2 + (self._radius * np.cos(t) * norm_y) ** 2)
+        circumference, _ = quad(integrand, self._interval[0, 0], self._interval[0, 1])
+        return circumference
 
     def derivative(self, sample_points, order=1):
         if order == 0:
@@ -95,9 +104,10 @@ class Circle(Curve):
 
     def normal(self, sample_points):
         # Normals are radially outward, computed as the difference from the center to the sample points.
+        # FIXME: This is not the correct normal calculation for a circle.
         circle_points = self.sample(sample_points) - self._location
         norms = np.linalg.norm(circle_points, axis=1, keepdims=True)
-        norms[norms == 0] = 1  # Avoid division by zero
+        norms = np.where(norms == 0, 1, norms)
         return circle_points / norms
 
 
@@ -136,11 +146,13 @@ class Ellipse(Curve):
         return ellipse_points
 
     def length(self):
-        # Approximate length by summing distances between sampled points
-        num_samples = 100  # Can be adjusted for precision
-        param_range = np.linspace(self._interval[0, 0], self._interval[0, 1], num_samples)
-        points = self.sample(param_range.reshape(-1, 1))
-        return np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1))
+        # Circumference of the ellipse
+        norm_x = np.linalg.norm(self._x_axis)
+        norm_y = np.linalg.norm(self._y_axis)
+        integrand = lambda t: np.sqrt(
+            (-self._maj_radius * np.sin(t) * norm_x) ** 2 + (self._min_radius * np.cos(t) * norm_y) ** 2)
+        circumference, _ = quad(integrand, self._interval[0, 0], self._interval[0, 1])
+        return circumference
 
     def derivative(self, sample_points, order=1):
         if order % 4 == 0:
@@ -159,6 +171,7 @@ class Ellipse(Curve):
 
     def normal(self, sample_points):
         # Similar approach as Circle, but considering the ellipse's shape.
+        # FIXME: This is not the correct normal calculation for an ellipse.
         ellipse_points = self.sample(sample_points) - self._center
         norms = np.linalg.norm(ellipse_points, axis=1, keepdims=True)
         norms[norms == 0] = 1
@@ -208,13 +221,6 @@ class BSplineCurve(Curve):
         # Evaluate the curve at the given sample points
         return np.array(self._curveObject.evaluate_list(sample_points[:, 0].tolist()))
 
-    def length(self):
-        # Approximate length by summing distances between sampled points
-        num_samples = 100  # Can be adjusted for precision
-        param_range = np.linspace(self._interval[0, 0], self._interval[0, 1], num_samples)
-        points = self.sample(param_range.reshape(-1, 1))
-        return np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1))
-
     def derivative(self, sample_points, order=1):
         assert (sample_points.shape[1] == 1)
         return np.array([
@@ -224,7 +230,10 @@ class BSplineCurve(Curve):
     def normal(self, sample_points):
         if sample_points.size == 0:
             return np.array([])
+
         # Utilize the geomdl built-in normal calculation
-        normals = [self._curveObject.normal(u) for u in sample_points.flatten()]
+        normal_vector = self.derivative(sample_points, order=1)
+        normal_vector = np.array([-normal_vector[:, 1], normal_vector[:, 0]]).T
+
         # Extract just the vector components if normals are returned as tuples (origin, vector)
-        return np.array([norm[1] for norm in normals])
+        return normal_vector

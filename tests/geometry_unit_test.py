@@ -1,7 +1,6 @@
-import unittest
-
-import numpy as np
 from tests.test_utilities import *
+import unittest
+import numpy as np
 
 
 def surface_derivative(surface, sample_points):
@@ -57,12 +56,13 @@ def curves_derivative(curve, sample_points):
 
 def generate_points_on_curve(curve, num_samples=1000):
     param_range = np.linspace(curve._interval[0, 0], curve._interval[0, 1], num_samples)
+    param_range = param_range[:, None]
     points = curve.sample(param_range.reshape(-1, 1))
-    return points
+    return param_range, points
 
 
 def estimate_normal(curve, num_samples=1000):
-    points = generate_points_on_curve(curve, num_samples)
+    _, points = generate_points_on_curve(curve, num_samples)
     lines = np.diff(points, axis=0)
     lengths = np.linalg.norm(lines, axis=1)
     normalized_lines = lines / lengths[:, np.newaxis]
@@ -79,23 +79,29 @@ class Geometrytest(unittest.TestCase):
         self.assertEqual(line._direction.shape, (1, 2))
         self.assertEqual(line._interval.shape, (1, 2))
         sample_points = np.linspace(0, 1, 10).reshape(-1, 1)
+
         # sampling
         self.assertEqual(line.sample(sample_points).shape, (10, 2))
+
         # derivative
         self.assertEqual(line.derivative(sample_points, 0).shape, (10, 2))
         self.assertEqual(line.derivative(sample_points, 1).shape, (10, 2))
         self.assertEqual(line.derivative(sample_points, 2).shape, (10, 2))
-
         d, d2 = curves_derivative(line, sample_points)
         self.assertTrue(d < 1e-7)
         self.assertTrue(d2 < 1e-7)
 
+        # length
         num_samples = 1000  # Can be adjusted for precision
-        points = generate_points_on_curve(line, num_samples)
+        param_points, points = generate_points_on_curve(line, num_samples)
         self.assertTrue(abs(np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1)) - line.length() < 1e-4))
 
+        # normals
         rotated_p = estimate_normal(line, num_samples)
-        self.assertTrue(abs(np.sum(rotated_p - line.normal(points)[1:, :]) < 1e-4))
+        self.assertTrue(abs(np.sum(rotated_p - line.normal(param_points)[1:, :]) < 1e-4))
+
+        # check if normals are unit length
+        self.assertTrue(np.allclose(np.linalg.norm(line.normal(param_points), axis=1), 1,  atol=1e-8))
 
     def test_circle2d(self):
         circle = test_circle2d()
@@ -115,19 +121,21 @@ class Geometrytest(unittest.TestCase):
         self.assertEqual(circle.derivative(sample_points, 2).shape, (10, 2))
         self.assertEqual(circle.derivative(sample_points, 3).shape, (10, 2))
         self.assertEqual(circle.derivative(sample_points, 4).shape, (10, 2))
-
         d, d2 = curves_derivative(circle, sample_points)
         self.assertTrue(d < 1e-4)
         self.assertTrue(d2 < 1e-4)
 
         # length
         num_samples = 1000
-        points = generate_points_on_curve(circle, num_samples)
+        param_points, points = generate_points_on_curve(circle, num_samples)
         self.assertTrue(abs(np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1)) - circle.length() < 1e-4))
 
         # normals
         rotated_p = estimate_normal(circle, num_samples)
-        self.assertTrue(abs(np.sum(rotated_p - circle.normal(points)[1:, :]) < 1e-4))
+        self.assertTrue(abs(np.sum(rotated_p - circle.normal(param_points)[1:, :]) < 1e-4))
+
+        # check if normals are unit length
+        self.assertTrue(np.allclose(np.linalg.norm(circle.normal(param_points), axis=1), 1, atol=1e-8))
 
     def test_ellipse2d(self):
         ellipse = test_ellipse2d()
@@ -140,25 +148,28 @@ class Geometrytest(unittest.TestCase):
         self.assertEqual(ellipse._y_axis.shape, (1, 2))
         sample_points = np.linspace(0, 2 * np.pi, 10).reshape(-1, 1)
         self.assertEqual(ellipse.sample(sample_points).shape, (10, 2))
+
         # derivative
         self.assertEqual(ellipse.derivative(sample_points, 0).shape, (10, 2))
         self.assertEqual(ellipse.derivative(sample_points, 1).shape, (10, 2))
         self.assertEqual(ellipse.derivative(sample_points, 2).shape, (10, 2))
         self.assertEqual(ellipse.derivative(sample_points, 3).shape, (10, 2))
         self.assertEqual(ellipse.derivative(sample_points, 4).shape, (10, 2))
-
         d, d2 = curves_derivative(ellipse, sample_points)
         self.assertTrue(d < 1e-4)
         self.assertTrue(d2 < 1e-4)
 
         # length
         num_samples = 1000  # Can be adjusted for precision
-        points = generate_points_on_curve(ellipse, num_samples)
+        param_points, points = generate_points_on_curve(ellipse, num_samples)
         self.assertTrue(abs(np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1)) - ellipse.length() < 1e-4))
 
         # normals
         rotated_p = estimate_normal(ellipse, num_samples)
-        self.assertTrue(abs(np.sum(rotated_p - ellipse.normal(points)[1:, :]) < 1e-4))
+        self.assertTrue(abs(np.sum(rotated_p - ellipse.normal(param_points)[1:, :]) < 1e-4))
+
+        # check if normals are unit length
+        self.assertTrue(np.allclose(np.linalg.norm(ellipse.normal(param_points), axis=1), 1, atol=1e-8))
 
     def test_bspline_curve2d(self):
         bspline_curve2d = test_bspline_curve2d()
@@ -182,16 +193,19 @@ class Geometrytest(unittest.TestCase):
         self.assertEqual(bspline_curve2d.derivative(sample_points, 1).shape, (50, 2))
         d, d2 = curves_derivative(bspline_curve2d, sample_points)
         self.assertTrue(d < 1e-4)
-        #self.assertTrue(d2 < 1e-4)
+        # self.assertTrue(d2 < 1e-4)
 
         # length
         num_samples = 1000  # Can be adjusted for precision
-        points = generate_points_on_curve(bspline_curve2d, num_samples)
+        param_points, points = generate_points_on_curve(bspline_curve2d, num_samples)
         self.assertTrue(abs(np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1)) - bspline_curve2d.length() < 1e-4))
 
         # normals
         rotated_p = estimate_normal(bspline_curve2d, num_samples)
-        self.assertTrue(abs(np.sum(rotated_p - bspline_curve2d.normal(points)[1:, :]) < 1e-4))
+        self.assertTrue(abs(np.sum(rotated_p - bspline_curve2d.normal(param_points)[1:, :]) < 1e-4))
+
+        # check if normals are unit length
+        self.assertTrue(np.allclose(np.linalg.norm(bspline_curve2d.normal(param_points), axis=1), 1, atol=1e-8))
 
     def test_line3d(self):
         line = test_line3d()
@@ -423,7 +437,7 @@ class Geometrytest(unittest.TestCase):
         self.assertEqual(bspline_surface._v_knots.shape[0], 1)
         self.assertEqual(type(bspline_surface._v_rational), bool)
 
-        # TODO: check weights, thers is inconsistency when initializing weights
+        # TODO: check weights, there is inconsistency when initializing weights
 
         # sample points
         umin_value, umax_value, vmin_value, vmax_value = bspline_surface._trim_domain.reshape(-1, 1)

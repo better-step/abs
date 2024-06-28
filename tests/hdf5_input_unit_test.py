@@ -1,10 +1,10 @@
 import os
 from pathlib import Path
 import h5py
-import unittest
-from abs.geometry import *
-import numpy as np
 from tests.geometry_unit_test import *
+from abs.geometry import *
+import unittest
+import numpy as np
 
 
 def read_file(file_path):
@@ -53,12 +53,15 @@ class Hdf5test(unittest.TestCase):
 
         # length
         num_samples = 1000  # Can be adjusted for precision
-        points = generate_points_on_curve(line, num_samples)
+        param_points, points = generate_points_on_curve(line, num_samples)
         self.assertTrue(abs(np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1)) - line.length() < 1e-4))
 
         # normals
         rotated_p = estimate_normal(line, num_samples)
-        self.assertTrue(abs(np.sum(rotated_p - line.normal(points)[1:, :]) < 1e-4))
+        self.assertTrue(abs(np.sum(rotated_p - line.normal(param_points)[1:, :]) < 1e-4))
+
+        # check if normals are unit length
+        self.assertTrue(np.allclose(np.linalg.norm(line.normal(param_points), axis=1), 1, atol=1e-8))
 
     def test_circle2d(self):
         sample_name = 'cylinder_Hole.hdf5'
@@ -89,12 +92,15 @@ class Hdf5test(unittest.TestCase):
 
         # length
         num_samples = 1000  # Can be adjusted for precision
-        points = generate_points_on_curve(circle, num_samples)
+        param_points, points = generate_points_on_curve(circle, num_samples)
         self.assertTrue(abs(np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1)) - circle.length() < 1e-4))
 
         # normals
         rotated_p = estimate_normal(circle, num_samples)
-        self.assertTrue(abs(np.sum(rotated_p - circle.normal(points)[1:, :]) < 1e-4))
+        self.assertTrue(abs(np.sum(rotated_p - circle.normal(param_points)[1:, :]) < 1e-4))
+
+        # check if normals are unit length
+        self.assertTrue(np.allclose(np.linalg.norm(circle.normal(param_points), axis=1), 1, atol=1e-8))
 
     def test_ellipse2d(self):
         pass
@@ -130,12 +136,15 @@ class Hdf5test(unittest.TestCase):
 
         # length
         num_samples = 1000  # Can be adjusted for precision
-        points = generate_points_on_curve(bspline_curve2d, num_samples)
+        param_points, points = generate_points_on_curve(bspline_curve2d, num_samples)
         self.assertTrue(abs(np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1)) - bspline_curve2d.length() < 1e-4))
 
         # normals
         rotated_p = estimate_normal(bspline_curve2d, num_samples)
-        self.assertTrue(abs(np.sum(rotated_p - bspline_curve2d.normal(points)[1:, :]) < 1e-4))
+        self.assertTrue(abs(np.sum(rotated_p - bspline_curve2d.normal(param_points)[1:, :]) < 1e-4))
+
+        # check if normals are unit length
+        self.assertTrue(np.allclose(np.linalg.norm(bspline_curve2d.normal(param_points), axis=1), 1,  atol=1e-8))
 
     # 3D curves
     def test_line3d(self):

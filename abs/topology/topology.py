@@ -1,7 +1,5 @@
 import numpy as np
 import h5py
-from scipy.spatial import cKDTree
-from munch import Munch
 
 
 class Topology:
@@ -44,7 +42,7 @@ class Topology:
                 halfEdgeMapValue = halfEdgeMap.get(halfedge_id, {'loops': set()})
                 halfEdgeMapValue['loops'].add(loop_index)
                 halfEdgeMap[halfedge_id] = halfEdgeMapValue
-        return Munch.fromDict(halfEdgeMap)
+        return halfEdgeMap
 
     def _create_edge_map(self):
         """
@@ -56,7 +54,7 @@ class Topology:
             edgeMapValue = edgeMap.get(edge_id, {'halfedges': set()})
             edgeMapValue['halfedges'].add(halfEdge_index)
             edgeMap[edge_id] = edgeMapValue
-        return Munch.fromDict(edgeMap)
+        return edgeMap
 
     def _create_loop_map(self):
         """
@@ -68,7 +66,7 @@ class Topology:
                 loopMapValue = loopMap.get(loop_id, {'faces': set()})
                 loopMapValue['faces'].add(face_index)
                 loopMap[loop_id] = loopMapValue
-        return Munch.fromDict(loopMap)
+        return loopMap
 
     def _create_face_map(self):
         """
@@ -81,7 +79,7 @@ class Topology:
                 faceMapValue = faceMap.get(face_id, {'shells': set()})
                 faceMapValue['shells'].add(shell_index)
                 faceMap[face_id] = faceMapValue
-        return Munch.fromDict(faceMap)
+        return faceMap
 
     @property
     def edges(self):
