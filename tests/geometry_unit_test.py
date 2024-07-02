@@ -1,6 +1,7 @@
 from tests.test_utilities import *
 import unittest
 import numpy as np
+import warnings
 
 
 def surface_derivative(surface, sample_points):
@@ -94,7 +95,8 @@ class Geometrytest(unittest.TestCase):
         # length
         num_samples = 1000  # Can be adjusted for precision
         param_points, points = generate_points_on_curve(line, num_samples)
-        self.assertTrue(abs(np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1)) - line.length() < 1e-4))
+        self.assertTrue(abs(np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1)) -
+                            (line._length if line._length != -1 else line.length()) < 1e-4))
 
         # normals
         rotated_p = estimate_normal(line, num_samples)
@@ -128,7 +130,8 @@ class Geometrytest(unittest.TestCase):
         # length
         num_samples = 1000
         param_points, points = generate_points_on_curve(circle, num_samples)
-        self.assertTrue(abs(np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1)) - circle.length() < 1e-4))
+        self.assertTrue(abs(np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1)) -
+                            (circle._length if circle._length != -1 else circle.length()) < 1e-4))
 
         # normals
         rotated_p = estimate_normal(circle, num_samples)
@@ -162,7 +165,8 @@ class Geometrytest(unittest.TestCase):
         # length
         num_samples = 1000  # Can be adjusted for precision
         param_points, points = generate_points_on_curve(ellipse, num_samples)
-        self.assertTrue(abs(np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1)) - ellipse.length() < 1e-4))
+        self.assertTrue(abs(np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1)) -
+                            (ellipse._length if ellipse._length != -1 else ellipse.length()) < 1e-4))
 
         # normals
         rotated_p = estimate_normal(ellipse, num_samples)

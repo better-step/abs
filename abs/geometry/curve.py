@@ -26,11 +26,13 @@ class Line(Curve):
             self._location = np.array(line['location']).reshape(-1, 1).T
             self._interval = np.array(line['interval']).reshape(-1, 1).T
             self._direction = np.array(line['direction']).reshape(-1, 1).T
+            self._length = -1
             self._type = line['type']
         else:
             self._location = np.array(line.get('location')[()]).reshape(-1, 1).T
             self._interval = np.array(line.get('interval')[()]).reshape(-1, 1).T
             self._direction = np.array(line.get('direction')[()]).reshape(-1, 1).T
+            self._length = -1
             self._type = line.get('type')[()].decode('utf8')
 
     def sample(self, sample_points):
@@ -39,7 +41,8 @@ class Line(Curve):
         return self._location + sample_points * self._direction
 
     def length(self):
-        return np.linalg.norm((self._interval[0, 1] - self._interval[0, 0]) * self._direction)
+        self._length = np.linalg.norm((self._interval[0, 1] - self._interval[0, 0]) * self._direction)
+        return self._length
 
     def derivative(self, sample_points, order=1):
         if order == 1:
@@ -60,6 +63,7 @@ class Circle(Curve):
             self._interval = np.array(circle['interval']).reshape(-1, 1).T
             self._x_axis = np.array(circle['x_axis']).reshape(-1, 1).T
             self._y_axis = np.array(circle['y_axis']).reshape(-1, 1).T
+            self._length = -1
             self._type = circle['type']
             if 'z_axis' in circle:
                 self._z_axis = np.array(circle['z_axis']).reshape(-1, 1).T
@@ -69,6 +73,7 @@ class Circle(Curve):
             self._interval = np.array(circle.get('interval')[()]).reshape(-1, 1).T
             self._x_axis = np.array(circle.get('x_axis')[()]).reshape(-1, 1).T
             self._y_axis = np.array(circle.get('y_axis')[()]).reshape(-1, 1).T
+            self._length = -1
             self._type = circle.get('type')[()].decode('utf8')
             if 'z_axis' in circle:
                 self._z_axis = np.array(circle.get('z_axis')[()]).reshape(-1, 1).T
@@ -81,13 +86,14 @@ class Circle(Curve):
         return circle_points
 
     def length(self):
-        # Circumference of the circle
         norm_x = np.linalg.norm(self._x_axis)
         norm_y = np.linalg.norm(self._y_axis)
         integrand = lambda t: np.sqrt(
-            (-self._radius * np.sin(t) * norm_x) ** 2 + (self._radius * np.cos(t) * norm_y) ** 2)
+            (self.derivative(t, order=1)[:, 0] * norm_x) ** 2 + (self.derivative(t, order=1)[:, 1] * norm_y) ** 2
+        )
         circumference, _ = quad(integrand, self._interval[0, 0], self._interval[0, 1])
-        return circumference
+        self._length = circumference
+        return self._length
 
     def derivative(self, sample_points, order=1):
         if order == 0:
@@ -121,6 +127,7 @@ class Ellipse(Curve):
             self._min_radius = float(ellipse['min_radius'])
             self._x_axis = np.array(ellipse['x_axis']).reshape(-1, 1).T
             self._y_axis = np.array(ellipse['y_axis']).reshape(-1, 1).T
+            self._length = -1
             self._type = ellipse['type']
 
             if 'z_axis' in ellipse:
@@ -133,6 +140,7 @@ class Ellipse(Curve):
             self._min_radius = float(ellipse.get('min_radius')[()])
             self._x_axis = np.array(ellipse.get('x_axis')[()]).reshape(-1, 1).T
             self._y_axis = np.array(ellipse.get('y_axis')[()]).reshape(-1, 1).T
+            self._length = -1
             self._type = ellipse.get('type')[()].decode('utf8')
 
             if 'z_axis' in ellipse:
@@ -146,13 +154,14 @@ class Ellipse(Curve):
         return ellipse_points
 
     def length(self):
-        # Circumference of the ellipse
         norm_x = np.linalg.norm(self._x_axis)
         norm_y = np.linalg.norm(self._y_axis)
         integrand = lambda t: np.sqrt(
-            (-self._maj_radius * np.sin(t) * norm_x) ** 2 + (self._min_radius * np.cos(t) * norm_y) ** 2)
+            (self.derivative(t, order=1)[:, 0] * norm_x) ** 2 + (self.derivative(t, order=1)[:, 1] * norm_y) ** 2
+        )
         circumference, _ = quad(integrand, self._interval[0, 0], self._interval[0, 1])
-        return circumference
+        self._length = circumference
+        return self._length
 
     def derivative(self, sample_points, order=1):
         if order % 4 == 0:
@@ -237,3 +246,7 @@ class BSplineCurve(Curve):
 
         # Extract just the vector components if normals are returned as tuples (origin, vector)
         return normal_vector
+
+    def length(self):
+        self._length, _ = quad(lambda t: np.linalg.norm(self.derivative(np.array([[t]]), 1)), self._interval[0, 0], self._interval[0, 1])
+        return self._length
