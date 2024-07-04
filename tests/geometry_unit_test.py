@@ -103,7 +103,7 @@ class Geometrytest(unittest.TestCase):
         self.assertTrue(abs(np.sum(rotated_p - line.normal(param_points)[1:, :]) < 1e-4))
 
         # check if normals are unit length
-        self.assertTrue(np.allclose(np.linalg.norm(line.normal(param_points), axis=1), 1,  atol=1e-8))
+        self.assertTrue(np.allclose(np.linalg.norm(line.normal(param_points), axis=1), 1, atol=1e-8))
 
     def test_circle2d(self):
         circle = test_circle2d()
@@ -200,7 +200,7 @@ class Geometrytest(unittest.TestCase):
         # self.assertTrue(d2 < 1e-4)
 
         # length
-        num_samples = 1000  # Can be adjusted for precision
+        num_samples = 1000
         param_points, points = generate_points_on_curve(bspline_curve2d, num_samples)
         self.assertTrue(abs(np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1)) - bspline_curve2d.length() < 1e-4))
 
@@ -325,6 +325,8 @@ class Geometrytest(unittest.TestCase):
         self.assertTrue(du < 1e-7)
         self.assertTrue(dv < 1e-7)
 
+        self.assertEqual(plane.area(), 1)
+
     def test_cylinder(self):
         cylinder = test_cylinder()
         self.assertEqual(cylinder._location.shape, (1, 3))
@@ -348,6 +350,8 @@ class Geometrytest(unittest.TestCase):
         self.assertTrue(dv < 1e-6)
         self.assertTrue(d2u < 1e-6)
         self.assertTrue(d2v < 1e-6)
+
+        self.assertEqual(cylinder.area(), 1)
 
     def test_cone(self):
         cone = test_cone()
@@ -374,6 +378,7 @@ class Geometrytest(unittest.TestCase):
         self.assertTrue(dv < 1e-6)
         self.assertTrue(d2u < 1e-6)
         self.assertTrue(d2v < 1e-6)
+
 
     def test_sphere(self):
         sphere = test_sphere()
@@ -427,6 +432,7 @@ class Geometrytest(unittest.TestCase):
     def test_bspline_surface(self):
         bspline_surface = test_bspline_surface()
 
+        x = bspline_surface.area()
         self.assertEqual(type(bspline_surface._continuity), int)
         self.assertEqual(bspline_surface._face_domain.shape, (1, 4))
         self.assertEqual(type(bspline_surface._is_trimmed), bool)

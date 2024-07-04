@@ -8,10 +8,13 @@ class Curve:
         raise NotImplementedError("Sample method must be implemented by subclasses")
 
     def length(self):
-        num_samples = 100
-        param_range = np.linspace(self._interval[0, 0], self._interval[0, 1], num_samples)
-        points = self.sample(param_range.reshape(-1, 1))
-        return np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1))
+        if self._length == -1:
+            integrand = lambda t: np.sqrt(
+                (lambda d: (d[:, 0] ** 2 + d[:, 1] ** 2))(self.derivative(t, order=1))
+            )
+            circumference, _ = quad(integrand, self._interval[0, 0], self._interval[0, 1])
+            self._length = circumference
+        return self._length
 
     def derivative(self, points, order=1):
         raise NotImplementedError("Derivative method must be implemented by subclasses")
@@ -41,7 +44,8 @@ class Line(Curve):
         return self._location + sample_points * self._direction
 
     def length(self):
-        self._length = np.linalg.norm((self._interval[0, 1] - self._interval[0, 0]) * self._direction)
+        if self._length == -1:
+            self._length = np.linalg.norm((self._interval[0, 1] - self._interval[0, 0]) * self._direction)
         return self._length
 
     def derivative(self, sample_points, order=1):
@@ -50,7 +54,6 @@ class Line(Curve):
         return np.zeros([sample_points.shape[0], self._location.shape[1]])
 
     def normal(self, sample_points):
-        # Assuming the direction is (dx, dy), a perpendicular direction can be (dy, -dx) or (-dy, dx).
         normal_vector = np.array([-self._direction[0, 1], self._direction[0, 0]])
         return np.tile(normal_vector, (sample_points.shape[0], 1))
 
@@ -85,16 +88,6 @@ class Circle(Curve):
             np.cos(sample_points) * self._x_axis + np.sin(sample_points) * self._y_axis)
         return circle_points
 
-    def length(self):
-        norm_x = np.linalg.norm(self._x_axis)
-        norm_y = np.linalg.norm(self._y_axis)
-        integrand = lambda t: np.sqrt(
-            (self.derivative(t, order=1)[:, 0] * norm_x) ** 2 + (self.derivative(t, order=1)[:, 1] * norm_y) ** 2
-        )
-        circumference, _ = quad(integrand, self._interval[0, 0], self._interval[0, 1])
-        self._length = circumference
-        return self._length
-
     def derivative(self, sample_points, order=1):
         if order == 0:
             return self.sample(sample_points)
@@ -109,12 +102,11 @@ class Circle(Curve):
             return self._radius * (np.sin(sample_points) * self._x_axis - np.cos(sample_points) * self._y_axis)
 
     def normal(self, sample_points):
-        # Normals are radially outward, computed as the difference from the center to the sample points.
-        # FIXME: This is not the correct normal calculation for a circle.
-        circle_points = self.sample(sample_points) - self._location
-        norms = np.linalg.norm(circle_points, axis=1, keepdims=True)
-        norms = np.where(norms == 0, 1, norms)
-        return circle_points / norms
+        rotation_matrix = np.array([[0, 1], [-1, 0]])
+        normal_vector = self.derivative(sample_points, order=1) @ rotation_matrix.T
+        normal_vector /= np.linalg.norm(normal_vector, axis=1, keepdims=True)
+
+        return normal_vector
 
 
 class Ellipse(Curve):
@@ -153,16 +145,6 @@ class Ellipse(Curve):
                          self._min_radius * np.sin(sample_points) * self._y_axis
         return ellipse_points
 
-    def length(self):
-        norm_x = np.linalg.norm(self._x_axis)
-        norm_y = np.linalg.norm(self._y_axis)
-        integrand = lambda t: np.sqrt(
-            (self.derivative(t, order=1)[:, 0] * norm_x) ** 2 + (self.derivative(t, order=1)[:, 1] * norm_y) ** 2
-        )
-        circumference, _ = quad(integrand, self._interval[0, 0], self._interval[0, 1])
-        self._length = circumference
-        return self._length
-
     def derivative(self, sample_points, order=1):
         if order % 4 == 0:
             if order == 0:
@@ -179,17 +161,16 @@ class Ellipse(Curve):
             self._min_radius * np.cos(sample_points) * self._y_axis
 
     def normal(self, sample_points):
-        # Similar approach as Circle, but considering the ellipse's shape.
-        # FIXME: This is not the correct normal calculation for an ellipse.
-        ellipse_points = self.sample(sample_points) - self._center
-        norms = np.linalg.norm(ellipse_points, axis=1, keepdims=True)
-        norms[norms == 0] = 1
-        return ellipse_points / norms
+        rotation_matrix = np.array([[0, 1], [-1, 0]])
+        normal_vector = self.derivative(sample_points, order=1) @ rotation_matrix.T
+        normal_vector /= np.linalg.norm(normal_vector, axis=1, keepdims=True)
+        return normal_vector
 
 
 class BSplineCurve(Curve):
     def __init__(self, bspline):
         # Attributes initialization for B-spline curve
+        self._length = -1
         if isinstance(bspline, dict):
             self._closed = bool(bspline['closed'])
             self._degree = int(bspline['degree'])
@@ -226,7 +207,6 @@ class BSplineCurve(Curve):
     def sample(self, sample_points):
         if sample_points.size == 1:
             return np.array(self._curveObject.evaluate_single(sample_points[0]))
-
         # Evaluate the curve at the given sample points
         return np.array(self._curveObject.evaluate_list(sample_points[:, 0].tolist()))
 
@@ -239,14 +219,13 @@ class BSplineCurve(Curve):
     def normal(self, sample_points):
         if sample_points.size == 0:
             return np.array([])
-
-        # Utilize the geomdl built-in normal calculation
-        normal_vector = self.derivative(sample_points, order=1)
-        normal_vector = np.array([-normal_vector[:, 1], normal_vector[:, 0]]).T
-
-        # Extract just the vector components if normals are returned as tuples (origin, vector)
+        rotation_matrix = np.array([[0, -1], [1, 0]])
+        normal_vector = self.derivative(sample_points, order=1) @ rotation_matrix.T
+        normal_vector /= np.linalg.norm(normal_vector, axis=1, keepdims=True)
         return normal_vector
 
     def length(self):
-        self._length, _ = quad(lambda t: np.linalg.norm(self.derivative(np.array([[t]]), 1)), self._interval[0, 0], self._interval[0, 1])
+        if self._length == -1:
+            self._length, _ = quad(lambda t: np.linalg.norm(self.derivative(np.array([[t]]), 1)),
+                                self._interval[0, 0], self._interval[0, 1])
         return self._length

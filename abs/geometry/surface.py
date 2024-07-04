@@ -1,5 +1,6 @@
 import numpy as np
 from geomdl import BSpline
+from scipy.integrate import dblquad
 
 
 class Surface:
@@ -15,6 +16,23 @@ class Surface:
         normals = normals / np.linalg.norm(normals, axis=1)[:, np.newaxis]
         return normals
 
+    def area(self):
+        if self._area == -1:
+
+            derivatives = lambda u,v : self.derivative(np.array([[u, v]]))
+            E = lambda u, v: derivatives(u, v)[:, :, 0].flatten() @ derivatives(u, v)[:, :, 0].flatten()
+            F = lambda u, v: derivatives(u, v)[:, :, 0].flatten() @ derivatives(u, v)[:, :, 1].flatten()
+            G = lambda u, v: derivatives(u, v)[:, :, 1].flatten() @ derivatives(u, v)[:, :, 1].flatten()
+            integrand = lambda u, v: np.sqrt(E(u, v) * G(u, v) - F(u, v) ** 2)
+
+            if self._type == 'BSpline':
+                self._area, _ = dblquad(integrand, self._trim_domain[0] , self._trim_domain[1], self._trim_domain[2],
+                                        self._trim_domain[3])
+            else:
+                self._area, _ = dblquad(integrand, self._trim_domain[0, 0] , self._trim_domain[0,1],
+                                        self._trim_domain[1,0], self._trim_domain[1,1])
+        return self._area
+
 
 class Plane(Surface):
     def __init__(self, plane):
@@ -25,6 +43,7 @@ class Plane(Surface):
             self._x_axis = np.array(plane['x_axis']).reshape(-1, 1).T
             self._y_axis = np.array(plane['y_axis']).reshape(-1, 1).T
             self._z_axis = np.array(plane['z_axis']).reshape(-1, 1).T
+            self._area = -1
             self._type = plane['type']
         else:
             self._location = np.array(plane.get('location')[()]).reshape(-1, 1).T
@@ -33,6 +52,7 @@ class Plane(Surface):
             self._x_axis = np.array(plane.get('x_axis')[()]).reshape(-1, 1).T
             self._y_axis = np.array(plane.get('y_axis')[()]).reshape(-1, 1).T
             self._z_axis = np.array(plane.get('z_axis')[()]).reshape(-1, 1).T
+            self._area = -1
             self._type = plane.get('type')[()].decode('utf8')
 
     def sample(self, sample_points):
@@ -75,6 +95,7 @@ class Cylinder(Surface):
             self._x_axis = np.array(cylinder['x_axis']).reshape(-1, 1).T
             self._y_axis = np.array(cylinder['y_axis']).reshape(-1, 1).T
             self._z_axis = np.array(cylinder['z_axis']).reshape(-1, 1).T
+            self._area = -1
             self._type = cylinder['type']
         else:
             self._location = np.array(cylinder.get('location')[()]).reshape(-1, 1).T
@@ -84,6 +105,7 @@ class Cylinder(Surface):
             self._x_axis = np.array(cylinder.get('x_axis')[()]).reshape(-1, 1).T
             self._y_axis = np.array(cylinder.get('y_axis')[()]).reshape(-1, 1).T
             self._z_axis = np.array(cylinder.get('z_axis')[()]).reshape(-1, 1).T
+            self._area = -1
             self._type = cylinder.get('type')[()].decode('utf8')
 
     def sample(self, sample_points):
@@ -114,7 +136,6 @@ class Cylinder(Surface):
         else:
             raise ValueError("Order must be 0, 1, or 2")
 
-
     def shape_type(self):
         return "Cylinder"
 
@@ -131,6 +152,7 @@ class Cone(Surface):
             self._x_axis = np.array(cone['x_axis']).reshape(-1, 1).T
             self._y_axis = np.array(cone['y_axis']).reshape(-1, 1).T
             self._z_axis = np.array(cone['z_axis']).reshape(-1, 1).T
+            self._area = -1
             self._type = cone['type']
         else:
             self._location = np.array(cone.get('location')[()]).reshape(-1, 1).T
@@ -142,6 +164,7 @@ class Cone(Surface):
             self._x_axis = np.array(cone.get('x_axis')[()]).reshape(-1, 1).T
             self._y_axis = np.array(cone.get('y_axis')[()]).reshape(-1, 1).T
             self._z_axis = np.array(cone.get('z_axis')[()]).reshape(-1, 1).T
+            self._area = -1
             self._type = cone.get('type')[()].decode('utf8')
 
     def sample(self, sample_points):
@@ -196,6 +219,7 @@ class Sphere(Surface):
                 self._z_axis = np.array(sphere['z_axis']).reshape(-1, 1).T
             else:
                 self._z_axis = np.zeros((1, 3))
+            self._area = -1
             self._type = sphere['type']
         else:
             self._location = np.array(sphere.get('location')[()]).reshape(-1, 1).T
@@ -208,6 +232,7 @@ class Sphere(Surface):
                 self._z_axis = np.array(sphere.get('z_axis')[()]).reshape(-1, 1).T
             else:
                 self._z_axis = np.zeros((1, 3))
+            self._area = -1
             self._type = sphere.get('type')[()].decode('utf8')
 
     def sample(self, sample_points):
@@ -251,9 +276,7 @@ class Sphere(Surface):
             raise ValueError("Order must be 0, 1, or 2")
 
     def normal(self, sample_points):
-        # Compute points on the sphere
         sphere_points = self.sample(sample_points)
-        # Calculate normals as vectors from sphere center to the points, normalize these vectors
         normals = sphere_points - self._location
         normals = normals / np.linalg.norm(normals, axis=1)[:, np.newaxis]
         return normals
@@ -272,6 +295,7 @@ class Torus(Surface):
             self._x_axis = np.array(torus['x_axis']).reshape(-1, 1).T
             self._y_axis = np.array(torus['y_axis']).reshape(-1, 1).T
             self._z_axis = np.array(torus['z_axis']).reshape(-1, 1).T
+            self._area = -1
             self._type = torus['type']
         else:
             self._location = np.array(torus.get('location')[()]).reshape(-1, 1).T
@@ -281,6 +305,7 @@ class Torus(Surface):
             self._x_axis = np.array(torus.get('x_axis')[()]).reshape(-1, 1).T
             self._y_axis = np.array(torus.get('y_axis')[()]).reshape(-1, 1).T
             self._z_axis = np.array(torus.get('z_axis')[()]).reshape(-1, 1).T
+            self._area = -1
             self._type = torus.get('type')[()].decode('utf8')
 
     def sample(self, sample_points):
@@ -328,7 +353,6 @@ class Torus(Surface):
         else:
             raise ValueError("Order must be 0, 1, or 2")
 
-
     def shape_type(self):
         return "Torus"
 
@@ -350,6 +374,7 @@ class BSplineSurface(Surface):
             self._v_knots = np.array(bspline_surface['v_knots']).reshape(-1, 1).T
             self._v_rational = bool(bspline_surface['v_rational'])
             self._weights = np.array(bspline_surface['weights'])
+            self._area = -1
             self._type = bspline_surface['type']
         else:
             self._continuity = int(bspline_surface.get('continuity')[()])
@@ -367,6 +392,7 @@ class BSplineSurface(Surface):
             self._v_rational = bool(bspline_surface.get('v_rational')[()])
             self._weights = np.column_stack((bspline_surface.get('weights').get('0')[()],
                                              bspline_surface.get('weights').get('1')[()])).reshape(-1, 1)
+            self._area = -1
             self._type = bspline_surface.get('type')[()].decode('utf8')
 
         self._surface_obj = BSpline.Surface(normalize_kv=False)
