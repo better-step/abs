@@ -18,14 +18,13 @@ class Surface:
 
     def area(self):
         if self._area == -1:
-
             derivatives = lambda u, v: self.derivative(np.array([[u, v]]))
             E = lambda u, v: derivatives(u, v)[:, :, 0].flatten() @ derivatives(u, v)[:, :, 0].flatten()
             F = lambda u, v: derivatives(u, v)[:, :, 0].flatten() @ derivatives(u, v)[:, :, 1].flatten()
             G = lambda u, v: derivatives(u, v)[:, :, 1].flatten() @ derivatives(u, v)[:, :, 1].flatten()
             integrand = lambda u, v: np.sqrt(E(u, v) * G(u, v) - F(u, v) ** 2)
             self._area, _ = dblquad(integrand, self._trim_domain[0, 0], self._trim_domain[0, 1],
-                                        self._trim_domain[1, 0], self._trim_domain[1, 1])
+                                    self._trim_domain[1, 0], self._trim_domain[1, 1])
         return self._area
 
 
@@ -75,7 +74,6 @@ class Plane(Surface):
         normal_vector_normalized = normal_vector / np.linalg.norm(normal_vector)
         normals = np.tile(normal_vector_normalized, (sample_points.shape[0], 1))
         return normals
-
 
 
 class Cylinder(Surface):
