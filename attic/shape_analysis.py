@@ -1,4 +1,3 @@
-# shape_analysis.py
 import numpy as np
 from shape_core import ShapeCore
 

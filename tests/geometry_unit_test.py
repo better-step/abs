@@ -230,6 +230,11 @@ class Geometrytest(unittest.TestCase):
         self.assertTrue(d < 1e-7)
         self.assertTrue(d2 < 1e-7)
 
+        # length
+        num_samples = 1000
+        param_points, points = generate_points_on_curve(line, num_samples)
+        self.assertTrue(abs(np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1)) - line.length() < 1e-4))
+
     def test_circle3d(self):
         circle = test_circle3d()
         self.assertEqual(circle._location.shape, (1, 3))
@@ -250,6 +255,11 @@ class Geometrytest(unittest.TestCase):
         d, d2 = curves_derivative(circle, sample_points)
         self.assertTrue(d < 1e-4)
         self.assertTrue(d2 < 1e-4)
+
+        # length
+        num_samples = 1000
+        param_points, points = generate_points_on_curve(circle, num_samples)
+        self.assertTrue(abs(np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1)) - circle.length() < 1e-4))
 
     def test_ellipse3d(self):
         ellipse = test_ellipse3d()
@@ -274,6 +284,11 @@ class Geometrytest(unittest.TestCase):
         self.assertTrue(d < 1e-4)
         self.assertTrue(d2 < 1e-4)
 
+        # length
+        num_samples = 1000
+        param_points, points = generate_points_on_curve(ellipse, num_samples)
+        self.assertTrue(abs(np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1)) - ellipse.length() < 1e-4))
+
     def test_bspline_curve3d(self):
         bspline_curve3d = test_bspline_curve3d()
         self.assertEqual(type(bspline_curve3d._closed), bool)
@@ -297,6 +312,11 @@ class Geometrytest(unittest.TestCase):
         d, d2 = curves_derivative(bspline_curve3d, sample_points)
         self.assertTrue(d < 1e-4)
         self.assertTrue(d2 < 1e-4)
+
+        # length
+        num_samples = 1000
+        param_points, points = generate_points_on_curve(bspline_curve3d, num_samples)
+        self.assertTrue(abs(np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1)) - bspline_curve3d.length() < 1e-4))
 
     def test_plane(self):
         plane = test_plane()
@@ -447,7 +467,6 @@ class Geometrytest(unittest.TestCase):
         self.assertEqual(bspline_surface._v_knots.shape[0], 1)
         self.assertEqual(type(bspline_surface._v_rational), bool)
 
-        # TODO: check weights, there is inconsistency when initializing weights
 
         # sample points
         umin_value, umax_value, vmin_value, vmax_value = bspline_surface._trim_domain.reshape(-1, 1)

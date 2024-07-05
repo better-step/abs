@@ -30,13 +30,13 @@ class Line(Curve):
             self._interval = np.array(line['interval']).reshape(-1, 1).T
             self._direction = np.array(line['direction']).reshape(-1, 1).T
             self._length = -1
-            self._type = line['type']
+            self._shape_name = line['type']
         else:
             self._location = np.array(line.get('location')[()]).reshape(-1, 1).T
             self._interval = np.array(line.get('interval')[()]).reshape(-1, 1).T
             self._direction = np.array(line.get('direction')[()]).reshape(-1, 1).T
             self._length = -1
-            self._type = line.get('type')[()].decode('utf8')
+            self._shape_name = line.get('type')[()].decode('utf8')
 
     def sample(self, sample_points):
         if sample_points.size == 0:
@@ -67,7 +67,7 @@ class Circle(Curve):
             self._x_axis = np.array(circle['x_axis']).reshape(-1, 1).T
             self._y_axis = np.array(circle['y_axis']).reshape(-1, 1).T
             self._length = -1
-            self._type = circle['type']
+            self._shape_name = circle['type']
             if 'z_axis' in circle:
                 self._z_axis = np.array(circle['z_axis']).reshape(-1, 1).T
         else:
@@ -77,7 +77,7 @@ class Circle(Curve):
             self._x_axis = np.array(circle.get('x_axis')[()]).reshape(-1, 1).T
             self._y_axis = np.array(circle.get('y_axis')[()]).reshape(-1, 1).T
             self._length = -1
-            self._type = circle.get('type')[()].decode('utf8')
+            self._shape_name = circle.get('type')[()].decode('utf8')
             if 'z_axis' in circle:
                 self._z_axis = np.array(circle.get('z_axis')[()]).reshape(-1, 1).T
 
@@ -120,7 +120,7 @@ class Ellipse(Curve):
             self._x_axis = np.array(ellipse['x_axis']).reshape(-1, 1).T
             self._y_axis = np.array(ellipse['y_axis']).reshape(-1, 1).T
             self._length = -1
-            self._type = ellipse['type']
+            self._shape_name = ellipse['type']
 
             if 'z_axis' in ellipse:
                 self._z_axis = np.array(ellipse['z_axis']).reshape(-1, 1).T
@@ -133,7 +133,7 @@ class Ellipse(Curve):
             self._x_axis = np.array(ellipse.get('x_axis')[()]).reshape(-1, 1).T
             self._y_axis = np.array(ellipse.get('y_axis')[()]).reshape(-1, 1).T
             self._length = -1
-            self._type = ellipse.get('type')[()].decode('utf8')
+            self._shape_name = ellipse.get('type')[()].decode('utf8')
 
             if 'z_axis' in ellipse:
                 self._z_axis = np.array(ellipse.get('z_axis')[()]).reshape(-1, 1).T
@@ -180,7 +180,7 @@ class BSplineCurve(Curve):
             self._weights = np.array(bspline['weights']).reshape(-1, 1)
             self._interval = np.array(bspline['interval']).reshape(-1, 1).T
             self._rational = bool(bspline['rational'])
-            self._type = bspline['type']
+            self._shape_name = bspline['type']
         else:
             self._closed = bool(bspline.get('closed')[()])
             self._degree = int(bspline.get('degree')[()])
@@ -190,7 +190,7 @@ class BSplineCurve(Curve):
             self._weights = np.array(bspline.get('weights')[()]).reshape(-1, 1)
             self._interval = np.array(bspline.get('interval')[()]).reshape(-1, 1).T
             self._rational = bool(bspline.get('rational')[()])
-            self._type = bspline.get('type')[()].decode('utf8')
+            self._shape_name = bspline.get('type')[()].decode('utf8')
 
         # Create BSpline or NURBS curve object
         if self._rational:
