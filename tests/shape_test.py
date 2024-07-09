@@ -15,7 +15,16 @@ def get_file(sample_name):
 
 
 def l_function(shape, geo, points):
-    return geo.normal(points)
+    # get the normals
+    if geo._shape_name == 'Circle' and len(geo._interval[0]) == 2:
+        return None
+    if geo._shape_name == 'Ellipse' and len(geo._interval[0]) == 2:
+        return None
+    if geo._shape_name == 'BSpline' and len(geo._interval[0]) == 2:
+        return None
+    else:
+        normal_points = geo.normal(points)
+        return normal_points
 
 
 sample_name = 'cylinder_Hole.hdf5'

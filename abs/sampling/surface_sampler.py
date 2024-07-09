@@ -62,8 +62,9 @@ def uniform_parametric_sample(surface, spacing):
 
     u_values = np.linspace(surface._trim_domain[0, 0], surface._trim_domain[0, 1], num_samples)
     v_values = np.linspace(surface._trim_domain[1, 0], surface._trim_domain[1, 1], num_samples)
+    t = np.array(np.meshgrid(u_values, v_values)).T.reshape(-1, 2)
 
-    return np.array(np.meshgrid(u_values, v_values)).T.reshape(-1, 2)
+    return t, surface.sample(t)
 
 
 def random_parametric_sample(surface, spacing):
@@ -83,6 +84,7 @@ def random_parametric_sample(surface, spacing):
 
     u_values = np.random.uniform(low=surface._trim_domain[0, 0], high=surface._trim_domain[0, 1], size=num_samples)
     v_values = np.random.uniform(low=surface._trim_domain[1, 0], high=surface._trim_domain[1, 1], size=num_samples)
+    t = np.array(np.meshgrid(u_values, v_values)).T.reshape(-1, 2)
 
-    return np.array(np.meshgrid(u_values, v_values)).T.reshape(-1, 2)
+    return t, surface.sample(t)
 
