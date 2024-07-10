@@ -35,3 +35,4 @@ with h5py.File(file_path, 'r') as hdf:
     s = Shape(geo, topo)
 
 get_data(s, 10, l_function)
+new_get_data(s, 10, l_function)
