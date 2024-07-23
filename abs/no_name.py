@@ -47,6 +47,8 @@ def new_get_data(shape, num_samples, lambda_func):
                     ss = np.concatenate((ss, s), axis=0)
                     pts = np.concatenate((pts, pt), axis=0)
 
+
+
     return ss, pts
 
 
