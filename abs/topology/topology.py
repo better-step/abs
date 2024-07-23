@@ -81,6 +81,22 @@ class Topology:
                 faceMap[face_id] = faceMapValue
         return faceMap
 
+    def determine_curve_orientation(self, face, halfedge):
+        """
+        Determine the orientation of a curve relative to a surface.
+
+        Args:
+            face (dict): The face information.
+            halfedge (dict): The halfedge information.
+
+        Returns:
+            bool: The modified orientation of the curve.
+        """
+        orientation_wrt_edge = self._halfedges[halfedge]['orientation_wrt_edge']
+        if not self._faces[face]['surface_orientation']:
+            orientation_wrt_edge = not orientation_wrt_edge
+        return orientation_wrt_edge
+
     @property
     def edges(self):
 

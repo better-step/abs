@@ -53,3 +53,35 @@ def calculate_winding_numbers(curve_uv_values_on_surface, surface_uv_values, per
 
 
     return optimized_winding_number(curve_uv_values_on_surface, surface_uv_values, period_u, period_v)
+
+
+def find_surface_uv_for_curve(surface_points, surface_uv_values, curve_points):
+        """
+        Calculate the nearest UV values on a surface for a given set of curve points.
+
+        Args:
+        surface_points (np.ndarray): Points on the surface.
+        surface_uv_values (np.ndarray): UV values on the surface.
+        curve_points (np.ndarray): Points on the curve.
+
+        Returns:
+        np.ndarray: UV values on the surface closest to the curve points.
+        """
+        # Calculate the nearest surface point for each curve point
+        # nearest_3d_surface_points, curve_indexes = self._calculate_nearest_surface_points(surface_points, curve_points)
+        from scipy.spatial import KDTree
+        tree = KDTree(surface_points)
+        _, curve_indexes = tree.query(curve_points)
+
+        if type(curve_indexes) == np.int64:
+            curve_indexes = [curve_indexes]
+
+        if surface_uv_values.size > 0 and max(curve_indexes) < len(surface_uv_values):
+            surface_uv_near_curve = surface_uv_values[curve_indexes]
+        else:
+            # Handle the case where surface_uv_values is empty or too small
+            # This could be setting surface_uv_near_curve to an empty array
+            # or some other default value, depending on your application's needs
+            surface_uv_near_curve = np.array([])
+
+        return surface_uv_near_curve
