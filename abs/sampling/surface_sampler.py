@@ -17,7 +17,7 @@ def uniform_sample(surface, spacing):
     num_samples = max(int(np.sqrt(surface.area()) / spacing), 1)
 
     u_values = np.linspace(surface._trim_domain[0, 0], surface._trim_domain[0, 1], num_samples)
-    v_values = np.linspace(surface._trim_domain[1, 0], surface._trim_domainl[1, 1], num_samples)
+    v_values = np.linspace(surface._trim_domain[1, 0], surface._trim_domain[1, 1], num_samples)
 
     points = np.array(np.meshgrid(u_values, v_values)).T.reshape(-1, 2)
     return points, surface.sample(points)
