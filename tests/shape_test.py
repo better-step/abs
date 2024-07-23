@@ -34,5 +34,13 @@ with h5py.File(file_path, 'r') as hdf:
     topo = hdf['topology/parts']
     s = Shape(geo, topo)
 
-get_data(s, 10, l_function)
-new_get_data(s, 10, l_function)
+# get_data(s, 10, l_function)
+ss, pts=new_get_data(s, 10, l_function)
+
+print(pts)
+
+with open("cylinder_Hole.obj", "w") as f:
+    if pts[0].shape[1] == 2:
+        [f.write(f"v {pts[i,0]} {pts[i,1]} 0\n") for i in range(pts.shape[0])]
+    else:
+        [f.write(f"v {pts[i,0]} {pts[i,1]} {pts[i,2]}\n") for i in range(pts.shape[0])]
