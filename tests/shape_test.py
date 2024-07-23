@@ -34,5 +34,5 @@ with h5py.File(file_path, 'r') as hdf:
     topo = hdf['topology/parts']
     s = Shape(geo, topo)
 
-get_data(s, 10, l_function)
-new_get_data(s, 10, l_function)
+# ss1, pts1 = get_data(s, 10, l_function)
+ss, pts =new_get_data(s, 10, l_function)
