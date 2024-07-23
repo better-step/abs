@@ -25,7 +25,7 @@ def compute_position(point, period_u, period_v):
         position = np.array(point)
     return position
 
-def optimized_winding_number(curve_uv_values, surface_uv_values, period_u=None, period_v=None):
+def winding_number(curve_uv_values, surface_uv_values, period_u=None, period_v=None):
     """ Compute the winding number for a polyline and surface UV values efficiently. """
     polyline_positions = np.array([compute_position(point, period_u, period_v) for point in curve_uv_values])
     is_2D = polyline_positions.shape[1] == 2
@@ -43,17 +43,6 @@ def optimized_winding_number(curve_uv_values, surface_uv_values, period_u=None, 
     dot = np.einsum('ijk,ijk->ij', a, b)
     winding_number_result = np.sum(np.arctan2(det, dot), axis=0) / (2 * np.pi)
     return winding_number_result.reshape(-1, 1)
-
-def calculate_winding_numbers(curve_uv_values_on_surface, surface_uv_values, period_u=None, period_v=None):
-    """ Public API function to calculate winding numbers for a given set of surface points. """
-
-
-    # input for winding number calculation -> curve_uv_values, surface_uv_values, period_u, period_v
-
-
-
-    return optimized_winding_number(curve_uv_values_on_surface, surface_uv_values, period_u, period_v)
-
 
 def find_surface_uv_for_curve(surface_points, surface_uv_values, curve_points):
         """

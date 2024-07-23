@@ -44,8 +44,11 @@ def new_get_data(shape, num_samples, lambda_func):
                     surface = shape.Geometry._surfaces[surface_index]
                     uv_points, pt = surface_sampler.uniform_parametric_sample(surface, 0.5)
                     s = lambda_func(shape, surface, uv_points)
-                    ss = np.concatenate((ss, s), axis=0)
-                    pts = np.concatenate((pts, pt), axis=0)
+
+                    index = shape.filter_outside_points(face_index, uv_points)
+
+                    ss = np.concatenate((ss, s[index,:]), axis=0)
+                    pts = np.concatenate((pts, pt[index,:]), axis=0)
 
 
 
