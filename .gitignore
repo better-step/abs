@@ -107,3 +107,4 @@ ENV/
 .vscode/
 **/.DS_Store
 .idea
+bin
