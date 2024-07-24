@@ -1,6 +1,8 @@
 from abs.sampling import curve_sampler
 from abs.sampling import surface_sampler
 import numpy as np
+from abs import poisson_disk_downsample
+
 
 
 def get_data(shape, num_samples, lambda_func):
@@ -51,8 +53,8 @@ def new_get_data(shape, num_samples, lambda_func):
                     pts = np.concatenate((pts, pt[index,:]), axis=0)
 
 
-
-    return ss, pts
+    idx = poisson_disk_downsample(pts, num_samples)
+    return ss[idx,:], pts[idx,:]
 
 
 
