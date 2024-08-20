@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def uniform_sample(curve, spacing):
+def uniform_sample(curve, spacing, min_pts=None, max_pts=None):
     """
     Sample uniform points on a curve
 
@@ -15,6 +15,11 @@ def uniform_sample(curve, spacing):
     """
 
     num_samples = max(int(curve.length() / spacing), 1)
+
+    if min_pts is not None:
+        num_samples = max(num_samples, min_pts)
+    if max_pts is not None:
+        num_samples = min(num_samples, max_pts)
 
     t = np.linspace(curve._interval[0, 0], curve._interval[0, 1], num_samples).reshape(-1, 1)
     return t, curve.sample(t)

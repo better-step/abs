@@ -1,44 +1,64 @@
-from pathlib import Path
-import h5py
-import os
 from abs.shape import Shape
-from abs.no_name import *
-
-
-def read_file(file_path):
-    assert Path(file_path).exists(), "Please provide valid file path"
-    return h5py.File(file_path, 'r')
-
-
-def get_file(sample_name):
-    return os.path.abspath(os.path.join(os.getcwd(), '..', 'abs', 'data', 'sample_hdf5', sample_name))
+from abs.utils import *
 
 
 def l_function(shape, geo, points):
-    # get the normals
+
+
     if geo._shape_name == 'Circle' and len(geo._interval[0]) == 2:
         return None
     if geo._shape_name == 'Ellipse' and len(geo._interval[0]) == 2:
         return None
-    if geo._shape_name == 'BSpline' and len(geo._interval[0]) == 2:
-        return None
-    else:
-        normal_points = geo.normal(points)
-        return normal_points
+
+    if geo._shape_name == 'BSpline':
+        try:
+            if len(geo._interval[0]) == 2:
+                return None
+        except AttributeError:
+            pass
 
 
-sample_name = 'cylinder_Hole.hdf5'
+    normal_points = geo.normal(points)
+    return normal_points
+
+
+def l_function_labels(shape, geo, points):
+    labels = geo._shape_name(points)
+    return labels
+
+# testing start here
+name = "test5"
+sample_name = f'{name}.hdf5'
+base_name = os.path.splitext(sample_name)[0]
+
 file_path = get_file(sample_name)
 with h5py.File(file_path, 'r') as hdf:
     geo = hdf['geometry/parts']
     topo = hdf['topology/parts']
     s = Shape(geo, topo)
 
-# get_data(s, 10, l_function)
-ss, pts=new_get_data(s, 1000, l_function)
+ss, pts = get_data(s, 30000, l_function)
 
-with open("cylinder_Hole.obj", "w") as f:
-    if pts.shape[1] == 2:
-        [f.write(f"v {pts[i,0]} {pts[i,1]} 0\n") for i in range(pts.shape[0])]
-    else:
-        [f.write(f"v {pts[i,0]} {pts[i,1]} {pts[i,2]}\n") for i in range(pts.shape[0])]
+
+save_obj(f'sample_results/{name}.obj', pts)
+save_ply(f'sample_results/{name}.ply', pts, ss)
+
+
+with h5py.File(file_path, 'r') as hdf:
+    vv = []
+    ff = []
+    n = 0
+
+    for m in hdf['mesh']:
+        v = np.array(hdf[f'mesh/{m}']['points'])
+        f = np.array(hdf[f'mesh/{m}']['triangle'])
+
+        vv.append(v)
+        ff.append(f + n)
+        n += len(v)
+
+    if len(vv) > 0:
+        v = np.concatenate(vv)
+        f = np.concatenate(ff)
+
+        save_obj_mesh(f'sample_results/{name}_mesh.obj', v, f)
