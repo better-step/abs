@@ -12,7 +12,7 @@ class Curve:
             integrand = lambda t: np.sqrt(
                 (lambda d: (d[:, 0] ** 2 + d[:, 1] ** 2))(self.derivative(t, order=1))
             )
-            circumference, _ = quad(integrand, self._interval[0, 0], self._interval[0, 1], epsabs=1.49e-04, epsrel=1.49e-04)
+            circumference, _ = quad(integrand, self._interval[0, 0], self._interval[0, 1], epsabs = 1.49e-04, epsrel = 1.49e-04)
             self._length = circumference
         return self._length
 
