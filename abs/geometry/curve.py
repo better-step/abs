@@ -12,7 +12,7 @@ class Curve:
             integrand = lambda t: np.sqrt(
                 (lambda d: (d[:, 0] ** 2 + d[:, 1] ** 2))(self.derivative(t, order=1))
             )
-            circumference, _ = quad(integrand, self._interval[0, 0], self._interval[0, 1])
+            circumference, _ = quad(integrand, self._interval[0, 0], self._interval[0, 1], epsabs=1.49e-04, epsrel=1.49e-04)
             self._length = circumference
         return self._length
 
@@ -206,7 +206,9 @@ class BSplineCurve(Curve):
 
     def sample(self, sample_points):
         if sample_points.size == 1:
-            return np.array(self._curveObject.evaluate_single(sample_points[0]))
+            samples = np.array(self._curveObject.evaluate_single(sample_points[0]))
+            return samples.reshape(-1, 1)
+
         # Evaluate the curve at the given sample points
         return np.array(self._curveObject.evaluate_list(sample_points[:, 0].tolist()))
 
@@ -227,5 +229,20 @@ class BSplineCurve(Curve):
     def length(self):
         if self._length == -1:
             self._length, _ = quad(lambda t: np.linalg.norm(self.derivative(np.array([[t]]), 1)),
-                                self._interval[0, 0], self._interval[0, 1])
+                                self._interval[0, 0], self._interval[0, 1], epsabs=1.49e-04, epsrel=1.49e-04)
         return self._length
+
+
+class Other(Curve):
+    def __init__(self, other):
+        self._shape_name = other.get('type')[()].decode('utf8')
+        self._interval = np.array(other.get('interval')[()]).reshape(-1, 1).T
+
+    def sample(self, sample_points):
+        return np.array([])
+
+    def derivative(self, sample_points, order=1):
+        return np.array([])
+
+    def normal(self, sample_points):
+        return np.array([])

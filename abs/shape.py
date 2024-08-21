@@ -19,7 +19,9 @@ def _create_surface(surface_data):
     if surface_class:
         return surface_class(surface_data)
     else:
-        raise ValueError(f"Unsupported surface type: {surface_type}")
+        print(f"This surface type: {surface_type}, is currently not supported")
+        return None
+
 
 
 def _create_curve(curve_data):
@@ -34,8 +36,9 @@ def _create_curve(curve_data):
     curve_class = curve_map.get(curve_type)
     if curve_class:
         return curve_class(curve_data)
-    else:
-        raise ValueError(f"Unsupported curve type: {curve_type}")
+    # else:
+    #     print(f"This curve type: {curve_type}, is currently not supported")
+    #     return None
 
 
 class Shape:
@@ -80,7 +83,6 @@ class Shape:
 
                         surface_index = face['surface']
                         surface = self.Geometry._surfaces[surface_index]
-                        surface_uv_values, surface_points  = surface_sampler.uniform_sample(surface, spacing)
 
                         for loop_id in face['loops']:
                             loop = part.loops[loop_id]
@@ -91,10 +93,12 @@ class Shape:
                                 if '2dcurve' in halfedge:
                                     curve2d_index = halfedge['2dcurve']
                                     curve2d = curves2d[curve2d_index]
-                                    _, closest_surface_uv_values_of_curve = curve_sampler.uniform_sample(curve2d, spacing)
+                                    _, closest_surface_uv_values_of_curve = curve_sampler.uniform_sample(curve2d, spacing, 4, 300)
                                     if not modified_orientation:
                                         closest_surface_uv_values_of_curve = closest_surface_uv_values_of_curve[::-1]
                                 else:
+                                    surface_uv_values, surface_points = surface_sampler.uniform_sample(surface, spacing)
+
                                     curve3d_index = halfedge['edge']
                                     curve3d = curves3d[curve3d_index]
 
@@ -124,6 +128,7 @@ class Shape:
                 for curve_data in part.get('3dcurves', {}).values():
                     curve = _create_curve(curve_data)
                     self._curves3d.append(curve)
+
 
                 for surface_data in part.get('surfaces', {}).values():
                     surface = _create_surface(surface_data)

@@ -1,5 +1,6 @@
 import numpy as np
 from geomdl import BSpline
+from geomdl import operations
 from scipy.integrate import dblquad
 
 
@@ -22,9 +23,9 @@ class Surface:
             E = lambda u, v: derivatives(u, v)[:, :, 0].flatten() @ derivatives(u, v)[:, :, 0].flatten()
             F = lambda u, v: derivatives(u, v)[:, :, 0].flatten() @ derivatives(u, v)[:, :, 1].flatten()
             G = lambda u, v: derivatives(u, v)[:, :, 1].flatten() @ derivatives(u, v)[:, :, 1].flatten()
-            integrand = lambda u, v: np.sqrt(E(u, v) * G(u, v) - F(u, v) ** 2)
+            integrand = lambda u, v: np.sqrt(max(E(u, v) * G(u, v) - F(u, v) ** 2, 0))
             self._area, _ = dblquad(integrand, self._trim_domain[0, 0], self._trim_domain[0, 1],
-                                    self._trim_domain[1, 0], self._trim_domain[1, 1])
+                                    self._trim_domain[1, 0], self._trim_domain[1, 1], epsabs=1.49e-04, epsrel=1.49e-04)
         return self._area
 
 
@@ -215,7 +216,7 @@ class Sphere(Surface):
             if 'z_axis' in sphere:
                 self._z_axis = np.array(sphere.get('z_axis')[()]).reshape(-1, 1).T
             else:
-                self._z_axis = np.zeros((1, 3))
+                self._z_axis = np.cross(self._x_axis, self._y_axis)
             self._area = -1
             self._shape_name = sphere.get('type')[()].decode('utf8')
 
@@ -406,11 +407,11 @@ class BSplineSurface(Surface):
             return np.array([])  # Handle empty input gracefully.
 
         # Evaluate normals using the geomdl built-in function.
-        normals = np.array([self._surface_obj.normal([u, v]) for u, v in sample_points])
+        normals = operations.normal(self._surface_obj, sample_points)
 
         # The returned normals are in the form of tuples (origin, vector components).
         # For consistency and use in graphics or further calculations, you might only need the vector components.
         # Therefore, you may choose to only return these components.
-        normal_vectors = normals[:, 1]  # Assuming the second element of each tuple is the vector component.
+        normal_vectors = np.array([n[-1] for n in normals])
 
         return normal_vectors

@@ -19,7 +19,7 @@ include(CPM)
 CPMAddPackage(
     NAME pybind11
     GIT_REPOSITORY https://github.com/pybind/pybind11.git
-    GIT_TAG v2.9.2
+    GIT_TAG v2.13.1
     GIT_SHALLOW FALSE
 )
 
