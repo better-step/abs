@@ -6,6 +6,7 @@ from test_utilities import *
 import abs.sampling as cs
 from abs import poisson_disk_downsample
 
+import abs.utils as au
 
 
 class TestSampling(unittest.TestCase):
@@ -34,6 +35,11 @@ class TestSampling(unittest.TestCase):
         pts = np.random.rand(1000, 3)
         indices = poisson_disk_downsample(pts, 100)
 
+    def test_downsample1(self):
+        plane = test_plane()
+        _, pts = cs.surface_sampler.random_sample(plane, 0.005)
+        indices = poisson_disk_downsample(pts, 1000, 50)
+        au.save_obj('test_sampling.obj', pts[indices])
 
 
 if __name__ == '__main__':

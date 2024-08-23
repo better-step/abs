@@ -241,7 +241,7 @@ void blue_noise_downsample(const Eigen::MatrixXd &X, const double r,
   Eigen::VectorXi SortIdx;
   Eigen::MatrixXd Xsorted;
   {
-    sortrows(Xs, true, Xs, SortIdx);
+    sortrows(decltype(Xs)(Xs), true, Xs, SortIdx);
     Xsorted = X(SortIdx, Eigen::all).eval();
   }
   // Initialization
@@ -358,8 +358,8 @@ Eigen::VectorXi poisson_disk_downsample(const Eigen::MatrixXd &v,
   const size_t num_samples_max =
       int(double(target_num_samples) * (1 + sample_num_tolerance));
 
-  const Eigen::MatrixXd bmin = v.colwise().minCoeff();
-  const Eigen::MatrixXd bmax = v.colwise().maxCoeff();
+  const Eigen::Vector3d bmin = v.colwise().minCoeff();
+  const Eigen::Vector3d bmax = v.colwise().maxCoeff();
   const double bbsize = (bmax - bmin).norm();
   double range_min_rad = bbsize / 50.0;
   double range_max_rad = bbsize / 50.0;
