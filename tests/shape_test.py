@@ -39,10 +39,10 @@ with h5py.File(file_path, 'r') as hdf:
         parts.append(s)
 
 
-ss, pts = get_data_parts(parts, 10000, l_function)
-# ss, pts = get_data(s, 10000, l_function)
-# ss, pts = get_data_test(s, 10000, l_function)
-#ss, pts = get_data_geo(s, 30000, l_function)
+pts, ss  = get_data_parts(parts, 10000, l_function)
+# pts, ss = get_data(s, 10000, l_function)
+# pts, ss = get_data_test(s, 10000, l_function)
+#pts, ss = get_data_geo(s, 30000, l_function)
 
 
 save_obj(f'sample_results/{name}.obj', pts)
