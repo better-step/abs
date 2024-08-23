@@ -399,10 +399,26 @@ class BSplineSurface(Surface):
     def derivative(self, sample_points, order=1):
         if order == 0:
             return self.sample(sample_points)
-        return np.array([
-            self._surface_obj.derivatives(sample_points[i, 0], sample_points[i, 1], order)[-1] for i in
-            range(sample_points.shape[0])
-        ])
+        elif order == 1:
+            res = np.zeros((sample_points.shape[0], 3, 2))
+            for i in range(sample_points.shape[0]):
+                d = self._surface_obj.derivatives(sample_points[i, 0], sample_points[i, 1], order)
+                res[i, :, 0] = d[1][0]
+                res[i, :, 1] = d[0][1]
+
+            return res
+        elif order == 2:
+            res = np.zeros((sample_points.shape[0], 3, 2, 2))
+            for i in range(sample_points.shape[0]):
+                d = self._surface_obj.derivatives(sample_points[i, 0], sample_points[i, 1], order)
+                res[i, :, 0, 0] = d[2][0]
+                res[i, :, 1, 0] = d[1][1]
+                res[i, :, 0, 1] = d[1][1]
+                res[i, :, 1, 1] = d[0][2]
+
+            return res
+        else:
+            raise ValueError("Order must be 0, 1, or 2")
 
     def normal(self, sample_points):
         if sample_points.size == 0:

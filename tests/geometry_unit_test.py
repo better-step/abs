@@ -478,10 +478,10 @@ class Geometrytest(unittest.TestCase):
 
         # derivative
         du, dv, d2u, d2v = surface_derivative(bspline_surface, sample_points)
-        self.assertTrue(du < 1e-4)
-        self.assertTrue(dv < 1e-4)
-        self.assertTrue(d2u < 1e-4)
-        self.assertTrue(d2v < 1e-4)
+        self.assertTrue(du < 1e-6)
+        self.assertTrue(dv < 1e-6)
+        self.assertTrue(d2u < 1e-6)
+        self.assertTrue(d2v < 1e-6)
 
 
 if __name__ == '__main__':
