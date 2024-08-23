@@ -3,8 +3,6 @@ from abs.utils import *
 
 
 def l_function(shape, geo, points):
-
-
     if geo._shape_name == 'Circle' and len(geo._interval[0]) == 2:
         return None
     if geo._shape_name == 'Ellipse' and len(geo._interval[0]) == 2:
@@ -27,7 +25,7 @@ def l_function_labels(shape, geo, points):
     return labels
 
 # testing start here
-name = "test5"
+name = "Ellipse"
 sample_name = f'{name}.hdf5'
 base_name = os.path.splitext(sample_name)[0]
 
@@ -35,10 +33,16 @@ file_path = get_file(sample_name)
 with h5py.File(file_path, 'r') as hdf:
     geo = hdf['geometry/parts']
     topo = hdf['topology/parts']
-    s = Shape(geo, topo)
+    parts = []
+    for i in range(len(geo)):
+        s = Shape(list(geo.values())[i], list(topo.values())[i])
+        parts.append(s)
 
-#ss, pts = get_data(s, 30000, l_function)
-ss, pts = get_data_geo(s, 30000, l_function_labels)
+
+ss, pts = get_data_parts(parts, 10000, l_function)
+# ss, pts = get_data(s, 10000, l_function)
+# ss, pts = get_data_test(s, 10000, l_function)
+#ss, pts = get_data_geo(s, 30000, l_function)
 
 
 save_obj(f'sample_results/{name}.obj', pts)

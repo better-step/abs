@@ -19,6 +19,8 @@ def save_obj(filename, pts):
             [f.write(f"v {pts[i, 0]} {pts[i, 1]} 0\n") for i in range(pts.shape[0])]
         else:
             [f.write(f"v {pts[i, 0]} {pts[i, 1]} {pts[i, 2]}\n") for i in range(pts.shape[0])]
+
+
 def save_obj_mesh(filename, pts, faces):
     with open(filename, "w") as f:
         if pts.shape[1] == 2:

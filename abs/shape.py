@@ -52,7 +52,7 @@ class Shape:
         """
         Filter out points that are outside the trimming curve of a face.
         """
-        total_winding_numbers = np.zeros((len(uv_points),1))
+        total_winding_numbers = np.zeros((len(uv_points), 1))
         curves = self._2d_trimming_curves[face_index]
         for poly in curves:
             # period_u, period_v = self._determine_surface_periodicity(surface)
@@ -120,21 +120,20 @@ class Shape:
             self.__init_geometry(geometry_data)
 
         def __init_geometry(self, data):
-            for part in data.values():
-                for curve_data in part.get('2dcurves', {}).values():
-                    curve = _create_curve(curve_data)
-                    self._curves2d.append(curve)
+            for curve_data in data.get('2dcurves', {}).values():
+                curve = _create_curve(curve_data)
+                self._curves2d.append(curve)
 
-                for curve_data in part.get('3dcurves', {}).values():
-                    curve = _create_curve(curve_data)
-                    self._curves3d.append(curve)
+            for curve_data in data.get('3dcurves', {}).values():
+                curve = _create_curve(curve_data)
+                self._curves3d.append(curve)
 
 
-                for surface_data in part.get('surfaces', {}).values():
-                    surface = _create_surface(surface_data)
-                    self._surfaces.append(surface)
+            for surface_data in data.get('surfaces', {}).values():
+                surface = _create_surface(surface_data)
+                self._surfaces.append(surface)
 
-                self._bbox.append(part.get('bbox'))
+            self._bbox.append(data.get('bbox'))
 
     class Topology:
         def __init__(self, topology_data):
@@ -143,8 +142,6 @@ class Shape:
 
         def __init_topology(self, data):
             topology_parts = []
-            for data_key in data.keys():
-                part = data.get(data_key)
-                topo_part = Topology(part)
-                topology_parts.append(topo_part)
+            topo_part = Topology(data)
+            topology_parts.append(topo_part)
             self._topology = topology_parts

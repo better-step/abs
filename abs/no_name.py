@@ -5,37 +5,43 @@ from abs import poisson_disk_downsample
 
 
 
-def get_data_geo(shape, num_samples, lambda_func):
+def get_data_parts(parts, num_samples, lambda_func):
 
     ss = np.empty((0, 3))
     pts = np.empty((0, 3))
 
-    sample2d_flag = True
-    sample3d_flag = False
+    for part in parts:
+        for p_index, p in enumerate(part.Topology._topology):
+            for face_index, face in enumerate(p.faces):
+                surface_index = face['surface']
+                surface = part.Geometry._surfaces[surface_index]
+                uv_points, pt = surface_sampler.random_parametric_sample(surface, 0.8, 10, 5 * num_samples)
+                s = lambda_func(part, surface, uv_points)
+                index = part.filter_outside_points(face_index, uv_points)
+                ss = np.concatenate((ss, s[index, :]), axis=0)
+                pts = np.concatenate((pts, pt[index, :]), axis=0)
 
-    # update the flags based on the lambda function later!
-    # also need to hae a way of switching between random and uniform sampling ?!!
-    # need to decide on the spacing !
 
-    for part_index, part in enumerate(shape.Geometry):
+    return pts, ss
 
-        if sample2d_flag:
-            for curve2d in part._curves2d:
-                uv_points, pt = curve_sampler.random_parametric_sample(curve2d, 0.1)
-                pts.append(pt)
 
-    if sample3d_flag:
-        for curve3d in shape.Geometry._curves3d:
-            uv_points, pt = curve_sampler.random_parametric_sample(curve3d, 0.1)
-            pts.append(pt)
+def get_data_test(shape, num_samples, lambda_func):
+    ss = np.empty((0, 3))
+    pts = np.empty((0, 3))
 
-    for surface in shape.Geometry._surfaces:
-        uv_points, pt = surface_sampler.random_parametric_sample(surface, 0.5, 10, 5 * num_samples)
-        s = lambda_func(shape, surface, uv_points)
-        index = shape.filter_outside_points(face_index, uv_points)
-        ss = np.concatenate((ss, s), axis=0)
-        pts.append(pt)
+    for part_index, part in enumerate(shape.Topology._topology):
+        for face_index, face in enumerate(part.faces):
+            surface_index = face['surface']
+            surface = shape.Geometry._surfaces[surface_index]
+            uv_points, pt = surface_sampler.random_parametric_sample(surface, 0.8, 10, 5 * num_samples)
+            s = lambda_func(shape, surface, uv_points)
+            index = shape.filter_outside_points(face_index, uv_points)
+            ss = np.concatenate((ss, s[index, :]), axis=0)
+            pts = np.concatenate((pts, pt[index, :]), axis=0)
 
+    # idx = poisson_disk_downsample(pts, num_samples)
+    # ss, pts = ss[idx, :], pts[idx, :]
+    return ss, pts
 
 def get_data(shape, num_samples, lambda_func):
     # for tracking normals and sample points
@@ -52,7 +58,7 @@ def get_data(shape, num_samples, lambda_func):
 
                     surface = shape.Geometry._surfaces[surface_index]
 
-                    uv_points, pt = surface_sampler.random_parametric_sample(surface, 0.5, 10, 5*num_samples)
+                    uv_points, pt = surface_sampler.random_parametric_sample(surface, 0.8, 10, 5*num_samples)
 
                     s = lambda_func(shape, surface, uv_points)
 
@@ -60,7 +66,7 @@ def get_data(shape, num_samples, lambda_func):
 
                     ss = np.concatenate((ss, s[index, :]), axis=0)
                     pts = np.concatenate((pts, pt[index, :]), axis=0)
-        # break
+
 
 
     idx = poisson_disk_downsample(pts, num_samples)
@@ -74,7 +80,7 @@ def get_data(shape, num_samples, lambda_func):
     #         # Sample points along the curve
     #         uv_points, pt = curve_sampler.random_parametric_sample(curve, num_samples)
     #         pts = np.concatenate((pts, pt), axis=0)
-
-    #idx = poisson_disk_downsample(pts, num_samples)
+    #
+    # idx = poisson_disk_downsample(pts, num_samples)
     # return ss[idx,:], pts[idx,:]
-    return ss, pts
+    return pts, ss

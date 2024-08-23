@@ -207,7 +207,8 @@ class BSplineCurve(Curve):
     def sample(self, sample_points):
         if sample_points.size == 1:
             samples = np.array(self._curveObject.evaluate_single(sample_points[0]))
-            return samples.reshape(-1, 1)
+            samples = samples.reshape(-1, 1)
+            return samples.T
 
         # Evaluate the curve at the given sample points
         return np.array(self._curveObject.evaluate_list(sample_points[:, 0].tolist()))
