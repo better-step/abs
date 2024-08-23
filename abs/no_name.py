@@ -21,8 +21,8 @@ def get_data_parts(parts, num_samples, lambda_func):
                 ss = np.concatenate((ss, s[index, :]), axis=0)
                 pts = np.concatenate((pts, pt[index, :]), axis=0)
 
-
-    return pts, ss
+    indices = poisson_disk_downsample(pts, num_samples)
+    return pts[indices], ss[indices]
 
 
 def get_data_test(shape, num_samples, lambda_func):
