@@ -24,8 +24,10 @@ class Surface:
             F = lambda u, v: derivatives(u, v)[:, :, 0].flatten() @ derivatives(u, v)[:, :, 1].flatten()
             G = lambda u, v: derivatives(u, v)[:, :, 1].flatten() @ derivatives(u, v)[:, :, 1].flatten()
             integrand = lambda u, v: np.sqrt(max(E(u, v) * G(u, v) - F(u, v) ** 2, 0))
-            self._area, _ = dblquad(integrand, self._trim_domain[0, 0], self._trim_domain[0, 1],
-                                    self._trim_domain[1, 0], self._trim_domain[1, 1], epsabs=1.49e-04, epsrel=1.49e-04)
+            self._area, _ = dblquad(integrand,
+                                    self._trim_domain[0, 0], self._trim_domain[0, 1],
+                                    self._trim_domain[1, 0], self._trim_domain[1, 1],
+                                    epsabs=1.49e-04, epsrel=1.49e-04)
         return self._area
 
 
