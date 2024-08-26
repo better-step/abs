@@ -13,7 +13,7 @@ class Hdf5test(unittest.TestCase):
 
     def test_geometry_parts(self):
         file_path = get_file('Cylinder_Hole.hdf5')
-        print(file_path)
+        # print(file_path)
         data = read_file(file_path)
         self.assertIsNotNone(data)
         self.assertIsNotNone(data['geometry']['parts'])
