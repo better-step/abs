@@ -39,8 +39,11 @@ jobs:
               run: |
                   pip install --user -r requirements.txt
                   pip install --user -r requirements_dev.txt
-                  pip install .
-            - name: PKG-TEST
+            - name: Install package
               run: |
-                  python -m unittest discover tests/
+                  pip install .
+            - name: Run Tests
+              run: |
+                  cd test
+                  python -m unittest discover -v
 
