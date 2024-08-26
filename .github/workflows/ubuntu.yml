@@ -41,7 +41,7 @@ jobs:
                   pip install --user -r requirements_dev.txt
             - name: Install package
               run: |
-                  pip install .
+                   python setup.py build develop
             - name: Run Tests
               run: |
                   cd test
