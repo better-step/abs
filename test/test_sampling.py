@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 
 from utils.test_utilities import *
-import abs.sampling as cs
+import abs as cs
 from abs import poisson_disk_downsample
 
 import abs.utils as au

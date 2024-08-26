@@ -1,5 +1,6 @@
 import numpy as np
-from abs.geometry import *
+from abs.curve import *
+from abs.surface import *
 
 
 def line3d():

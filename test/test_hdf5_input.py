@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 import h5py
 from test_geometry import *
-from abs.geometry import *
+from abs import *
 import unittest
 import numpy as np
 

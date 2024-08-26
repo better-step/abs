@@ -1,5 +1,5 @@
-from abs.sampling import curve_sampler
-from abs.sampling import surface_sampler
+from abs import curve_sampler
+from abs import surface_sampler
 import numpy as np
 from abs import poisson_disk_downsample
 

@@ -1,8 +1,8 @@
-from abs.geometry.curve import *
-from abs.geometry.surface import *
+from abs.curve import *
+from abs.surface import *
 from abs.topology import *
-from abs.sampling import curve_sampler
-from abs.sampling import surface_sampler
+from abs import curve_sampler
+from abs import surface_sampler
 from abs.winding_number import winding_number, find_surface_uv_for_curve
 
 def _create_surface(surface_data):
