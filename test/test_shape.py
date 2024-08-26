@@ -44,6 +44,7 @@ pts, ss  = get_data_parts(parts, 1000, l_function)
 # pts, ss = get_data_test(s, 10000, l_function)
 #pts, ss = get_data_geo(s, 30000, l_function)
 
+os.makedirs('sample_results', exist_ok=True)
 
 save_obj(f'sample_results/{name}.obj', pts)
 save_ply(f'sample_results/{name}.ply', pts, ss)
