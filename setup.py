@@ -163,7 +163,7 @@ setup(
     keywords='abs',
     name='A Better Step',
     setup_requires=setup_requirements,
-    test_suite='tests',
+    test_suite='test',
     tests_require=test_requirements,
     ext_modules=[CMakeExtension('abspy')],
     cmdclass=dict(build_ext=CMakeBuild),

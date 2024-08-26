@@ -4,17 +4,10 @@ import h5py
 import os
 from abs.topology import Topology
 
-
-def read_file(file_path):
-    assert Path(file_path).exists(), "Please provide valid file path"
-    return h5py.File(file_path, 'r')
+from abs.utils import *
 
 
-def get_file(sample_name):
-    return os.path.abspath(os.path.join(os.getcwd(), '..', 'abs', 'data', 'sample_hdf5', sample_name))
-
-
-class Topologytest(unittest.TestCase):
+class TestTopology(unittest.TestCase):
 
     def test_topology(self):
         sample_name = 'Cone.hdf5'

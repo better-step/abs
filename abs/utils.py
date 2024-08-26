@@ -10,7 +10,7 @@ def read_file(file_path):
 
 
 def get_file(sample_name):
-    return os.path.abspath(os.path.join(os.getcwd(), '..', 'abs', 'data', 'sample_hdf5', sample_name))
+    return os.path.abspath(os.path.join(Path(__file__), '..', 'data', 'sample_hdf5', sample_name))
 
 
 def save_obj(filename, pts):

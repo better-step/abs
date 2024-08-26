@@ -1,9 +1,8 @@
-import unittest
 import numpy as np
 from abs.geometry import *
 
 
-def test_line3d():
+def line3d():
     data = {
         "type": "Line",
         "location": [0, 0, 0],
@@ -13,7 +12,7 @@ def test_line3d():
     return Line(data)
 
 
-def test_line2d():
+def line2d():
     data = {
         "type": "Line",
         "location": [0, 0],
@@ -24,7 +23,7 @@ def test_line2d():
     return Line(data)
 
 
-def test_circle3d():
+def circle3d():
     data = {
         "type": "Circle",
         "location": [0, 0, 0],
@@ -38,7 +37,7 @@ def test_circle3d():
     return Circle(data)
 
 
-def test_circle2d():
+def circle2d():
     data = {
         "type": "Circle",
         "location": [0, 0],
@@ -51,7 +50,7 @@ def test_circle2d():
     return Circle(data)
 
 
-def test_ellipse3d():
+def ellipse3d():
     data = {
         "type": "Ellipse",
         "focus1": [0, 0, 0],
@@ -67,7 +66,7 @@ def test_ellipse3d():
     return Ellipse(data)
 
 
-def test_ellipse2d():
+def ellipse2d():
     data = {
         "type": "Ellipse",
         "focus1": [0, 0],
@@ -83,7 +82,7 @@ def test_ellipse2d():
     return Ellipse(data)
 
 
-def test_bspline_curve3d():
+def bspline_curve3d():
     data = {
         "type": "BSplineCurve",
         "closed": False,
@@ -98,7 +97,7 @@ def test_bspline_curve3d():
     return BSplineCurve(data)
 
 
-def test_bspline_curve2d():
+def bspline_curve2d():
     data = {
         "type": "BSplineCurve",
         "closed": False,
@@ -146,7 +145,7 @@ def test_bspline_curve2d():
     return BSplineCurve(data)
 
 
-def test_plane():
+def plane():
     data = {
         "type": "Plane",
         "coefficients": [1, 0, 0, 0],
@@ -160,7 +159,7 @@ def test_plane():
     return Plane(data)
 
 
-def test_cylinder():
+def cylinder():
     data = {
         "type": "Cylinder",
         "location": [0, 0, 0],
@@ -175,7 +174,7 @@ def test_cylinder():
     return Cylinder(data)
 
 
-def test_cone():
+def cone():
     data = {
         "type": "Cone",
         "angle": 0.5,
@@ -192,7 +191,7 @@ def test_cone():
     return Cone(data)
 
 
-def test_sphere():
+def sphere():
     data = {
         "type": "Sphere",
         "coefficients": [1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1, 0.0, 0.5, 1],
@@ -207,7 +206,7 @@ def test_sphere():
     return Sphere(data)
 
 
-def test_torus():
+def torus():
     data = {
         "type": "Torus",
         "location": [0, 0, 0],
@@ -222,7 +221,7 @@ def test_torus():
     return Torus(data)
 
 
-def test_bspline_surface():
+def bspline_surface():
     data = {
         "continuity": 6,
         "face_domain": [0.0, 0.785398163397494, 1.5707963267949, 3.14159265358979],
@@ -256,28 +255,3 @@ def test_bspline_surface():
 
     return BSplineSurface(data)
 
-
-class TestBasic(unittest.TestCase):
-    def test_shapes(self):
-        test_line3d()
-        test_line2d()
-
-        test_circle3d()
-        test_circle2d()
-
-        test_ellipse3d()
-        test_ellipse2d()
-
-        test_bspline_curve3d()
-        test_bspline_curve2d()
-
-        test_plane()
-        test_cylinder()
-        test_cone()
-        test_sphere()
-        test_torus()
-        test_bspline_surface()
-
-
-if __name__ == '__main__':
-    unittest.main()

@@ -1,16 +1,16 @@
-from test_utilities import *
+from utils.test_utilities import *
 import abs.sampling as cs
 
 if __name__ == '__main__':
     curves = {
-        "line3d":test_line3d(),
-        "line2d":test_line2d(),
-        "circle3d":test_circle3d(),
-        "circle2d":test_circle2d(),
-        "ellipse3d":test_ellipse3d(),
-        "ellipse2d":test_ellipse2d(),
-        # "bspline_curve3d":test_bspline_curve3d(),
-        "bspline_curve2d":test_bspline_curve2d()
+        "line3d": line3d(),
+        "line2d": line2d(),
+        "circle3d": circle3d(),
+        "circle2d": circle2d(),
+        "ellipse3d": ellipse3d(),
+        "ellipse2d": ellipse2d(),
+        # "bspline_curve3d": bspline_curve3d(),
+        "bspline_curve2d": bspline_curve2d()
     }
 
     for k in curves:

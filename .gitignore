@@ -109,3 +109,4 @@ ENV/
 .idea
 bin
 abs.code-workspace
+*.ply

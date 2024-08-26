@@ -1,25 +1,18 @@
 import os
 from pathlib import Path
 import h5py
-from tests.geometry_unit_test import *
+from test_geometry import *
 from abs.geometry import *
 import unittest
 import numpy as np
 
-
-def read_file(file_path):
-    assert Path(file_path).exists(), "Please provide valid file path"
-    return h5py.File(file_path, 'r')
-
-
-def get_file(sample_name):
-    return os.path.abspath(os.path.join(os.getcwd(), '..', 'abs', 'data', 'sample_hdf5', sample_name))
+from abs.utils import *
 
 
 class Hdf5test(unittest.TestCase):
 
     def test_geometry_parts(self):
-        file_path = get_file()
+        file_path = get_file('cylinder_Hole.hdf5')
         print(file_path)
         data = read_file(file_path)
         self.assertIsNotNone(data)
@@ -109,7 +102,7 @@ class Hdf5test(unittest.TestCase):
         sample_name = 'test1.hdf5'
         file_path = get_file(sample_name)
         with h5py.File(file_path, 'r') as hdf:
-            grp = hdf['geometry/parts/part_001/2dcurves/001']
+            grp = hdf['geometry/parts/part_001/2dcurves/000']
             bspline_curve2d = BSplineCurve(grp)
 
         self.assertEqual(bspline_curve2d._closed, False)
@@ -450,3 +443,6 @@ class Hdf5test(unittest.TestCase):
         self.assertTrue(dv < 1e-4)
         self.assertTrue(d2u < 1e-4)
         self.assertTrue(d2v < 1e-4)
+
+if __name__ == '__main__':
+    unittest.main()
