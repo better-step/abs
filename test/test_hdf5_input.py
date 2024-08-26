@@ -57,7 +57,7 @@ class Hdf5test(unittest.TestCase):
         self.assertTrue(np.allclose(np.linalg.norm(line.normal(param_points), axis=1), 1, atol=1e-8))
 
     def test_circle2d(self):
-        sample_name = 'cylinder_Hole.hdf5'
+        sample_name = 'Cylinder_Hole.hdf5'
         file_path = get_file(sample_name)
         with h5py.File(file_path, 'r') as hdf:
             grp = hdf['geometry/parts/part_001/2dcurves/004']
