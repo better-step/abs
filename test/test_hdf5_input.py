@@ -12,7 +12,7 @@ from abs.utils import *
 class Hdf5test(unittest.TestCase):
 
     def test_geometry_parts(self):
-        file_path = get_file('cylinder_Hole.hdf5')
+        file_path = get_file('Cylinder_Hole.hdf5')
         print(file_path)
         data = read_file(file_path)
         self.assertIsNotNone(data)
@@ -20,7 +20,7 @@ class Hdf5test(unittest.TestCase):
 
     #  2D curves
     def test_line2d(self):
-        sample_name = 'cylinder_Hole.hdf5'
+        sample_name = 'Cylinder_Hole.hdf5'
         file_path = get_file(sample_name)
         with h5py.File(file_path, 'r') as hdf:
             grp = hdf['geometry/parts/part_001/2dcurves/001']
@@ -286,7 +286,7 @@ class Hdf5test(unittest.TestCase):
         self.assertTrue(dv < 1e-7)
 
     def test_cylinder(self):
-        sample_name = 'cylinder_Hole.hdf5'
+        sample_name = 'Cylinder_Hole.hdf5'
         file_path = get_file(sample_name)
         with h5py.File(file_path, 'r') as hdf:
             grp = hdf['geometry/parts/part_001/surfaces/000']
