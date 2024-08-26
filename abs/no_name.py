@@ -1,5 +1,4 @@
-from abs import curve_sampler
-from abs import surface_sampler
+from abs import sampler
 import numpy as np
 from abs import poisson_disk_downsample
 
@@ -15,7 +14,7 @@ def get_data_parts(parts, num_samples, lambda_func):
             for face_index, face in enumerate(p.faces):
                 surface_index = face['surface']
                 surface = part.Geometry._surfaces[surface_index]
-                uv_points, pt = surface_sampler.random_parametric_sample(surface, 0.8, 10, 5 * num_samples)
+                uv_points, pt = sampler.random_sample(surface, 0.8, 10, 5 * num_samples)
                 s = lambda_func(part, surface, uv_points)
                 index = part.filter_outside_points(face_index, uv_points)
                 ss = np.concatenate((ss, s[index, :]), axis=0)

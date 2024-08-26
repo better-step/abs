@@ -1,8 +1,8 @@
 from abs.curve import *
 from abs.surface import *
 from abs.topology import *
-from abs import curve_sampler
-from abs import surface_sampler
+from abs import sampler
+from abs import sampler
 from abs.winding_number import winding_number, find_surface_uv_for_curve
 
 def _create_surface(surface_data):
@@ -100,18 +100,18 @@ class Shape:
                     if '2dcurve' in halfedge:
                         curve2d_index = halfedge['2dcurve']
                         curve2d = curves2d[curve2d_index]
-                        _, closest_surface_uv_values_of_curve = curve_sampler.uniform_sample(curve2d, spacing, 4, 300)
+                        _, closest_surface_uv_values_of_curve = sampler.uniform_sample(curve2d, spacing, 4, 300)
                         if not modified_orientation:
                             closest_surface_uv_values_of_curve = closest_surface_uv_values_of_curve[::-1]
                     else:
-                        surface_uv_values, surface_points = surface_sampler.uniform_sample(surface, spacing)
+                        surface_uv_values, surface_points = sampler.uniform_sample(surface, spacing)
 
                         curve3d_index = halfedge['edge']
                         curve3d = curves3d[curve3d_index]
 
 
                         # Sample the curve points to get UV values
-                        _, curve_points = curve_sampler.uniform_sample(curve3d, spacing)
+                        _, curve_points = sampler.uniform_sample(curve3d, spacing)
 
                         if not modified_orientation:
                             curve_points = curve_points[::-1]
