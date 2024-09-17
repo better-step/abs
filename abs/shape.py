@@ -140,7 +140,7 @@ class Shape:
                 surface = _create_surface(surface_data)
                 self._surfaces.append(surface)
 
-            self._bbox.append(data.get('bbox'))
+            self._bbox.append(np.array(data.get('bbox')[:]))
 
     class Topology:
         def __init__(self, topology_data):

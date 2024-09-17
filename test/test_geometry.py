@@ -39,17 +39,18 @@ def surface_derivative(surface, sample_points):
 
 def curves_derivative(curve, sample_points):
     epsilon = (sample_points[1] - sample_points[0]) * 1e-5
+
     sample_points_plus = sample_points.copy()
     sample_points_plus += epsilon
     deriv = (curve.sample(sample_points_plus) - curve.sample(sample_points)) / epsilon
     deriv1 = curve.derivative(sample_points, 1)
-    p = np.abs(deriv - deriv1).max()
+    p = np.abs(deriv - deriv1).max()/max(1, np.abs(np.mean(deriv)))
 
     sample_points_plus = sample_points.copy()
     sample_points_plus += epsilon
     deriv = (curve.derivative(sample_points_plus, 1) - curve.derivative(sample_points, 1)) / epsilon
     deriv1 = curve.derivative(sample_points, 2)
-    q = np.abs(deriv - deriv1).max()
+    q = np.abs(deriv - deriv1).max()/max(1, np.abs(np.mean(deriv)))
 
     return p, q
 
@@ -216,8 +217,7 @@ class TestGeometry(unittest.TestCase):
         self.assertEqual(shape.derivative(sample_points, 1).shape, (50, 2))
         d, d2 = curves_derivative(shape, sample_points)
         self.assertTrue(d < 1e-4)
-        # TODO: Fix this test
-        # self.assertTrue(d2 < 1e-4)
+        self.assertTrue(d2 < 1e-4)
 
         # length
         num_samples = 1000

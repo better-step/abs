@@ -26,7 +26,6 @@ class TestTopology(unittest.TestCase):
         face_index = 2
         adjacent_faces = topology.find_adjacent_faces(face_index)
         print(adjacent_faces)
-        # TODO: check if the result is correct
 
     def test_find_connected_components(self):
         sample_name = 'Cylinder_Hole_Fillet.hdf5'
@@ -36,5 +35,4 @@ class TestTopology(unittest.TestCase):
             topology = Topology(grp)
 
         connected_components = topology.find_connected_components()
-        # is this okay?
         self.assertEqual(len(connected_components[0]), 7)

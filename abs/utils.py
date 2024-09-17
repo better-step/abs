@@ -1,7 +1,7 @@
 from pathlib import Path
 import h5py
 import os
-from abs.no_name import *
+from abs.part_processor import *
 
 
 def read_file(file_path):
@@ -75,3 +75,41 @@ end_header
             np.savetxt(f, data, fmt='%f %f %f %f %f %f')
         else:
             np.savetxt(f, data, fmt='%f %f %f')
+
+
+def save_parts(name, P, S):
+    num_parts = len(P)
+    os.makedirs('sample_results', exist_ok=True)
+
+    for i in range(num_parts):
+        pts = P[i]
+        ss = S[i]
+
+        obj_filename = f'sample_results/{name}_part{i}.obj'
+        ply_filename = f'sample_results/{name}_part{i}.ply'
+
+        save_obj(obj_filename, pts)
+        save_ply(ply_filename, pts, ss)
+
+        print(f'Saved part {i} to {obj_filename} and {ply_filename}')
+
+
+def save_mesh(file_path, name):
+    with h5py.File(file_path, 'r') as hdf:
+        vv = []
+        ff = []
+        n = 0
+
+        for m in hdf['mesh']:
+            v = np.array(hdf[f'mesh/{m}']['points'])
+            f = np.array(hdf[f'mesh/{m}']['triangle'])
+
+            vv.append(v)
+            ff.append(f + n)
+            n += len(v)
+
+        if len(vv) > 0:
+            v = np.concatenate(vv)
+            f = np.concatenate(ff)
+
+            save_obj_mesh(f'sample_results/{name}_mesh.obj', v, f)

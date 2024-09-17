@@ -396,8 +396,6 @@ class Hdf5test(unittest.TestCase):
         self.assertEqual(bspline_surface._v_knots.shape[0], 1)
         self.assertEqual(type(bspline_surface._v_rational), bool)
 
-        #TODO: check weights, thers is inconsistency when initializing weights
-
         # sample points
         umin_value, umax_value, vmin_value, vmax_value = bspline_surface._trim_domain.reshape(-1, 1)
         gridX = np.linspace(umin_value, umax_value)

@@ -161,7 +161,7 @@ class Cone(Surface):
     def sample(self, sample_points):
 
         if sample_points.size == 0:
-            return self._apex  #TODO: check this may be to location
+            return self._apex
         cone_points = self._location.T + (self._radius + sample_points[:, 1] * np.sin(self._angle)) * \
                       (np.cos(sample_points[:, 0]) * self._x_axis.T + np.sin(sample_points[:, 0]) * self._y_axis.T) \
                       + sample_points[:, 1] * np.cos(self._angle) * self._z_axis.T

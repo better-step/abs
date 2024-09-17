@@ -215,9 +215,20 @@ class BSplineCurve(Curve):
 
     def derivative(self, sample_points, order=1):
         assert (sample_points.shape[1] == 1)
-        return np.array([
-            self._curveObject.derivatives(sample_points[i, 0], order)[-1] for i in range(sample_points.shape[0])
-        ])
+        # return np.array([
+        #     self._curveObject.derivatives(sample_points[i, 0], order) for i in range(sample_points.shape[0])
+        # ])
+        if order == 0:
+            return self.sample(sample_points)
+        else:
+            res = np.zeros([sample_points.shape[0], self._poles.shape[1]])
+            for i in range(sample_points.shape[0]):
+                d = self._curveObject.derivatives(sample_points[i, 0], order)
+                res[i, :] = d[-1]
+            return res
+
+
+
 
     def normal(self, sample_points):
         if sample_points.size == 0:
