@@ -21,7 +21,8 @@ def get_spacing_size(total_area, num_samples, surface_dim=3):
 def process_part(part, num_samples, lambda_func, points_ratio=5, reduction_factor=0.9):
 
     # Initial setup for sampling
-    num_points = points_ratio * num_samples
+    initial_num_points = points_ratio * num_samples
+    num_points = initial_num_points
     total_area = estimate_total_surface_area(part)
     current_spacing = get_spacing_size(total_area, num_points)
 
@@ -39,6 +40,10 @@ def process_part(part, num_samples, lambda_func, points_ratio=5, reduction_facto
 
                 # Sample points
                 uv_points, pt = sampler.random_sample(surface, current_spacing, 0, num_points)
+
+                if len(uv_points) == initial_num_points:
+                    num_points *= 2
+
                 s = lambda_func(part, surface, uv_points)
 
                 if s is not None:
@@ -58,7 +63,7 @@ def process_part(part, num_samples, lambda_func, points_ratio=5, reduction_facto
         pts = np.concatenate(current_pts, axis=0)
         ss = np.concatenate(current_ss, axis=0)
 
-        if len(pts) >= num_points:
+        if len(pts) >= initial_num_points:
             break
         else:
             current_spacing *= reduction_factor
@@ -101,7 +106,7 @@ def process_part(part, num_samples, lambda_func, points_ratio=5, reduction_facto
 
 
 def get_parts(parts, num_samples, lambda_func):
-    # Initialize empty lists to hold part arrays
+    # Initialize empty lists to hold part arrays -
     pts_list = []
     ss_list = []
 

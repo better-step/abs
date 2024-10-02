@@ -1,4 +1,7 @@
-# example of a dataset for normal estimation
+"""
+    example of a dataset for normal estimation - move this sample usage later
+"""
+
 
 import os
 import h5py
@@ -56,8 +59,6 @@ def process_directory(directory_path, output_pickle_file, num_samples, get_norma
     for file_name in tqdm(hdf5_files, desc="Processing files"):
         file_path = os.path.join(directory_path, file_name)
 
-        print(f"Processing file {file_name}")
-
         # Process the file to get points and normals
         points, normals = process_file(file_path, num_samples, get_normal_func)
 
@@ -77,9 +78,18 @@ def process_directory(directory_path, output_pickle_file, num_samples, get_norma
 
 
 # Example usage:
-directory_path = '/Users/nafiseh/Documents/GitHub/meshInYaml/meshInYaml/data_hdf5/j1.0.0/hdf5'
-output_dir = '/Users/nafiseh/Documents/GitHub/abs_new/processed_data/new_train.pkl'
-num_samples = 1000
+# directory_path = '/Users/nafiseh/Documents/GitHub/meshInYaml/meshInYaml/data_hdf5/j1.0.0/hdf5'
+# output_dir = '/Users/nafiseh/Documents/GitHub/abs_new/processed_data/new_train.pkl'
+# num_samples = 1000
+
+# Make the path relative
+input_data_file_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'hdf5')
+input_data_file_path = os.path.normpath(input_data_file_path)
+
+output_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'processed', 'train.pkl')
+output_dir = os.path.normpath(output_dir)
+
+num_samples = 2000
 
 # Assuming get_normal_func is already defined
-process_directory(directory_path, output_dir, num_samples, get_normal_func)
+process_directory(input_data_file_path, output_dir, num_samples, get_normal_func)

@@ -2,7 +2,7 @@ from abs.shape import Shape
 from abs.utils import *
 from abs.part_processor import *
 import unittest
-
+import os
 
 def get_normal_func(shape, geo, points):
     """
@@ -55,11 +55,14 @@ def get_labels_func(shape, geo, points):
 class TestShapeFunctions(unittest.TestCase):
 
     def test_get_parts_integration(self):
-        name = "/Users/nafiseh/Documents/GitHub/abs_new/data/sample_hdf5/Circle"
+        name = 'Circle'
         sample_name = f'{name}.hdf5'
+        file_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'sample_hdf5', sample_name)
+        file_path = os.path.normpath(file_path)
+
         num_samples = 1000
 
-        with h5py.File(sample_name, 'r') as hdf:
+        with h5py.File(file_path, 'r') as hdf:
             geo = hdf['geometry/parts']
             topo = hdf['topology/parts']
             parts = []
