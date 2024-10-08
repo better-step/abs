@@ -9,10 +9,18 @@ class Curve:
 
     def length(self):
         if self._length == -1:
-            integrand = lambda t: np.sqrt(
-                (lambda d: (d[:, 0] ** 2 + d[:, 1] ** 2))(self.derivative(t, order=1))[0]
-            )
-            circumference, _ = quad(integrand, self._interval[0, 0], self._interval[0, 1], epsabs = 1.49e-04, epsrel = 1.49e-04)
+            pts, weights = np.polynomial.legendre.leggauss(4)
+            pts += 1
+            pts *= 0.5 * (self._interval[0, 1] - self._interval[0, 0])
+            pts += self._interval[0, 0]
+
+            dd = self.derivative(pts[:, None], order=1)
+            circumference = np.sum(np.linalg.norm(dd, axis=1)*weights)*(self._interval[0, 1] - self._interval[0, 0]) / 2
+
+            # integrand = lambda t: np.sqrt(
+            #     (lambda d: (d[:, 0] ** 2 + d[:, 1] ** 2))(self.derivative(t, order=1))[0]
+            # )
+            # circumference, _ = quad(integrand, self._interval[0, 0], self._interval[0, 1], epsabs=1.49e-04, epsrel=1.49e-04)
             self._length = circumference
         return self._length
 

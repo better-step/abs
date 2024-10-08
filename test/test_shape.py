@@ -55,7 +55,7 @@ def get_labels_func(shape, geo, points):
 class TestShapeFunctions(unittest.TestCase):
 
     def test_get_parts_integration(self):
-        name = 'Circle'
+        name = 'Cylinder'
         sample_name = f'{name}.hdf5'
         file_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'sample_hdf5', sample_name)
         file_path = os.path.normpath(file_path)

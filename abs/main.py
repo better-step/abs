@@ -93,3 +93,4 @@ num_samples = 2000
 
 # Assuming get_normal_func is already defined
 process_directory(input_data_file_path, output_dir, num_samples, get_normal_func)
+
