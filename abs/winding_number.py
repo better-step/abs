@@ -27,7 +27,12 @@ def compute_position(point, period_u, period_v):
 
 def winding_number(curve_uv_values, surface_uv_values, period_u=None, period_v=None):
     """ Compute the winding number for a polyline and surface UV values efficiently. """
-    polyline_positions = np.array([compute_position(point, period_u, period_v) for point in curve_uv_values])
+    if period_u == None and period_v == None:
+        polyline_positions = curve_uv_values
+    else:
+        polyline_positions = np.array([compute_position(point, period_u, period_v) for point in curve_uv_values])
+
+
     is_2D = polyline_positions.shape[1] == 2
     a_values = polyline_positions[:-1]
     b_values = polyline_positions[1:]

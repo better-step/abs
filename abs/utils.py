@@ -113,3 +113,17 @@ def save_mesh(file_path, name):
             f = np.concatenate(ff)
 
             save_obj_mesh(f'sample_results/{name}_mesh.obj', v, f)
+
+
+def save_to_xyz(points, filename):
+    """
+    Save 3D points to an .xyz file.
+
+    Args:
+    points (array-like): List or NumPy array of 3D points (x, y, z).
+    filename (str): The path to the output .xyz file.
+    """
+    with open(filename, 'w') as f:
+        for point in points[0]:
+            # Write each point as X Y Z in a new line
+            f.write(f"{point[0]} {point[1]} {point[2]}\n")
