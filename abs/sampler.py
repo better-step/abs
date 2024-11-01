@@ -3,7 +3,7 @@ from abs.curve import Curve
 from abs.surface import Surface
 
 
-def uniform_sample(geom, spacing, min_pts=None, max_pts=None):
+def uniform_sample(geom, num_samples, min_pts=None, max_pts=None):
     """
     Sample uniform points on a curve or surface
 
@@ -19,13 +19,13 @@ def uniform_sample(geom, spacing, min_pts=None, max_pts=None):
     """
 
     if isinstance(geom, Curve):
-        return _uniform_sample_curve(geom, spacing, min_pts, max_pts)
+        return _uniform_sample_curve(geom, num_samples, min_pts, max_pts)
     elif isinstance(geom, Surface):
-        return _uniform_sample_surface(geom, spacing, min_pts, max_pts)
+        return _uniform_sample_surface(geom, num_samples, min_pts, max_pts)
     else:
         raise ValueError("Invalid geometry type")
 
-def random_sample(geom, spacing, min_pts=None, max_pts=None):
+def random_sample(geom, num_samples, min_pts=None, max_pts=None):
     """
     Sample random points on a curve or surface
 
@@ -41,15 +41,16 @@ def random_sample(geom, spacing, min_pts=None, max_pts=None):
     """
 
     if isinstance(geom, Curve):
-        return _random_sample_curve(geom, spacing, min_pts, max_pts)
+        return _random_sample_curve(geom, num_samples, min_pts, max_pts)
     elif isinstance(geom, Surface):
-        return _random_sample_surface(geom, spacing, min_pts, max_pts)
+        return _random_sample_surface(geom, num_samples, min_pts, max_pts)
     else:
         raise ValueError("Invalid geometry type")
 
 
 
-def _uniform_sample_curve(curve, spacing, min_pts=None, max_pts=None):
+#def _uniform_sample_curve(curve, spacing, min_pts=None, max_pts=None):
+def _uniform_sample_curve(curve, num_samples, min_pts=None, max_pts=None):
     """
     Sample uniform points on a curve
 
@@ -62,7 +63,7 @@ def _uniform_sample_curve(curve, spacing, min_pts=None, max_pts=None):
     parametric values and an array of sampled points on the curve.
     """
 
-    num_samples = max(int(curve.length() / spacing), 1)
+    # num_samples = max(int(curve.length() / spacing), 1)
 
     if min_pts is not None:
         num_samples = max(num_samples, min_pts)
@@ -73,7 +74,8 @@ def _uniform_sample_curve(curve, spacing, min_pts=None, max_pts=None):
     return t, curve.sample(t)
 
 
-def _random_sample_curve(curve, spacing, min_pts=None, max_pts=None):
+#def _random_sample_curve(curve, spacing, min_pts=None, max_pts=None):
+def _random_sample_curve(curve, num_samples, min_pts=None, max_pts=None):
     """
     Sample random points on a curve
 
@@ -86,7 +88,7 @@ def _random_sample_curve(curve, spacing, min_pts=None, max_pts=None):
     parametric values and an array of sampled points on the curve.
     """
 
-    num_samples = max(int(curve.length() / spacing), 1)
+    #num_samples = max(int(curve.length() / spacing), 1)
 
     if min_pts is not None:
         num_samples = max(num_samples, min_pts)
@@ -97,7 +99,8 @@ def _random_sample_curve(curve, spacing, min_pts=None, max_pts=None):
     return t, curve.sample(t)
 
 
-def _uniform_sample_surface(surface, spacing, min_pts=None, max_pts=None):
+# def _uniform_sample_surface(surface, spacing, min_pts=None, max_pts=None):
+def _uniform_sample_surface(surface, num_samples, min_pts=None, max_pts=None):
     """
     Sample uniform points on a surface
 
@@ -110,12 +113,14 @@ def _uniform_sample_surface(surface, spacing, min_pts=None, max_pts=None):
     parametric values and an array of sampled points on the surface.
     """
 
-    num_samples = max(int(np.sqrt(surface.area()) / spacing), 1)
+    # num_samples = max(int(np.sqrt(surface.area()) / spacing), 1)
 
     if min_pts is not None:
         num_samples = max(num_samples, min_pts)
     if max_pts is not None:
         num_samples = min(num_samples, max_pts)
+
+    num_samples = np.sqrt(num_samples).astype(int)
 
     u_values = np.linspace(surface._trim_domain[0, 0], surface._trim_domain[0, 1], num_samples)
     v_values = np.linspace(surface._trim_domain[1, 0], surface._trim_domain[1, 1], num_samples)
@@ -123,7 +128,8 @@ def _uniform_sample_surface(surface, spacing, min_pts=None, max_pts=None):
     points = np.array(np.meshgrid(u_values, v_values)).T.reshape(-1, 2)
     return points, surface.sample(points)
 
-def _random_sample_surface(surface, spacing, min_pts=None, max_pts=None):
+# def _random_sample_surface(surface, spacing, min_pts=None, max_pts=None):
+def _random_sample_surface(surface, num_samples, min_pts=None, max_pts=None):
     """
     Sample random points on a surface
 
@@ -136,15 +142,13 @@ def _random_sample_surface(surface, spacing, min_pts=None, max_pts=None):
     parametric values and an array of sampled points on the surface.
     """
 
-    num_samples = max(int(np.sqrt(surface.area()) / spacing), 1)**2
+    # num_samples = max(int(np.sqrt(surface.area()) / spacing), 1)**2
 
 
     if min_pts is not None:
         num_samples = max(num_samples, min_pts)
     if max_pts is not None:
         num_samples = min(num_samples, max_pts)
-
-
 
     points = np.random.uniform(low=[surface._trim_domain[0, 0], surface._trim_domain[1, 0]],
                           high=[surface._trim_domain[0, 1], surface._trim_domain[1, 1]],
@@ -165,18 +169,18 @@ def _random_sample_surface(surface, spacing, min_pts=None, max_pts=None):
     parametric values and an array of sampled points on the surface.
     """
 
-    num_samples = max(int(np.sqrt(surface.area()) / spacing), 1)**2
-
-
-    if min_pts is not None:
-        num_samples = max(num_samples, min_pts)
-    if max_pts is not None:
-        num_samples = min(num_samples, max_pts)
-
-
-
-    t = np.random.uniform(low=[surface._trim_domain[0, 0], surface._trim_domain[1, 0]],
-                          high=[surface._trim_domain[0, 1], surface._trim_domain[1, 1]],
-                          size=(num_samples,2))
-
-    return t, surface.sample(t)
+    # num_samples = max(int(np.sqrt(surface.area()) / spacing), 1)**2
+    #
+    #
+    # if min_pts is not None:
+    #     num_samples = max(num_samples, min_pts)
+    # if max_pts is not None:
+    #     num_samples = min(num_samples, max_pts)
+    #
+    #
+    #
+    # t = np.random.uniform(low=[surface._trim_domain[0, 0], surface._trim_domain[1, 0]],
+    #                       high=[surface._trim_domain[0, 1], surface._trim_domain[1, 1]],
+    #                       size=(num_samples,2))
+    #
+    # return t, surface.sample(t)

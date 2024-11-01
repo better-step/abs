@@ -2,7 +2,6 @@ from abs.curve import *
 from abs.surface import *
 from abs.topology import *
 from abs import sampler
-from abs import sampler
 from abs.winding_number import winding_number, find_surface_uv_for_curve
 
 def _create_surface(surface_data):
@@ -36,13 +35,9 @@ def _create_curve(curve_data):
     curve_class = curve_map.get(curve_type)
     if curve_class:
         return curve_class(curve_data)
-    # else:
-    #     print(f"This curve type: {curve_type}, is currently not supported")
-    #     return None
-
 
 class Shape:
-    def __init__(self, geometry_data, topology_data, spacing=1):
+    def __init__(self, geometry_data, topology_data, spacing=200):
         self.Geometry = self.Geometry(geometry_data)
         self.Topology = self.Topology(topology_data)
 
@@ -70,7 +65,6 @@ class Shape:
         Create 2D trimming curves.
         """
         self._2d_trimming_curves = []
-
         for _, part in enumerate(self.Topology._topology):
             if len(part.solids) == 0:
                 for shell_index, _ in enumerate(part.shells):
@@ -79,6 +73,7 @@ class Shape:
                 for _, solid in enumerate(part.solids):
                     for shell_index in solid['shells']:
                         self._process_2d_trimming_curves_for_shell(part, shell_index, curves2d, curves3d, spacing)
+
 
     def _process_2d_trimming_curves_for_shell(self, part, shell_index, curves2d, curves3d, spacing):
         shell = part.shells[shell_index]
@@ -140,6 +135,7 @@ class Shape:
                 surface = _create_surface(surface_data)
                 self._surfaces.append(surface)
 
+
             self._bbox.append(np.array(data.get('bbox')[:]))
 
     class Topology:
@@ -152,3 +148,4 @@ class Shape:
             topo_part = Topology(data)
             topology_parts.append(topo_part)
             self._topology = topology_parts
+

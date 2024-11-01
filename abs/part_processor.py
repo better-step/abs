@@ -3,28 +3,23 @@ import numpy as np
 from abs import poisson_disk_downsample
 
 
+
 def estimate_total_surface_area(part):
-    total_area = 0
-    for p in part.Topology._topology:
-        for face in p.faces:
-            surface_index = face['surface']
-            surface = part.Geometry._surfaces[surface_index]
-            total_area += surface.area()
+    surfaces = part.Geometry._surfaces
+    topology = part.Topology._topology
+    total_area = sum(surfaces[face['surface']].area()
+                     for p in topology
+                     for face in p.faces)
     return total_area
 
 
-def get_spacing_size(total_area, num_samples, surface_dim=3):
-    spacing = (total_area / num_samples) ** (1 / surface_dim)
-    return spacing
 
-
-def process_part(part, num_samples, lambda_func, points_ratio=5, reduction_factor=0.9):
+def process_part(part, num_samples, lambda_func, points_ratio=5):
 
     # Initial setup for sampling
     initial_num_points = points_ratio * num_samples
     num_points = initial_num_points
     total_area = estimate_total_surface_area(part)
-    current_spacing = get_spacing_size(total_area, num_points)
 
     # Sampling loop for surfaces
     while True:
@@ -35,14 +30,15 @@ def process_part(part, num_samples, lambda_func, points_ratio=5, reduction_facto
         for p_index, p in enumerate(part.Topology._topology):
 
             for face_index, face in enumerate(p.faces):
+
                 surface_index = face['surface']
                 surface = part.Geometry._surfaces[surface_index]
 
-                # Sample points
-                uv_points, pt = sampler.random_sample(surface, current_spacing, 0, num_points)
+                current_surface_num_points = int(np.ceil((surface.area() / total_area) * num_points))
 
-                if len(uv_points) == initial_num_points:
-                    num_points *= 2
+                # Sample points
+                uv_points, pt = sampler.random_sample(surface, current_surface_num_points, 2)
+
 
                 s = lambda_func(part, surface, uv_points)
 
@@ -60,13 +56,17 @@ def process_part(part, num_samples, lambda_func, points_ratio=5, reduction_facto
 
 
 
+
         pts = np.concatenate(current_pts, axis=0)
         ss = np.concatenate(current_ss, axis=0)
 
         if len(pts) >= initial_num_points:
             break
         else:
-            current_spacing *= reduction_factor
+            num_points = np.ceil(num_points *  initial_num_points / len(pts) * 1.2)
+
+
+
 
     # sample points for 3d curves
     for p_index, p in enumerate(part.Topology._topology):
@@ -77,6 +77,7 @@ def process_part(part, num_samples, lambda_func, points_ratio=5, reduction_facto
 
             if curve is None:
                 continue
+            continue
 
             # Sample points
             uv_points, pt = sampler.random_sample(curve, num_samples, 0, num_points)
@@ -94,6 +95,7 @@ def process_part(part, num_samples, lambda_func, points_ratio=5, reduction_facto
                 ss = np.concatenate((ss, s), axis=0)
 
     indices = poisson_disk_downsample(pts, num_samples, 0, 1e-50)
+
 
     if len(indices) < num_samples:
         remaining_pts = [i for i in range(len(pts)) if i not in indices]
