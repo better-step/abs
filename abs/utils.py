@@ -1,7 +1,7 @@
 from pathlib import Path
 import h5py
 import os
-from abs.part_processor import *
+import numpy as np
 
 
 def read_file(file_path):

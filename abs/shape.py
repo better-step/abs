@@ -1,6 +1,8 @@
 from abs.topology import *
 from abs.curve import *
 from abs.surface import *
+from abs import sampler
+
 
 
 def _create_surface(surface_data):
@@ -52,6 +54,78 @@ class Shape:
     def __init__(self, geometry_data, topology_data, spacing=200):
         self.Geometry = self.Geometry(geometry_data)
         self.Topology = self.Topology(topology_data)
+        self._create_2d_trimming_curves(self.Geometry._curves2d, self.Geometry._curves3d, spacing)
+
+
+    def _create_2d_trimming_curves(self, curves2d, curves3d, spacing):
+        """
+        Create 2D trimming curves.
+        """
+        self._2d_trimming_curves = []
+        if len(self.Topology._solids) == 0:
+            for shell in self.Topology._shells:
+                self._process_2d_trimming_curves_for_shell(shell, curves2d, curves3d, spacing)
+        else:
+            for solid in self.Topology._solids:
+                for shell in solid._shells:
+                    self._process_2d_trimming_curves_for_shell(shell, curves2d, curves3d, spacing)
+
+
+
+    def _process_2d_trimming_curves_for_shell(self, shell_index, curves2d, curves3d, spacing):
+        if isinstance(shell_index, (int, np.integer)):
+            shell = self.Topology._shells[shell_index]
+        else:
+            shell = shell_index
+
+
+        for face_index in shell._faces:
+
+            face = self.Topology._faces[face_index[0]]
+            self._2d_trimming_curves += (face_index[0] - len(self._2d_trimming_curves) + 1) * [None]
+            self._2d_trimming_curves[face_index[0]] = []
+            face_orientation = face._surface_orientation
+
+            # surface_index = face['surface']
+            # surface = self.Geometry._surfaces[surface_index]
+
+            for loop_id in face._loops:
+                loop = self.Topology._loops[loop_id]
+                for halfedge_index in loop._halfedges:
+                    halfedge = self.Topology._halfedges[halfedge_index]
+
+                    # should I move this to a function in Topology?
+                    orientation_wrt_edge = halfedge._orientation_wrt_edge
+                    if not face_orientation:
+                        modified_orientation = not orientation_wrt_edge
+                    else:
+                        modified_orientation = orientation_wrt_edge
+
+
+                    if  hasattr(halfedge, '_2dcurves'):
+                        curve2d_index = halfedge._2dcurves
+                        curve2d = curves2d[curve2d_index]
+                        _, closest_surface_uv_values_of_curve = sampler.uniform_sample(curve2d, spacing, 4, 300)
+                        if not modified_orientation:
+                            closest_surface_uv_values_of_curve = closest_surface_uv_values_of_curve[::-1]
+                    else:
+                        # needs to be fixed ---
+                        surface_uv_values, surface_points = sampler.uniform_sample(surface, spacing)
+
+                        curve3d_index = halfedge['edge']
+                        curve3d = curves3d[curve3d_index]
+
+
+                        # Sample the curve points to get UV values
+                        _, curve_points = sampler.uniform_sample(curve3d, spacing)
+
+                        if not modified_orientation:
+                            curve_points = curve_points[::-1]
+                        # Calculate the nearest UV values on the surface for the curve points
+                        closest_surface_uv_values_of_curve = find_surface_uv_for_curve(surface_points, surface_uv_values, curve_points)
+
+                    self._2d_trimming_curves[face_index[0]].append(closest_surface_uv_values_of_curve)
+
 
     class Geometry:
         def __init__(self, geometry_data):
