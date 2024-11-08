@@ -47,11 +47,11 @@ class Face(Topology):
             self._surface = face.get('surface')
             self._surface_orientation = face.get('surface_orientation')
 
-    def normals(self):
-        return self._normals
 
-    def sample(self, points):
-        return self._geometry.sample(points)
+    def _process_2d_trimming_curves(self, face):
+        self._2d_trimming_curves = []
+        face_orientation = face._surface_orientation
+
 
 
 class Halfedge(Topology):

@@ -52,9 +52,15 @@ def _get_loops(loop_data):
 
 class Shape:
     def __init__(self, geometry_data, topology_data, spacing=200):
-        self.Geometry = self.Geometry(geometry_data)
-        self.Topology = self.Topology(topology_data)
-        self._create_2d_trimming_curves(self.Geometry._curves2d, self.Geometry._curves3d, spacing)
+        self._geometry_data = self._geometry_data(geometry_data)
+        self._topology_data = self._topology_data(topology_data)
+
+        self.Solid = self.Solid(self._topology_data, self._geometry_data)
+
+        print('here')
+
+        # add this to the faces section later
+        #self._create_2d_trimming_curves(self.Geometry._curves2d, self.Geometry._curves3d, spacing)
 
 
     def _create_2d_trimming_curves(self, curves2d, curves3d, spacing):
@@ -73,6 +79,7 @@ class Shape:
 
 
     def _process_2d_trimming_curves_for_shell(self, shell_index, curves2d, curves3d, spacing):
+
         if isinstance(shell_index, (int, np.integer)):
             shell = self.Topology._shells[shell_index]
         else:
@@ -127,7 +134,7 @@ class Shape:
                     self._2d_trimming_curves[face_index[0]].append(closest_surface_uv_values_of_curve)
 
 
-    class Geometry:
+    class _geometry_data:
         def __init__(self, geometry_data):
             self._curves2d, self._curves3d, self._surfaces, self._bbox = [], [], [], []
             self.__init_geometry(geometry_data)
@@ -148,7 +155,7 @@ class Shape:
             self._bbox.append(np.array(data.get('bbox')[:]))
 
 
-    class Topology:
+    class _topology_data:
         def __init__(self, topology_data):
             self._edges, self._faces, self._halfedges, self._loops, self._shells, self._solids = [], [], [], [], [], []
             self.__init_topology(topology_data)
@@ -167,4 +174,47 @@ class Shape:
             for entity, (attr_list, constructor) in entity_map.items():
                 entity_data = Topology._get_topo_data(data, entity)
                 attr_list.extend(constructor(item) for item in entity_data)
+
+
+    class Solid:
+        def __init__(self, topology, geometry):
+            self.edges, self.faces, self.halfedges, self.loops, self.shells, self.solids = [], [], [], [], [], []
+            self.__init_solid(topology, geometry)
+
+
+        def __init_solid(self, topo, geo):
+
+            # Loop over edges
+            for edge in topo._edges:
+                edge._3dcurve = geo._curves3d[edge._3dcurve]
+                self.edges.append(edge)
+
+            # loop over halfedges
+            for halfedge in topo._halfedges:
+                halfedge._2dcurves = geo._curves2d[halfedge._2dcurves]
+                halfedge._edge = self.edges[halfedge._edge]
+                self.halfedges.append(halfedge)
+
+            # Loop over loops
+            for loop in topo._loops:
+                loop._halfedges = [topo._halfedges[halfedge_id] for halfedge_id in loop._halfedges]
+                self.loops.append(loop)
+
+            # Loop over faces
+            for face in topo._faces:
+                face._surface = geo._surfaces[face._surface]
+                face._loops = [topo._loops[loop_id] for loop_id in face._loops]
+                self.faces.append(face)
+
+            # # Loop over shells
+            # for shell in topo._shells:
+            #     for face_index, orientation in shell._faces:
+            #         shell.faces[face_index] = [topo._faces[face_index], orientation]
+
+            # loop over solids
+            for solid in topo._solids:
+                solid._shells = [topo._shells[shell_id] for shell_id in solid._shells]
+                self.solids.append(solid)
+
+
 

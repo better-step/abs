@@ -7,7 +7,6 @@ from abs import poisson_disk_downsample
 def estimate_total_surface_area(part):
     surfaces = part.Geometry._surfaces
     topology = part.Topology
-    # move area calculation to the topology???
     total_area = sum(surfaces[face['surface']].area()
                      for p in topology
                      for face in p.faces)
