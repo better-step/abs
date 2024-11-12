@@ -22,6 +22,27 @@ class Topology:
 
         return [data for _, data in sorted_data]
 
+
+    def _create_mappings(self):
+        self.halfEdgeMap = self._create_halfEdge_map()
+        self.edgeMap = self._create_edge_map()
+        self.loopMap = self._create_loop_map()
+        self.faceMap = self._create_face_map()
+
+
+    def _create_halfEdge_map(self):
+        """
+        Create a mapping from half-edges to loops.
+        """
+        halfEdgeMap = {}
+        for loop_index, loop in enumerate(self.loops):
+            for halfedge_id in loop['halfedges']:
+                halfEdgeMapValue = halfEdgeMap.get(halfedge_id, {'loops': set()})
+                halfEdgeMapValue['loops'].add(loop_index)
+                halfEdgeMap[halfedge_id] = halfEdgeMapValue
+        return halfEdgeMap
+
+
 class Edge(Topology):
     def __init__(self, edge):
         if isinstance(edge, dict):
@@ -41,16 +62,13 @@ class Face(Topology):
             self._loops = np.array(face['loops'])
             self._surface = np.int64(face['surface'])
             self._surface_orientation = face['surface_orientation']
+            self._2d_trimming_curves = []
 
         else:
             self._loops = face.get('loops')
             self._surface = face.get('surface')
             self._surface_orientation = face.get('surface_orientation')
-
-
-    def _process_2d_trimming_curves(self, face):
-        self._2d_trimming_curves = []
-        face_orientation = face._surface_orientation
+            self._2d_trimming_curves = []
 
 
 
@@ -88,11 +106,11 @@ class Loop(Topology):
 class Shell(Topology):
     def __init__(self, shell):
         if isinstance(shell, dict):
-            self._faces = np.array(shell['faces'])
+            self._faces = np.array(shell['faces'], dtype=object)
             self._orientation_wrt_solid = shell['orientation_wrt_solid']
 
         else:
-            self._faces = shell.get('faces')
+            self._faces = np.array(shell['faces'], dtype=object)
             self._orientation_wrt_solid = shell.get('orientation_wrt_solid')
 
 

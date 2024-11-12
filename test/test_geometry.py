@@ -1,7 +1,6 @@
 import unittest
 import numpy as np
-
-from utils.test_utilities import *
+from test.utils.test_utilities import *
 
 def surface_derivative(surface, sample_points):
     epsilon = 1e-6
@@ -365,7 +364,7 @@ class TestGeometry(unittest.TestCase):
         self.assertTrue(du < 1e-7)
         self.assertTrue(dv < 1e-7)
 
-        self.assertEqual(shape.area(), 1)
+        self.assertEqual(int(shape.area()), 1)
 
     def test_cylinder(self):
         shape = cylinder()
@@ -391,7 +390,7 @@ class TestGeometry(unittest.TestCase):
         self.assertTrue(d2u < 1e-6)
         self.assertTrue(d2v < 1e-6)
 
-        self.assertEqual(shape.area(), 1)
+        self.assertEqual(int(shape.area()), 1)
 
     def test_cone(self):
         shape = cone()

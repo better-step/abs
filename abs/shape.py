@@ -2,7 +2,7 @@ from abs.topology import *
 from abs.curve import *
 from abs.surface import *
 from abs import sampler
-
+from abs.winding_number import winding_number, find_surface_uv_for_curve
 
 
 def _create_surface(surface_data):
@@ -52,15 +52,31 @@ def _get_loops(loop_data):
 
 class Shape:
     def __init__(self, geometry_data, topology_data, spacing=200):
+
         self._geometry_data = self._geometry_data(geometry_data)
         self._topology_data = self._topology_data(topology_data)
 
-        self.Solid = self.Solid(self._topology_data, self._geometry_data)
+        self._create_2d_trimming_curves(self._geometry_data._curves2d, self._geometry_data._curves3d, spacing)
 
-        print('here')
+        self.Solid = self.Solid(self._topology_data, self._geometry_data, self._2d_trimming_curves)
 
-        # add this to the faces section later
-        #self._create_2d_trimming_curves(self.Geometry._curves2d, self.Geometry._curves3d, spacing)
+
+    def filter_outside_points(self, face, uv_points):
+        """
+        Filter out points that are outside the trimming curve of a face.
+        """
+        total_winding_numbers = np.zeros((len(uv_points), 1))
+        curves = face._2d_trimming_curves
+        for poly in curves:
+            # period_u, period_v = self._determine_surface_periodicity(surface)
+            period_u = None
+            period_v = None
+
+            total_winding_numbers += winding_number(poly, uv_points, period_u=period_u, period_v=period_v)
+
+        res = total_winding_numbers > 0.5
+        res = res.reshape(-1)
+        return res
 
 
     def _create_2d_trimming_curves(self, curves2d, curves3d, spacing):
@@ -68,58 +84,48 @@ class Shape:
         Create 2D trimming curves.
         """
         self._2d_trimming_curves = []
-        if len(self.Topology._solids) == 0:
-            for shell in self.Topology._shells:
+        if len(self._topology_data._solids) == 0:
+            for shell in self._topology_data._shells:
                 self._process_2d_trimming_curves_for_shell(shell, curves2d, curves3d, spacing)
         else:
-            for solid in self.Topology._solids:
-                for shell in solid._shells:
-                    self._process_2d_trimming_curves_for_shell(shell, curves2d, curves3d, spacing)
-
+            for solid in self._topology_data._solids:
+                for shell_index in solid._shells:
+                    self._process_2d_trimming_curves_for_shell(shell_index, curves2d, curves3d, spacing)
 
 
     def _process_2d_trimming_curves_for_shell(self, shell_index, curves2d, curves3d, spacing):
 
-        if isinstance(shell_index, (int, np.integer)):
-            shell = self.Topology._shells[shell_index]
-        else:
+        if isinstance(shell_index, Shell):
             shell = shell_index
+        else:
+            shell = self._topology_data._shells[shell_index]
 
+        for (face_index, _) in shell._faces:
+            face = self._topology_data._faces[face_index]
+            self._2d_trimming_curves += (face_index-len(self._2d_trimming_curves)+1)* [None]
+            self._2d_trimming_curves[face_index] = []
 
-        for face_index in shell._faces:
-
-            face = self.Topology._faces[face_index[0]]
-            self._2d_trimming_curves += (face_index[0] - len(self._2d_trimming_curves) + 1) * [None]
-            self._2d_trimming_curves[face_index[0]] = []
-            face_orientation = face._surface_orientation
-
-            # surface_index = face['surface']
-            # surface = self.Geometry._surfaces[surface_index]
+            surface_index = face._surface
+            surface = self._geometry_data._surfaces[surface_index]
 
             for loop_id in face._loops:
-                loop = self.Topology._loops[loop_id]
+                loop = self._topology_data._loops[loop_id]
                 for halfedge_index in loop._halfedges:
-                    halfedge = self.Topology._halfedges[halfedge_index]
+                    halfedge = self._topology_data._halfedges[halfedge_index]
+                    modified_orientation = halfedge._orientation_wrt_edge
+                    if not face._surface_orientation:
+                        modified_orientation = not modified_orientation
 
-                    # should I move this to a function in Topology?
-                    orientation_wrt_edge = halfedge._orientation_wrt_edge
-                    if not face_orientation:
-                        modified_orientation = not orientation_wrt_edge
-                    else:
-                        modified_orientation = orientation_wrt_edge
-
-
-                    if  hasattr(halfedge, '_2dcurves'):
+                    if hasattr(halfedge, '_2dcurves'):
                         curve2d_index = halfedge._2dcurves
                         curve2d = curves2d[curve2d_index]
                         _, closest_surface_uv_values_of_curve = sampler.uniform_sample(curve2d, spacing, 4, 300)
                         if not modified_orientation:
                             closest_surface_uv_values_of_curve = closest_surface_uv_values_of_curve[::-1]
                     else:
-                        # needs to be fixed ---
                         surface_uv_values, surface_points = sampler.uniform_sample(surface, spacing)
 
-                        curve3d_index = halfedge['edge']
+                        curve3d_index = halfedge._edge
                         curve3d = curves3d[curve3d_index]
 
 
@@ -131,7 +137,9 @@ class Shape:
                         # Calculate the nearest UV values on the surface for the curve points
                         closest_surface_uv_values_of_curve = find_surface_uv_for_curve(surface_points, surface_uv_values, curve_points)
 
-                    self._2d_trimming_curves[face_index[0]].append(closest_surface_uv_values_of_curve)
+                    self._2d_trimming_curves[face_index].append(closest_surface_uv_values_of_curve)
+
+
 
 
     class _geometry_data:
@@ -177,12 +185,12 @@ class Shape:
 
 
     class Solid:
-        def __init__(self, topology, geometry):
+        def __init__(self, topology, geometry, trimming_curves):
             self.edges, self.faces, self.halfedges, self.loops, self.shells, self.solids = [], [], [], [], [], []
-            self.__init_solid(topology, geometry)
+            self.__init_solid(topology, geometry, trimming_curves)
 
 
-        def __init_solid(self, topo, geo):
+        def __init_solid(self, topo, geo, trimming_curves):
 
             # Loop over edges
             for edge in topo._edges:
@@ -201,15 +209,17 @@ class Shape:
                 self.loops.append(loop)
 
             # Loop over faces
-            for face in topo._faces:
+            for idx, face in enumerate(topo._faces):
                 face._surface = geo._surfaces[face._surface]
                 face._loops = [topo._loops[loop_id] for loop_id in face._loops]
+                face._2d_trimming_curves = trimming_curves[idx]
                 self.faces.append(face)
 
-            # # Loop over shells
-            # for shell in topo._shells:
-            #     for face_index, orientation in shell._faces:
-            #         shell.faces[face_index] = [topo._faces[face_index], orientation]
+            # Loop over shells
+            for shell in topo._shells:
+                for orientation in shell._faces:
+                    shell._faces[orientation[0]] = (topo._faces[orientation[0]] , orientation[1])
+                self.shells.append(shell)
 
             # loop over solids
             for solid in topo._solids:

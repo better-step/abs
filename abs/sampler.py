@@ -1,6 +1,10 @@
 import numpy as np
 from abs.curve import Curve
 from abs.surface import Surface
+# remove these later
+import matplotlib.pyplot as plt
+from abs.utils import *
+
 
 
 def uniform_sample(geom, num_samples, min_pts=None, max_pts=None):
@@ -153,6 +157,27 @@ def _random_sample_surface(surface, num_samples, min_pts=None, max_pts=None):
     points = np.random.uniform(low=[surface._trim_domain[0, 0], surface._trim_domain[1, 0]],
                           high=[surface._trim_domain[0, 1], surface._trim_domain[1, 1]],
                           size=(num_samples,2))
+
+    # testing delete later
+    # uv_points = points
+    # xyz_points = surface.sample(uv_points)
+    #
+    # plt.figure()
+    # plt.scatter(uv_points[:, 0], uv_points[:, 1], alpha=0.5)
+    # plt.title("UV Space Distribution")
+    # plt.xlabel("U")
+    # plt.ylabel("V")
+    # plt.show()
+    #
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111, projection='3d')
+    # ax.scatter(xyz_points[:, 0], xyz_points[:, 1], xyz_points[:, 2], alpha=0.5)
+    # plt.title("3D Space Distribution")
+    # plt.show()
+    #
+    # name = 'sampling'
+    # save_file_path = os.path.join(os.path.dirname(__file__), '..', 'test', 'sample_results', f'{name}_normals.obj')
+    # save_obj(save_file_path, xyz_points)
 
     return points, surface.sample(points)
 

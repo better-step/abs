@@ -66,8 +66,6 @@ def process_part(part, num_samples, lambda_func, points_ratio=5):
             num_points = np.ceil(num_points *  initial_num_points / len(pts) * 1.2)
 
 
-
-
     # sample points for 3d curves
     for p_index, p in enumerate(part.Topology._topology):
 

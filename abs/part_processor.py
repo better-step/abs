@@ -1,21 +1,17 @@
 from abs import sampler
 import numpy as np
 from abs import poisson_disk_downsample
+import point_cloud_utils as pcu
 
 
 
 def estimate_total_surface_area(part):
-    surfaces = part.Geometry._surfaces
-    topology = part.Topology
-    total_area = sum(surfaces[face['surface']].area()
-                     for p in topology
-                     for face in p.faces)
 
-    # test: (this is wrong - fixed till this point)
-    for face in topology._faces:
-        # this is wrong!
-        for surface in face._surface:
-            total_area += surface.area()
+    #TODO each face has only ONE surface?
+    total_area = 0
+    for face in part.Solid.faces:
+        surface = face._surface
+        total_area += surface.area()
 
     return total_area
 
@@ -34,32 +30,28 @@ def process_part(part, num_samples, lambda_func, points_ratio=5):
         current_pts, current_ss = [], []
 
         # Iterate through faces in topology
-        for p_index, p in enumerate(part.Topology._topology):
 
-            for face_index, face in enumerate(p.faces):
+        for face in part.Solid.faces:
 
-                surface_index = face['surface']
-                surface = part.Geometry._surfaces[surface_index]
+            surface = face._surface
+            current_surface_num_points = int(np.ceil((surface.area() / total_area) * num_points))
 
-                current_surface_num_points = int(np.ceil((surface.area() / total_area) * num_points))
+            # Sample points
+            uv_points, pt = sampler.random_sample(surface, current_surface_num_points, 2)
 
-                # Sample points
-                uv_points, pt = sampler.random_sample(surface, current_surface_num_points, 2)
+            s = lambda_func(part, face, uv_points)
 
+            if s is not None:
 
-                s = lambda_func(part, surface, uv_points)
+                if len(s) != len(pt):
+                    s = np.full((pt.shape[0], pt.shape[1]), s)
 
-                if s is not None:
+                elif s.shape[1] != pt.shape[1]:
+                    s = np.tile(s, (1, pt.shape[1]))
 
-                    if len(s) != len(pt):
-                        s = np.full((pt.shape[0], pt.shape[1]), s)
-
-                    elif s.shape[1] != pt.shape[1]:
-                        s = np.tile(s, (1, pt.shape[1]))
-
-                    index = part.filter_outside_points(face_index, uv_points)
-                    current_pts.append(pt[index, :])
-                    current_ss.append(s[index, :])
+                index = part.filter_outside_points(face, uv_points)
+                current_pts.append(pt[index, :])
+                current_ss.append(s[index, :])
 
 
 
@@ -75,33 +67,33 @@ def process_part(part, num_samples, lambda_func, points_ratio=5):
 
 
 
-    # sample points for 3d curves
-    for p_index, p in enumerate(part.Topology._topology):
+    # # sample points for 3d curves
+    for edge in part.Solid.edges:
 
-        for edge in p.edges:
-            curve_index = edge['3dcurve']
-            curve = part.Geometry._curves3d[curve_index]
+        curve = edge._3dcurve
 
-            if curve is None:
-                continue
+        # what was the purpose of this?
+        if curve is None:
             continue
+        # continue
 
-            # Sample points
-            uv_points, pt = sampler.random_sample(curve, num_samples, 0, num_points)
+        # Sample points
+        uv_points, pt = sampler.random_sample(curve, num_samples, 0, num_points)
 
-            s = lambda_func(part, curve, uv_points)
+        s = lambda_func(part, edge, uv_points)
 
-            if s is not None:
-                if len(s) != len(pt):
-                    s = np.full((pt.shape[0], pt.shape[1]), s)
+        if s is not None:
+            if len(s) != len(pt):
+                s = np.full((pt.shape[0], pt.shape[1]), s)
 
-                elif s.shape[1] != pt.shape[1]:
-                    s = np.tile(s, (1, pt.shape[1]))
+            elif s.shape[1] != pt.shape[1]:
+                s = np.tile(s, (1, pt.shape[1]))
 
-                pts = np.concatenate((pts, pt), axis=0)
-                ss = np.concatenate((ss, s), axis=0)
+            pts = np.concatenate((pts, pt), axis=0)
+            ss = np.concatenate((ss, s), axis=0)
 
-    indices = poisson_disk_downsample(pts, num_samples, 0, 1e-50)
+    indices = poisson_disk_downsample(pts, num_samples)
+    #indices = pcu.downsample_point_cloud_poisson_disk(pts, 0, target_num_samples=num_samples)
 
 
     if len(indices) < num_samples:
@@ -115,6 +107,7 @@ def process_part(part, num_samples, lambda_func, points_ratio=5):
 
 
 def get_parts(parts, num_samples, lambda_func):
+
     # Initialize empty lists to hold part arrays -
     pts_list = []
     ss_list = []
