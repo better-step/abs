@@ -51,7 +51,7 @@ def _get_loops(loop_data):
 
 
 class Shape:
-    def __init__(self, geometry_data, topology_data, spacing=200):
+    def __init__(self, geometry_data, topology_data, spacing=0.1):
 
         self._geometry_data = self._geometry_data(geometry_data)
         self._topology_data = self._topology_data(topology_data)
@@ -116,21 +116,23 @@ class Shape:
                     if not face._surface_orientation:
                         modified_orientation = not modified_orientation
 
+                    curve3d_index = halfedge._edge
+                    curve3d = curves3d[curve3d_index]
+                    length = curve3d.length()
+                    n_samples = int(length / spacing)
+
                     if hasattr(halfedge, '_2dcurves'):
                         curve2d_index = halfedge._2dcurves
                         curve2d = curves2d[curve2d_index]
-                        _, closest_surface_uv_values_of_curve = sampler.uniform_sample(curve2d, spacing, 4, 300)
+                        _, closest_surface_uv_values_of_curve = sampler.uniform_sample(curve2d, n_samples, 4, 300)
                         if not modified_orientation:
                             closest_surface_uv_values_of_curve = closest_surface_uv_values_of_curve[::-1]
                     else:
-                        surface_uv_values, surface_points = sampler.uniform_sample(surface, spacing)
-
-                        curve3d_index = halfedge._edge
-                        curve3d = curves3d[curve3d_index]
+                        surface_uv_values, surface_points = sampler.uniform_sample(surface, n_samples*n_samples, 5, 300)
 
 
                         # Sample the curve points to get UV values
-                        _, curve_points = sampler.uniform_sample(curve3d, spacing)
+                        _, curve_points = sampler.uniform_sample(curve3d, n_samples)
 
                         if not modified_orientation:
                             curve_points = curve_points[::-1]
