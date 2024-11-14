@@ -158,7 +158,7 @@ def _random_sample_surface(surface, num_samples, min_pts=None, max_pts=None):
                           high=[surface._trim_domain[0, 1], surface._trim_domain[1, 1]],
                           size=(num_samples,2))
 
-    # testing delete later
+    #testing delete later
     # uv_points = points
     # xyz_points = surface.sample(uv_points)
     #

@@ -35,6 +35,9 @@ def _create_curve(curve_data):
     curve_class = curve_map.get(curve_type)
     if curve_class:
         return curve_class(curve_data)
+    else:
+        print(f"This curve type: {curve_type}, is currently not supported")
+        return None
 
 def _get_edges(edge_data):
     return Edge(edge_data)
@@ -118,6 +121,10 @@ class Shape:
 
                     curve3d_index = halfedge._edge
                     curve3d = curves3d[curve3d_index]
+
+                    if curve3d is None:
+                        continue
+
                     length = curve3d.length()
                     n_samples = int(length / spacing)
 

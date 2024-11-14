@@ -1,12 +1,9 @@
 import h5py
 import os
-
 import numpy as np
-
 from abs.shape import *
 from abs.part_processor import *
 from abs.utils import *
-
 import meshio as mio
 
 def get_normal_func(part, topo, points):
@@ -30,9 +27,9 @@ def get_normal_func(part, topo, points):
     return normal_points
 
 
-name = '19528_87cc3460_0002_2'
+name = 'Sphere'
 sample_name = f'{name}.hdf5'
-file_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'hdf5', sample_name)
+file_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'sample_hdf5', sample_name)
 file_path = os.path.normpath(file_path)
 
 
@@ -47,12 +44,12 @@ for i in range(len(geo)):
 num_samples = 10000
 P, S = get_parts(parts, num_samples, get_normal_func)
 
-save_file_path = os.path.join(os.path.dirname(__file__), '..', 'test', 'sample_results', f'{name}_normals.vtk')
-#save_ply(save_file_path, P[0], S[0])
+save_file_path = os.path.join(os.path.dirname(__file__), '..', 'test', 'sample_results', f'{name}.ply')
+save_ply(save_file_path, P[0], S[0])
 # save_obj(save_file_path, P[0])
 
-m = mio.Mesh(P[0], cells={"triangle":np.array([np.arange(P[0].shape[0]), np.arange(P[0].shape[0]), np.arange(P[0].shape[0])]).T})
-m.write(save_file_path)
+#m = mio.Mesh(P[0], cells={"triangle":np.array([np.arange(P[0].shape[0]), np.arange(P[0].shape[0]), np.arange(P[0].shape[0])]).T})
+#m.write(save_file_path)
 
 print('Finished')
 

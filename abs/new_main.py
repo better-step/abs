@@ -11,17 +11,28 @@ from joblib import dump
 
 
 
-def get_normal_func(shape, geo, points):
-    """Get normal vectors for points based on geometry."""
+def get_normal_func(part, topo, points):
+
     try:
-        if len(geo._interval[0]) == 2:
+        if hasattr(topo, '_3dcurve'):
+            return None
+        if topo._surface._shape_name == 'Other':
             return None
     except AttributeError:
         pass
 
-    normal_points = geo.normal(points)
-    return normal_points
+    surf = topo._surface
+    surf_orientation = topo._surface_orientation
+    shell_orienttion = part.Solid.shells[0]._orientation_wrt_solid
+    normal_points = surf.normal(points)
 
+    if not surf_orientation and shell_orienttion:
+        normal_points = -normal_points
+
+    # normalize the 3d points to enable it for surface reconstruction
+
+
+    return normal_points
 
 def process_file(file_path, num_samples, get_normal_func):
     """Process a single HDF5 file to generate sample points and normals in a memory-efficient way."""

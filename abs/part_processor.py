@@ -1,13 +1,11 @@
 from abs import sampler
 import numpy as np
 from abs import poisson_disk_downsample
-import point_cloud_utils as pcu
 
 
 
 def estimate_total_surface_area(part):
 
-    #TODO each face has only ONE surface?
     total_area = 0
     for face in part.Solid.faces:
         surface = face._surface
@@ -34,6 +32,7 @@ def process_part(part, num_samples, lambda_func, points_ratio=5):
         for face in part.Solid.faces:
 
             surface = face._surface
+
             current_surface_num_points = int(np.ceil((surface.area() / total_area) * num_points))
 
             # Sample points
@@ -52,6 +51,8 @@ def process_part(part, num_samples, lambda_func, points_ratio=5):
                 index = part.filter_outside_points(face, uv_points)
                 current_pts.append(pt[index, :])
                 current_ss.append(s[index, :])
+                # current_pts.append(pt)
+                # current_ss.append(s)
 
 
 
@@ -65,17 +66,13 @@ def process_part(part, num_samples, lambda_func, points_ratio=5):
             num_points = np.ceil(num_points *  initial_num_points / len(pts) * 1.2)
 
 
-
-
     # # sample points for 3d curves
     for edge in part.Solid.edges:
 
         curve = edge._3dcurve
 
-        # what was the purpose of this?
         if curve is None:
             continue
-        # continue
 
         # Sample points
         uv_points, pt = sampler.random_sample(curve, num_samples, 0, num_points)
@@ -93,7 +90,6 @@ def process_part(part, num_samples, lambda_func, points_ratio=5):
             ss = np.concatenate((ss, s), axis=0)
 
     indices = poisson_disk_downsample(pts, num_samples)
-    #indices = pcu.downsample_point_cloud_poisson_disk(pts, 0, target_num_samples=num_samples)
 
 
     if len(indices) < num_samples:
