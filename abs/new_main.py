@@ -2,6 +2,7 @@ import os
 import h5py
 import pickle
 import gzip
+
 from abs.shape import Shape
 from abs.utils import *
 from abs.part_processor import *
@@ -76,10 +77,16 @@ def process_and_save_single_file(file_path, num_samples, get_normal_func, output
         raise
 
 
+import os
+from concurrent.futures import ProcessPoolExecutor, as_completed
+from tqdm import tqdm
+
+
 def process_directory_parallel(directory_path, output_dir, num_samples, get_normal_func, max_workers=4):
-    """Process all HDF5 files in parallel using ProcessPoolExecutor."""
+    """Process all HDF5 files in parallel using ProcessPoolExecutor, with error handling."""
     os.makedirs(output_dir, exist_ok=True)
     hdf5_files = [f for f in os.listdir(directory_path) if f.endswith('.hdf5')]
+    error_files = []  # To log the files that failed
 
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
         futures = []
@@ -88,12 +95,23 @@ def process_directory_parallel(directory_path, output_dir, num_samples, get_norm
             futures.append(
                 executor.submit(process_and_save_single_file, file_path, num_samples, get_normal_func, output_dir)
             )
+
         for future in tqdm(as_completed(futures), total=len(hdf5_files), desc="Processing files"):
             try:
                 future.result()
             except Exception as e:
-                print(f"Task failed: {e}")
+                file_index = futures.index(future)
+                failed_file = hdf5_files[file_index]
+                error_files.append(failed_file)  # Log the name of the problematic file
+                print(f"Task failed for {failed_file}: {e}")
 
+    # Report the files that failed
+    if error_files:
+        print("\nThe following files failed to process:")
+        for error_file in error_files:
+            print(error_file)
+    else:
+        print("\nAll files processed successfully.")
 
 
 if __name__ == "__main__":

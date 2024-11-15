@@ -29,7 +29,7 @@ def uniform_sample(geom, num_samples, min_pts=None, max_pts=None):
     else:
         raise ValueError("Invalid geometry type")
 
-def random_sample(geom, num_samples, min_pts=None, max_pts=None):
+def random_sample(topo, num_samples, min_pts=None, max_pts=None):
     """
     Sample random points on a curve or surface
 
@@ -44,10 +44,10 @@ def random_sample(geom, num_samples, min_pts=None, max_pts=None):
     parametric values and an array of sampled points on the curve/surface.
     """
 
-    if isinstance(geom, Curve):
-        return _random_sample_curve(geom, num_samples, min_pts, max_pts)
-    elif isinstance(geom, Surface):
-        return _random_sample_surface(geom, num_samples, min_pts, max_pts)
+    if hasattr(topo, '_3dcurve') and isinstance(topo._3dcurve, Curve):
+        return _random_sample_curve(topo._3dcurve, num_samples, min_pts, max_pts)
+    elif isinstance(topo._surface, Surface):
+        return _random_sample_surface(topo._surface, num_samples, min_pts, max_pts)
     else:
         raise ValueError("Invalid geometry type")
 
@@ -132,7 +132,7 @@ def _uniform_sample_surface(surface, num_samples, min_pts=None, max_pts=None):
     points = np.array(np.meshgrid(u_values, v_values)).T.reshape(-1, 2)
     return points, surface.sample(points)
 
-# def _random_sample_surface(surface, spacing, min_pts=None, max_pts=None):
+
 def _random_sample_surface(surface, num_samples, min_pts=None, max_pts=None):
     """
     Sample random points on a surface
@@ -147,7 +147,6 @@ def _random_sample_surface(surface, num_samples, min_pts=None, max_pts=None):
     """
 
     # num_samples = max(int(np.sqrt(surface.area()) / spacing), 1)**2
-
 
     if min_pts is not None:
         num_samples = max(num_samples, min_pts)
@@ -181,31 +180,3 @@ def _random_sample_surface(surface, num_samples, min_pts=None, max_pts=None):
 
     return points, surface.sample(points)
 
-
-    """
-    Sample random points in parametric space on a surface
-
-    Args:
-    surface: The surface entity to be sampled.
-    spacing (float): The spacing parameter for sampling.
-
-
-    Returns:
-    parametric values and an array of sampled points on the surface.
-    """
-
-    # num_samples = max(int(np.sqrt(surface.area()) / spacing), 1)**2
-    #
-    #
-    # if min_pts is not None:
-    #     num_samples = max(num_samples, min_pts)
-    # if max_pts is not None:
-    #     num_samples = min(num_samples, max_pts)
-    #
-    #
-    #
-    # t = np.random.uniform(low=[surface._trim_domain[0, 0], surface._trim_domain[1, 0]],
-    #                       high=[surface._trim_domain[0, 1], surface._trim_domain[1, 1]],
-    #                       size=(num_samples,2))
-    #
-    # return t, surface.sample(t)

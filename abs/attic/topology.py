@@ -98,6 +98,7 @@ class Topology:
         return orientation_wrt_edge
 
 
+
     @property
     def edges(self):
 

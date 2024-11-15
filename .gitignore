@@ -110,3 +110,15 @@ ENV/
 bin
 abs.code-workspace
 *.ply
+/abs/_deps
+abs/cmake/CPM_0.39.0.cmake
+/abs/CMakeFiles
+abs/CMakeCache.txt
+/data
+*.pkl
+*.vtu
+*.xyz
+/abs/CPM_modules
+*_install.cmake
+*-lock.cmake
+Makefile

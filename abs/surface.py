@@ -1,7 +1,6 @@
 import numpy as np
 from geomdl import BSpline
 from geomdl import operations
-# from scipy.integrate import dblquad
 
 
 class Surface:
@@ -25,9 +24,6 @@ class Surface:
             pts += self._trim_domain[:, 0]
             weights = (w * w[:, None]).ravel()
 
-            # pts = np.array(np.meshgrid(np.linspace(self._trim_domain[0, 0], self._trim_domain[0, 1], 3),np.linspace(self._trim_domain[1, 0], self._trim_domain[1, 1], 3))).reshape(2, -1).T
-            # weights = 1/np.ones(pts.shape[0])
-
             dd = self.derivative(pts)
             EE = np.sum(dd[:, :, 0] * dd[:, :, 0], axis=1)
             FF = np.sum(dd[:, :, 0] * dd[:, :, 1], axis=1)
@@ -35,16 +31,6 @@ class Surface:
 
             self._area = np.sum(np.sqrt(EE * GG - FF ** 2)*weights)*np.prod(self._trim_domain[:, 1] - self._trim_domain[:, 0]) / 4
 
-            # derivatives = lambda u, v: self.derivative(np.array([[u, v]]))
-            # E = lambda u, v: derivatives(u, v)[:, :, 0].flatten() @ derivatives(u, v)[:, :, 0].flatten()
-            # F = lambda u, v: derivatives(u, v)[:, :, 0].flatten() @ derivatives(u, v)[:, :, 1].flatten()
-            # G = lambda u, v: derivatives(u, v)[:, :, 1].flatten() @ derivatives(u, v)[:, :, 1].flatten()
-            #
-            # integrand = lambda u, v: np.sqrt(max(E(u, v) * G(u, v) - F(u, v) ** 2, 0))
-            # self._area, _ = dblquad(integrand,
-            #                         self._trim_domain[0, 0], self._trim_domain[0, 1],
-            #                         self._trim_domain[1, 0], self._trim_domain[1, 1],
-            #                         epsabs=1.49e-04, epsrel=1.49e-04)
         return self._area
 
 

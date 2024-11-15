@@ -1,7 +1,7 @@
+from random import sample
 import numpy as np
 from geomdl import BSpline, NURBS
 from scipy.integrate import quad
-
 
 class Curve:
     def sample(self, points):
@@ -106,6 +106,7 @@ class Circle(Curve):
             return self._radius * (np.sin(sample_points) * self._x_axis - np.cos(sample_points) * self._y_axis)
 
     def normal(self, sample_points):
+
         rotation_matrix = np.array([[0, 1], [-1, 0]])
         normal_vector = self.derivative(sample_points, order=1) @ rotation_matrix.T
         normal_vector /= np.linalg.norm(normal_vector, axis=1, keepdims=True)
@@ -219,9 +220,6 @@ class BSplineCurve(Curve):
 
     def derivative(self, sample_points, order=1):
         assert (sample_points.shape[1] == 1)
-        # return np.array([
-        #     self._curveObject.derivatives(sample_points[i, 0], order) for i in range(sample_points.shape[0])
-        # ])
         if order == 0:
             return self.sample(sample_points)
         else:
@@ -230,9 +228,6 @@ class BSplineCurve(Curve):
                 d = self._curveObject.derivatives(sample_points[i, 0], order)
                 res[i, :] = d[-1]
             return res
-
-
-
 
     def normal(self, sample_points):
         if sample_points.size == 0:

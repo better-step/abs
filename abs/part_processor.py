@@ -3,21 +3,17 @@ import numpy as np
 from abs import poisson_disk_downsample
 
 
-
 def estimate_total_surface_area(part):
 
     total_area = 0
     for face in part.Solid.faces:
-        surface = face._surface
-        total_area += surface.area()
+        total_area += face.area()
 
     return total_area
 
 
-
 def process_part(part, num_samples, lambda_func, points_ratio=5):
 
-    # Initial setup for sampling
     initial_num_points = points_ratio * num_samples
     num_points = initial_num_points
     total_area = estimate_total_surface_area(part)
@@ -28,15 +24,12 @@ def process_part(part, num_samples, lambda_func, points_ratio=5):
         current_pts, current_ss = [], []
 
         # Iterate through faces in topology
-
         for face in part.Solid.faces:
 
-            surface = face._surface
-
-            current_surface_num_points = int(np.ceil((surface.area() / total_area) * num_points))
+            current_surface_num_points = int(np.ceil((face.area() / total_area) * num_points))
 
             # Sample points
-            uv_points, pt = sampler.random_sample(surface, current_surface_num_points, 2)
+            uv_points, pt = sampler.random_sample(face, current_surface_num_points, 2)
 
             s = lambda_func(part, face, uv_points)
 
@@ -48,13 +41,10 @@ def process_part(part, num_samples, lambda_func, points_ratio=5):
                 elif s.shape[1] != pt.shape[1]:
                     s = np.tile(s, (1, pt.shape[1]))
 
-                index = part.filter_outside_points(face, uv_points)
+
+                index = face.filter_outside_points(uv_points)
                 current_pts.append(pt[index, :])
                 current_ss.append(s[index, :])
-                # current_pts.append(pt)
-                # current_ss.append(s)
-
-
 
 
         pts = np.concatenate(current_pts, axis=0)
@@ -65,17 +55,15 @@ def process_part(part, num_samples, lambda_func, points_ratio=5):
         else:
             num_points = np.ceil(num_points *  initial_num_points / len(pts) * 1.2)
 
-
     # # sample points for 3d curves
     for edge in part.Solid.edges:
 
-        curve = edge._3dcurve
 
-        if curve is None:
+        if edge._3dcurve is None:
             continue
 
         # Sample points
-        uv_points, pt = sampler.random_sample(curve, num_samples, 0, num_points)
+        uv_points, pt = sampler.random_sample(edge, num_samples, 0, num_points)
 
         s = lambda_func(part, edge, uv_points)
 
@@ -104,20 +92,15 @@ def process_part(part, num_samples, lambda_func, points_ratio=5):
 
 def get_parts(parts, num_samples, lambda_func):
 
-    # Initialize empty lists to hold part arrays -
     pts_list = []
     ss_list = []
 
     for part in parts:
 
-        # Process each part to get points and ss values
         pts, ss = process_part(part, num_samples, lambda_func)
-
-        # Convert points and ss to NumPy arrays and append them to the list
         pts_list.append(np.array(pts))
         ss_list.append(np.array(ss))
 
-    # Return lists of arrays
     return pts_list, ss_list
 
 

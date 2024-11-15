@@ -2,6 +2,7 @@ from pathlib import Path
 import h5py
 import os
 import numpy as np
+import meshio as mio
 
 
 def read_file(file_path):
@@ -127,3 +128,8 @@ def save_to_xyz(points, filename):
         for point in points[0]:
             # Write each point as X Y Z in a new line
             f.write(f"{point[0]} {point[1]} {point[2]}\n")
+
+
+def save_vtu(save_file_path , P):
+    m = mio.Mesh(P, cells={"triangle":np.array([np.arange(P.shape[0]), np.arange(P.shape[0]), np.arange(P.shape[0])]).T})
+    m.write(save_file_path)
