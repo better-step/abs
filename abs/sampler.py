@@ -2,7 +2,6 @@ import numpy as np
 from abs.curve import Curve
 from abs.surface import Surface
 # remove these later
-import matplotlib.pyplot as plt
 from abs.utils import *
 
 
