@@ -208,7 +208,7 @@ class Sphere(Surface):
             if 'z_axis' in sphere:
                 self._z_axis = np.array(sphere['z_axis']).reshape(-1, 1).T
             else:
-                self._z_axis = np.zeros((1, 3))
+                self._z_axis = np.cross(self._x_axis, self._y_axis)
             self._area = -1
             self._shape_name = sphere['type']
         else:
