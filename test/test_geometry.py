@@ -1,11 +1,15 @@
 import unittest
+from random import sample
 import numpy as np
+from fontTools.merge.util import first
 from test.utils.test_utilities import *
+from scipy.interpolate import BSpline
 
 def surface_derivative(surface, sample_points):
     epsilon = 1e-6
 
     # testing ds/du order 1
+    sample_points_plus = sample_points.copy()
     sample_points_plus = sample_points.copy()
     sample_points_plus[:, 0] += epsilon
     deriv = (surface.sample(sample_points_plus) - surface.sample(sample_points)) / epsilon
@@ -55,7 +59,7 @@ def curves_derivative(curve, sample_points):
 
 
 def generate_points_on_curve(curve, num_samples=1000):
-    param_range = np.linspace(curve._interval[0, 0], curve._interval[0, 1], num_samples)
+    param_range = np.linspace(curve.interval[0, 0], curve.interval[0, 1], num_samples)
     param_range = param_range[:, None]
     points = curve.sample(param_range.reshape(-1, 1))
     return param_range, points
@@ -94,10 +98,11 @@ class TestGeometry(unittest.TestCase):
         bspline_surface()
 
     def test_line2d(self):
+
         shape = line2d()
-        self.assertEqual(shape._location.shape, (1, 2))
-        self.assertEqual(shape._direction.shape, (1, 2))
-        self.assertEqual(shape._interval.shape, (1, 2))
+        self.assertEqual(shape.location.shape, (1, 2))
+        self.assertEqual(shape.direction.shape, (1, 2))
+        self.assertEqual(shape.interval.shape, (1, 2))
         sample_points = np.linspace(0, 1, 10).reshape(-1, 1)
 
         # sampling
@@ -112,10 +117,10 @@ class TestGeometry(unittest.TestCase):
         self.assertTrue(d2 < 1e-7)
 
         # length
-        num_samples = 1000  # Can be adjusted for precision
+        num_samples = 1000
         param_points, points = generate_points_on_curve(shape, num_samples)
         self.assertTrue(abs(np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1)) -
-                            (shape._length if shape._length != -1 else shape.length()) < 1e-4))
+                            (shape.length if shape.length != -1 else shape.get_length()) < 1e-4))
 
         # normals
         rotated_p = estimate_normal(shape, num_samples)
@@ -126,11 +131,11 @@ class TestGeometry(unittest.TestCase):
 
     def test_circle2d(self):
         shape = circle2d()
-        self.assertEqual(shape._location.shape, (1, 2))
-        self.assertEqual(type(shape._radius), float)
-        self.assertEqual(shape._interval.shape, (1, 2))
-        self.assertEqual(shape._x_axis.shape, (1, 2))
-        self.assertEqual(shape._y_axis.shape, (1, 2))
+        self.assertEqual(shape.location.shape, (1, 2))
+        self.assertEqual(type(shape.radius), float)
+        self.assertEqual(shape.interval.shape, (1, 2))
+        self.assertEqual(shape.x_axis.shape, (1, 2))
+        self.assertEqual(shape.y_axis.shape, (1, 2))
 
         # sampling
         sample_points = np.linspace(0, 2 * np.pi, 10).reshape(-1, 1)
@@ -150,7 +155,7 @@ class TestGeometry(unittest.TestCase):
         num_samples = 1000
         param_points, points = generate_points_on_curve(shape, num_samples)
         self.assertTrue(abs(np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1)) -
-                            (shape._length if shape._length != -1 else shape.length()) < 1e-4))
+                            (shape.length if shape.length != -1 else shape.get_length()) < 1e-4))
 
         # normals
         rotated_p = estimate_normal(shape, num_samples)
@@ -160,14 +165,15 @@ class TestGeometry(unittest.TestCase):
         self.assertTrue(np.allclose(np.linalg.norm(shape.normal(param_points), axis=1), 1, atol=1e-8))
 
     def test_ellipse2d(self):
+
         ellipse = ellipse2d()
-        self.assertEqual(ellipse._focus1.shape, (1, 2))
-        self.assertEqual(ellipse._focus2.shape, (1, 2))
-        self.assertEqual(ellipse._interval.shape, (1, 2))
-        self.assertEqual(type(ellipse._maj_radius), float)
-        self.assertEqual(type(ellipse._min_radius), float)
-        self.assertEqual(ellipse._x_axis.shape, (1, 2))
-        self.assertEqual(ellipse._y_axis.shape, (1, 2))
+        self.assertEqual(ellipse.focus1.shape, (1, 2))
+        self.assertEqual(ellipse.focus2.shape, (1, 2))
+        self.assertEqual(ellipse.interval.shape, (1, 2))
+        self.assertEqual(type(ellipse.maj_radius), float)
+        self.assertEqual(type(ellipse.min_radius), float)
+        self.assertEqual(ellipse.x_axis.shape, (1, 2))
+        self.assertEqual(ellipse.y_axis.shape, (1, 2))
         sample_points = np.linspace(0, 2 * np.pi, 10).reshape(-1, 1)
         self.assertEqual(ellipse.sample(sample_points).shape, (10, 2))
 
@@ -185,7 +191,7 @@ class TestGeometry(unittest.TestCase):
         num_samples = 1000  # Can be adjusted for precision
         param_points, points = generate_points_on_curve(ellipse, num_samples)
         self.assertTrue(abs(np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1)) -
-                            (ellipse._length if ellipse._length != -1 else ellipse.length()) < 1e-4))
+                            (ellipse.length if ellipse.length != -1 else ellipse.get_length()) < 1e-4))
 
         # normals
         rotated_p = estimate_normal(ellipse, num_samples)
@@ -195,33 +201,37 @@ class TestGeometry(unittest.TestCase):
         self.assertTrue(np.allclose(np.linalg.norm(ellipse.normal(param_points), axis=1), 1, atol=1e-8))
 
     def test_bspline_curve2d(self):
+
         shape = bspline_curve2d()
-        self.assertEqual(shape._closed, False)
-        self.assertEqual(type(shape._continuity), int)
-        self.assertEqual(type(shape._degree), int)
-        self.assertEqual(shape._interval.shape, (1, 2))
-        self.assertEqual(shape._knots.shape[0], 1)
-        self.assertEqual(shape._poles.shape[1], 2)
-        self.assertEqual(type(shape._rational), bool)
-        self.assertEqual(shape._weights.shape[1], 1)
-        self.assertEqual(shape._poles.shape[0], shape._weights.shape[0])
+
+        self.assertEqual(shape.closed, False)
+        self.assertEqual(type(shape.continuity), int)
+        self.assertEqual(type(shape.degree), int)
+        self.assertEqual(shape.interval.shape, (1, 2))
+        self.assertEqual(shape.knots.shape[0], 1)
+        self.assertEqual(shape.poles.shape[1], 2)
+        self.assertEqual(type(shape.rational), bool)
+        self.assertEqual(shape.weights.shape[1], 1)
+        self.assertEqual(shape.poles.shape[0], shape.weights.shape[0])
 
         # sample points
-        umin_value, umax_value = shape._interval.T
+        umin_value, umax_value = shape.interval.T
         gridX = np.linspace(umin_value, umax_value)
         sample_points = gridX.reshape(-1, 1)
-        self.assertEqual(shape.sample(sample_points).shape, (gridX.shape[0], 2))
 
+        self.assertEqual(shape.sample(sample_points).shape, (gridX.shape[0], 2))
         self.assertEqual(shape.derivative(sample_points, 0).shape, (50, 2))
         self.assertEqual(shape.derivative(sample_points, 1).shape, (50, 2))
+
         d, d2 = curves_derivative(shape, sample_points)
+
         self.assertTrue(d < 1e-4)
         self.assertTrue(d2 < 1e-4)
 
         # length
         num_samples = 1000
         param_points, points = generate_points_on_curve(shape, num_samples)
-        self.assertTrue(abs(np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1)) - shape.length() < 1e-4))
+        self.assertTrue(abs(np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1)) - shape.get_length() < 1e-4))
 
         # normals
         rotated_p = estimate_normal(shape, num_samples)
@@ -230,11 +240,13 @@ class TestGeometry(unittest.TestCase):
         # check if normals are unit length
         self.assertTrue(np.allclose(np.linalg.norm(shape.normal(param_points), axis=1), 1, atol=1e-8))
 
+
+
     def test_line3d(self):
         shape = line3d()
-        self.assertEqual(shape._location.shape, (1, 3))
-        self.assertEqual(shape._direction.shape, (1, 3))
-        self.assertEqual(shape._interval.shape, (1, 2))
+        self.assertEqual(shape.location.shape, (1, 3))
+        self.assertEqual(shape.direction.shape, (1, 3))
+        self.assertEqual(shape.interval.shape, (1, 2))
         sample_points: None = np.linspace(0, 1, 10).reshape(-1, 1)
 
         # sampling
@@ -252,18 +264,19 @@ class TestGeometry(unittest.TestCase):
         # length
         num_samples = 1000
         param_points, points = generate_points_on_curve(shape, num_samples)
-        self.assertTrue(abs(np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1)) - shape.length() < 1e-4))
+        self.assertTrue(abs(np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1)) - shape.get_length() < 1e-4))
 
     def test_circle3d(self):
         shape = circle3d()
-        self.assertEqual(shape._location.shape, (1, 3))
-        self.assertEqual(type(shape._radius), float)
-        self.assertEqual(shape._interval.shape, (1, 2))
-        self.assertEqual(shape._x_axis.shape, (1, 3))
-        self.assertEqual(shape._y_axis.shape, (1, 3))
-        self.assertEqual(shape._z_axis.shape, (1, 3))
+        self.assertEqual(shape.location.shape, (1, 3))
+        self.assertEqual(type(shape.radius), float)
+        self.assertEqual(shape.interval.shape, (1, 2))
+        self.assertEqual(shape.x_axis.shape, (1, 3))
+        self.assertEqual(shape.y_axis.shape, (1, 3))
+        self.assertEqual(shape.z_axis.shape, (1, 3))
         sample_points = np.linspace(0, 2 * np.pi, 10).reshape(-1, 1)
         self.assertEqual(shape.sample(sample_points).shape, (10, 3))
+
         # derivative
         self.assertEqual(shape.derivative(sample_points, 0).shape, (10, 3))
         self.assertEqual(shape.derivative(sample_points, 1).shape, (10, 3))
@@ -278,18 +291,18 @@ class TestGeometry(unittest.TestCase):
         # length
         num_samples = 1000
         param_points, points = generate_points_on_curve(shape, num_samples)
-        self.assertTrue(abs(np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1)) - shape.length() < 1e-4))
+        self.assertTrue(abs(np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1)) - shape.get_length() < 1e-4))
 
     def test_ellipse3d(self):
         ellipse = ellipse3d()
-        self.assertEqual(ellipse._focus1.shape, (1, 3))
-        self.assertEqual(ellipse._focus2.shape, (1, 3))
-        self.assertEqual(ellipse._interval.shape, (1, 2))
-        self.assertEqual(type(ellipse._maj_radius), float)
-        self.assertEqual(type(ellipse._min_radius), float)
-        self.assertEqual(ellipse._x_axis.shape, (1, 3))
-        self.assertEqual(ellipse._y_axis.shape, (1, 3))
-        self.assertEqual(ellipse._z_axis.shape, (1, 3))
+        self.assertEqual(ellipse.focus1.shape, (1, 3))
+        self.assertEqual(ellipse.focus2.shape, (1, 3))
+        self.assertEqual(ellipse.interval.shape, (1, 2))
+        self.assertEqual(type(ellipse.maj_radius), float)
+        self.assertEqual(type(ellipse.min_radius), float)
+        self.assertEqual(ellipse.x_axis.shape, (1, 3))
+        self.assertEqual(ellipse.y_axis.shape, (1, 3))
+        self.assertEqual(ellipse.z_axis.shape, (1, 3))
         sample_points = np.linspace(0, 2 * np.pi, 10).reshape(-1, 1)
         self.assertEqual(ellipse.sample(sample_points).shape, (10, 3))
         # derivative
@@ -306,21 +319,21 @@ class TestGeometry(unittest.TestCase):
         # length
         num_samples = 1000
         param_points, points = generate_points_on_curve(ellipse, num_samples)
-        self.assertTrue(abs(np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1)) - ellipse.length() < 1e-4))
+        self.assertTrue(abs(np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1)) - ellipse.get_length() < 1e-4))
 
     def test_bspline_curve3d(self):
         shape = bspline_curve3d()
-        self.assertEqual(type(shape._closed), bool)
-        self.assertEqual(type(shape._continuity), int)
-        self.assertEqual(type(shape._degree), int)
-        self.assertEqual(shape._interval.shape, (1, 2))
-        self.assertEqual(shape._knots.shape[0], 1)
-        self.assertEqual(shape._poles.shape[1], 3)
-        self.assertEqual(type(shape._rational), bool)
-        self.assertEqual(shape._weights.shape[1], 1)
+        self.assertEqual(type(shape.closed), bool)
+        self.assertEqual(type(shape.continuity), int)
+        self.assertEqual(type(shape.degree), int)
+        self.assertEqual(shape.interval.shape, (1, 2))
+        self.assertEqual(shape.knots.shape[0], 1)
+        self.assertEqual(shape.poles.shape[1], 3)
+        self.assertEqual(type(shape.rational), bool)
+        self.assertEqual(shape.weights.shape[1], 1)
 
         # sample points
-        umin_value, umax_value = shape._interval.T
+        umin_value, umax_value = shape.interval.T
         gridX = np.linspace(umin_value, umax_value)
         sample_points = gridX.reshape(-1, 1)
         self.assertEqual(shape.sample(sample_points).shape, (gridX.shape[0], 3))
@@ -335,19 +348,20 @@ class TestGeometry(unittest.TestCase):
         # length
         num_samples = 1000
         param_points, points = generate_points_on_curve(shape, num_samples)
-        self.assertTrue(abs(np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1)) - shape.length() < 1e-4))
+        self.assertTrue(abs(np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1)) - shape.get_length() < 1e-4))
+
 
     def test_plane(self):
         shape = plane()
-        self.assertEqual(shape._coefficients.shape, (1, 4))
-        self.assertEqual(shape._location.shape, (1, 3))
-        self.assertEqual(shape._trim_domain.shape, (2, 2))
-        self.assertEqual(shape._x_axis.shape, (1, 3))
-        self.assertEqual(shape._y_axis.shape, (1, 3))
-        self.assertEqual(shape._z_axis.shape, (1, 3))
+        self.assertEqual(shape.coefficients.shape, (1, 4))
+        self.assertEqual(shape.location.shape, (1, 3))
+        self.assertEqual(shape.trim_domain.shape, (2, 2))
+        self.assertEqual(shape.x_axis.shape, (1, 3))
+        self.assertEqual(shape.y_axis.shape, (1, 3))
+        self.assertEqual(shape.z_axis.shape, (1, 3))
 
         # sample points
-        umin_value, umax_value, vmin_value, vmax_value = shape._trim_domain.reshape(-1, 1)
+        umin_value, umax_value, vmin_value, vmax_value = shape.trim_domain.reshape(-1, 1)
         gridX = np.linspace(umin_value, umax_value)
         gridY = np.linspace(vmin_value, vmax_value)
         gridX, gridY = np.meshgrid(gridX, gridY)
@@ -364,20 +378,20 @@ class TestGeometry(unittest.TestCase):
         self.assertTrue(du < 1e-7)
         self.assertTrue(dv < 1e-7)
 
-        self.assertEqual(int(shape.area()), 1)
+        self.assertEqual(int(shape.get_area()), 1)
 
     def test_cylinder(self):
         shape = cylinder()
-        self.assertEqual(shape._location.shape, (1, 3))
-        self.assertEqual(type(shape._radius), float)
-        self.assertEqual(shape._coefficients.shape, (1, 10))
-        self.assertEqual(shape._trim_domain.shape, (2, 2))
-        self.assertEqual(shape._x_axis.shape, (1, 3))
-        self.assertEqual(shape._y_axis.shape, (1, 3))
-        self.assertEqual(shape._z_axis.shape, (1, 3))
+        self.assertEqual(shape.location.shape, (1, 3))
+        self.assertEqual(type(shape.radius), float)
+        self.assertEqual(shape.coefficients.shape, (1, 10))
+        self.assertEqual(shape.trim_domain.shape, (2, 2))
+        self.assertEqual(shape.x_axis.shape, (1, 3))
+        self.assertEqual(shape.y_axis.shape, (1, 3))
+        self.assertEqual(shape.z_axis.shape, (1, 3))
 
         # sample points
-        umin_value, umax_value, vmin_value, vmax_value = shape._trim_domain.reshape(-1, 1)
+        umin_value, umax_value, vmin_value, vmax_value = shape.trim_domain.reshape(-1, 1)
         gridX = np.linspace(umin_value, umax_value)
         gridY = np.linspace(vmin_value, vmax_value)
         gridX, gridY = np.meshgrid(gridX, gridY)
@@ -390,22 +404,22 @@ class TestGeometry(unittest.TestCase):
         self.assertTrue(d2u < 1e-6)
         self.assertTrue(d2v < 1e-6)
 
-        self.assertEqual(int(shape.area()), 1)
+        self.assertEqual(int(shape.get_area()), 1)
 
     def test_cone(self):
         shape = cone()
-        self.assertEqual(type(shape._angle), float)
-        self.assertEqual(shape._apex.shape, (1, 3))
-        self.assertEqual(shape._coefficients.shape, (1, 10))
-        self.assertEqual(shape._location.shape, (1, 3))
-        self.assertEqual(type(shape._radius), float)
-        self.assertEqual(shape._trim_domain.shape, (2, 2))
-        self.assertEqual(shape._x_axis.shape, (1, 3))
-        self.assertEqual(shape._y_axis.shape, (1, 3))
-        self.assertEqual(shape._z_axis.shape, (1, 3))
+        self.assertEqual(type(shape.angle), float)
+        self.assertEqual(shape.apex.shape, (1, 3))
+        self.assertEqual(shape.coefficients.shape, (1, 10))
+        self.assertEqual(shape.location.shape, (1, 3))
+        self.assertEqual(type(shape.radius), float)
+        self.assertEqual(shape.trim_domain.shape, (2, 2))
+        self.assertEqual(shape.x_axis.shape, (1, 3))
+        self.assertEqual(shape.y_axis.shape, (1, 3))
+        self.assertEqual(shape.z_axis.shape, (1, 3))
 
         # sample points
-        umin_value, umax_value, vmin_value, vmax_value = shape._trim_domain.reshape(-1, 1)
+        umin_value, umax_value, vmin_value, vmax_value = shape.trim_domain.reshape(-1, 1)
         gridX = np.linspace(umin_value, umax_value)
         gridY = np.linspace(vmin_value, vmax_value)
         gridX, gridY = np.meshgrid(gridX, gridY)
@@ -421,16 +435,16 @@ class TestGeometry(unittest.TestCase):
 
     def test_sphere(self):
         shape = sphere()
-        self.assertEqual(shape._coefficients.shape, (1, 10))
-        self.assertEqual(shape._location.shape, (1, 3))
-        self.assertEqual(type(shape._radius), float)
-        self.assertEqual(shape._trim_domain.shape, (2, 2))
-        self.assertEqual(shape._x_axis.shape, (1, 3))
-        self.assertEqual(shape._y_axis.shape, (1, 3))
-        self.assertEqual(shape._z_axis.shape, (1, 3))
+        self.assertEqual(shape.coefficients.shape, (1, 10))
+        self.assertEqual(shape.location.shape, (1, 3))
+        self.assertEqual(type(shape.radius), float)
+        self.assertEqual(shape.trim_domain.shape, (2, 2))
+        self.assertEqual(shape.x_axis.shape, (1, 3))
+        self.assertEqual(shape.y_axis.shape, (1, 3))
+        self.assertEqual(shape.z_axis.shape, (1, 3))
 
         # sample points
-        umin_value, umax_value, vmin_value, vmax_value = shape._trim_domain.reshape(-1, 1)
+        umin_value, umax_value, vmin_value, vmax_value = shape.trim_domain.reshape(-1, 1)
         gridX = np.linspace(umin_value, umax_value)
         gridY = np.linspace(vmin_value, vmax_value)
         gridX, gridY = np.meshgrid(gridX, gridY)
@@ -446,16 +460,16 @@ class TestGeometry(unittest.TestCase):
 
     def test_torus(self):
         shape = torus()
-        self.assertEqual(shape._location.shape, (1, 3))
-        self.assertEqual(type(shape._max_radius), float)
-        self.assertEqual(type(shape._min_radius), float)
-        self.assertEqual(shape._trim_domain.shape, (2, 2))
-        self.assertEqual(shape._x_axis.shape, (1, 3))
-        self.assertEqual(shape._y_axis.shape, (1, 3))
-        self.assertEqual(shape._z_axis.shape, (1, 3))
+        self.assertEqual(shape.location.shape, (1, 3))
+        self.assertEqual(type(shape.max_radius), float)
+        self.assertEqual(type(shape.min_radius), float)
+        self.assertEqual(shape.trim_domain.shape, (2, 2))
+        self.assertEqual(shape.x_axis.shape, (1, 3))
+        self.assertEqual(shape.y_axis.shape, (1, 3))
+        self.assertEqual(shape.z_axis.shape, (1, 3))
 
         # sample points
-        umin_value, umax_value, vmin_value, vmax_value = shape._trim_domain.reshape(-1, 1)
+        umin_value, umax_value, vmin_value, vmax_value = shape.trim_domain.reshape(-1, 1)
         gridX = np.linspace(umin_value, umax_value)
         gridY = np.linspace(vmin_value, vmax_value)
         gridX, gridY = np.meshgrid(gridX, gridY)
@@ -471,24 +485,23 @@ class TestGeometry(unittest.TestCase):
     def test_bspline_surface(self):
         shape = bspline_surface()
 
-        x = shape.area()
-        self.assertEqual(type(shape._continuity), int)
-        self.assertEqual(shape._face_domain.shape, (1, 4))
-        self.assertEqual(type(shape._is_trimmed), bool)
-        self.assertEqual(shape._poles.shape[2], 3)
-        self.assertEqual(shape._trim_domain.shape, (2, 2))
-        self.assertEqual(type(shape._u_closed), bool)
-        self.assertEqual(type(shape._u_degree), int)
-        self.assertEqual(shape._u_knots.shape[0], 1)
-        self.assertEqual(type(shape._u_rational), bool)
-        self.assertEqual(type(shape._v_closed), bool)
-        self.assertEqual(type(shape._v_degree), int)
-        self.assertEqual(shape._v_knots.shape[0], 1)
-        self.assertEqual(type(shape._v_rational), bool)
+        self.assertEqual(type(shape.continuity), int)
+        self.assertEqual(shape.face_domain.shape, (1, 4))
+        self.assertEqual(type(shape.is_trimmed), bool)
+        self.assertEqual(shape.poles.shape[2], 3)
+        self.assertEqual(shape.trim_domain.shape, (2, 2))
+        self.assertEqual(type(shape.u_closed), bool)
+        self.assertEqual(type(shape.u_degree), int)
+        self.assertEqual(shape.u_knots.shape[0], 1)
+        self.assertEqual(type(shape.u_rational), bool)
+        self.assertEqual(type(shape.v_closed), bool)
+        self.assertEqual(type(shape.v_degree), int)
+        self.assertEqual(shape.v_knots.shape[0], 1)
+        self.assertEqual(type(shape.v_rational), bool)
 
 
         # sample points
-        umin_value, umax_value, vmin_value, vmax_value = shape._trim_domain.reshape(-1, 1)
+        umin_value, umax_value, vmin_value, vmax_value = shape.trim_domain.reshape(-1, 1)
         gridX = np.linspace(umin_value, umax_value)
         gridY = np.linspace(vmin_value, vmax_value)
         gridX, gridY = np.meshgrid(gridX, gridY)
@@ -501,6 +514,7 @@ class TestGeometry(unittest.TestCase):
         self.assertTrue(dv < 1e-6)
         self.assertTrue(d2u < 1e-6)
         self.assertTrue(d2v < 1e-6)
+
 
 
 if __name__ == '__main__':

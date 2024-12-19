@@ -2,41 +2,22 @@ import os
 import h5py
 import pickle
 import gzip
-
-from abs.shape import Shape
 from abs.utils import *
 from abs.part_processor import *
-from tqdm import tqdm
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from joblib import dump
-
+from abs.shape import *
+from tqdm import tqdm
 
 
 def get_normal_func(part, topo, points):
 
-    try:
-        if hasattr(topo, '_3dcurve'):
-            return None
-        if topo._surface._shape_name == 'Other':
-            return None
-    except AttributeError:
-        pass
-
-    surf = topo._surface
-    surf_orientation = topo._surface_orientation
-    shell_orienttion = part.Solid.shells[0]._orientation_wrt_solid
-    normal_points = surf.normal(points)
-
-    if not surf_orientation and shell_orienttion:
-        normal_points = -normal_points
-
-    # normalize the 3d points to enable it for surface reconstruction
-
-
-    return normal_points
+    if isinstance(topo, Face):
+        return topo.normal(points)
+    else:
+        return None
 
 def process_file(file_path, num_samples, get_normal_func):
-    """Process a single HDF5 file to generate sample points and normals in a memory-efficient way."""
 
     with h5py.File(file_path, 'r') as hdf:
         geo = hdf['geometry/parts']
@@ -44,23 +25,20 @@ def process_file(file_path, num_samples, get_normal_func):
 
         parts = []
         for i in range(len(geo)):
-            # Load data lazily using h5py
             s = Shape(geo.get(list(geo.keys())[i]), topo.get(list(topo.keys())[i]))
             parts.append(s)
 
-        # Generate points and normals using lazy access if possible
         P, S = get_parts(parts, num_samples, get_normal_func)
 
     return P, S
 
 
 def save_to_pickle(data, file_path):
-    """Save the provided data to a compressed pickle file using joblib."""
     dump(data, file_path)
 
 
 def process_and_save_single_file(file_path, num_samples, get_normal_func, output_dir):
-    """Process a single file and save its results to a pickle file."""
+
     try:
         points, normals = process_file(file_path, num_samples, get_normal_func)
         for i in range(len(points)):
@@ -77,16 +55,14 @@ def process_and_save_single_file(file_path, num_samples, get_normal_func, output
         raise
 
 
-import os
-from concurrent.futures import ProcessPoolExecutor, as_completed
-from tqdm import tqdm
+
 
 
 def process_directory_parallel(directory_path, output_dir, num_samples, get_normal_func, max_workers=4):
-    """Process all HDF5 files in parallel using ProcessPoolExecutor, with error handling."""
+
     os.makedirs(output_dir, exist_ok=True)
     hdf5_files = [f for f in os.listdir(directory_path) if f.endswith('.hdf5')]
-    error_files = []  # To log the files that failed
+    error_files = []
 
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
         futures = []
@@ -105,7 +81,6 @@ def process_directory_parallel(directory_path, output_dir, num_samples, get_norm
                 error_files.append(failed_file)  # Log the name of the problematic file
                 print(f"Task failed for {failed_file}: {e}")
 
-    # Report the files that failed
     if error_files:
         print("\nThe following files failed to process:")
         for error_file in error_files:
@@ -115,15 +90,14 @@ def process_directory_parallel(directory_path, output_dir, num_samples, get_norm
 
 
 if __name__ == "__main__":
-    # Set directory paths and parameters
+
     input_data_file_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'hdf5')
     input_data_file_path = os.path.normpath(input_data_file_path)
+    input_data_file_path = '/Users/nafiseh/Desktop/hdf5'
 
     output_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'processed')
     output_dir = os.path.normpath(output_dir)
 
-    num_samples = 2000  # Define how many samples to generate per part
+    num_samples = 2000
 
-    # Assuming get_normal_func is already defined and Shape, get_parts are defined properly
-    # Process files in parallel
     process_directory_parallel(input_data_file_path, output_dir, num_samples, get_normal_func, max_workers=8)

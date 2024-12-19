@@ -7,7 +7,7 @@ def estimate_total_surface_area(part):
 
     total_area = 0
     for face in part.Solid.faces:
-        total_area += face.area()
+        total_area += face.get_area()
 
     return total_area
 
@@ -26,7 +26,7 @@ def process_part(part, num_samples, lambda_func, points_ratio=5):
         # Iterate through faces in topology
         for face in part.Solid.faces:
 
-            current_surface_num_points = int(np.ceil((face.area() / total_area) * num_points))
+            current_surface_num_points = int(np.ceil((face.get_area() / total_area) * num_points))
 
             # Sample points
             uv_points, pt = sampler.random_sample(face, current_surface_num_points, 2)
@@ -45,8 +45,11 @@ def process_part(part, num_samples, lambda_func, points_ratio=5):
                 index = face.filter_outside_points(uv_points)
                 current_pts.append(pt[index, :])
                 current_ss.append(s[index, :])
+                # current_pts.append(pt)
+                # current_ss.append(s)
 
 
+        # TODO: add in case it's empty
         pts = np.concatenate(current_pts, axis=0)
         ss = np.concatenate(current_ss, axis=0)
 
@@ -59,7 +62,7 @@ def process_part(part, num_samples, lambda_func, points_ratio=5):
     for edge in part.Solid.edges:
 
 
-        if edge._3dcurve is None:
+        if edge.curve3d is None:
             continue
 
         # Sample points

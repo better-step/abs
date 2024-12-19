@@ -44,10 +44,10 @@ def random_sample(topo, num_samples, min_pts=None, max_pts=None):
     parametric values and an array of sampled points on the curve/surface.
     """
 
-    if hasattr(topo, '_3dcurve') and isinstance(topo._3dcurve, Curve):
-        return _random_sample_curve(topo._3dcurve, num_samples, min_pts, max_pts)
-    elif isinstance(topo._surface, Surface):
-        return _random_sample_surface(topo._surface, num_samples, min_pts, max_pts)
+    if hasattr(topo, 'curve3d') and isinstance(topo.curve3d, Curve):
+        return _random_sample_curve(topo.curve3d, num_samples, min_pts, max_pts)
+    elif isinstance(topo.surface, Surface):
+        return _random_sample_surface(topo.surface, num_samples, min_pts, max_pts)
     else:
         raise ValueError("Invalid geometry type")
 
@@ -74,7 +74,7 @@ def _uniform_sample_curve(curve, num_samples, min_pts=None, max_pts=None):
     if max_pts is not None:
         num_samples = min(num_samples, max_pts)
 
-    t = np.linspace(curve._interval[0, 0], curve._interval[0, 1], num_samples).reshape(-1, 1)
+    t = np.linspace(curve.interval[0, 0], curve.interval[0, 1], num_samples).reshape(-1, 1)
     return t, curve.sample(t)
 
 
@@ -99,7 +99,7 @@ def _random_sample_curve(curve, num_samples, min_pts=None, max_pts=None):
     if max_pts is not None:
         num_samples = min(num_samples, max_pts)
 
-    t = np.random.uniform(low=curve._interval[0, 0], high=curve._interval[0, 1], size=num_samples).reshape(-1, 1)
+    t = np.random.uniform(low=curve.interval[0, 0], high=curve.interval[0, 1], size=num_samples).reshape(-1, 1)
     return t, curve.sample(t)
 
 
@@ -126,8 +126,8 @@ def _uniform_sample_surface(surface, num_samples, min_pts=None, max_pts=None):
 
     num_samples = np.sqrt(num_samples).astype(int)
 
-    u_values = np.linspace(surface._trim_domain[0, 0], surface._trim_domain[0, 1], num_samples)
-    v_values = np.linspace(surface._trim_domain[1, 0], surface._trim_domain[1, 1], num_samples)
+    u_values = np.linspace(surface.trim_domain[0, 0], surface.trim_domain[0, 1], num_samples)
+    v_values = np.linspace(surface.trim_domain[1, 0], surface.trim_domain[1, 1], num_samples)
 
     points = np.array(np.meshgrid(u_values, v_values)).T.reshape(-1, 2)
     return points, surface.sample(points)
@@ -153,30 +153,10 @@ def _random_sample_surface(surface, num_samples, min_pts=None, max_pts=None):
     if max_pts is not None:
         num_samples = min(num_samples, max_pts)
 
-    points = np.random.uniform(low=[surface._trim_domain[0, 0], surface._trim_domain[1, 0]],
-                          high=[surface._trim_domain[0, 1], surface._trim_domain[1, 1]],
+    points = np.random.uniform(low=[surface.trim_domain[0, 0], surface.trim_domain[1, 0]],
+                          high=[surface.trim_domain[0, 1], surface.trim_domain[1, 1]],
                           size=(num_samples,2))
 
-    #testing delete later
-    # uv_points = points
-    # xyz_points = surface.sample(uv_points)
-    #
-    # plt.figure()
-    # plt.scatter(uv_points[:, 0], uv_points[:, 1], alpha=0.5)
-    # plt.title("UV Space Distribution")
-    # plt.xlabel("U")
-    # plt.ylabel("V")
-    # plt.show()
-    #
-    # fig = plt.figure()
-    # ax = fig.add_subplot(111, projection='3d')
-    # ax.scatter(xyz_points[:, 0], xyz_points[:, 1], xyz_points[:, 2], alpha=0.5)
-    # plt.title("3D Space Distribution")
-    # plt.show()
-    #
-    # name = 'sampling'
-    # save_file_path = os.path.join(os.path.dirname(__file__), '..', 'test', 'sample_results', f'{name}_normals.obj')
-    # save_obj(save_file_path, xyz_points)
 
     return points, surface.sample(points)
 

@@ -1,24 +1,24 @@
-from random import sample
 import numpy as np
-from geomdl import BSpline, NURBS
+#from geomdl import BSpline, NURBS
 from scipy.integrate import quad
+from scipy.interpolate import BSpline
 
 class Curve:
     def sample(self, points):
         raise NotImplementedError("Sample method must be implemented by subclasses")
 
-    def length(self):
-        if self._length == -1:
+    def get_length(self):
+        if self.length == -1:
             pts, weights = np.polynomial.legendre.leggauss(4)
             pts += 1
-            pts *= 0.5 * (self._interval[0, 1] - self._interval[0, 0])
-            pts += self._interval[0, 0]
+            pts *= 0.5 * (self.interval[0, 1] - self.interval[0, 0])
+            pts += self.interval[0, 0]
 
             dd = self.derivative(pts[:, None], order=1)
-            circumference = np.sum(np.linalg.norm(dd, axis=1)*weights)*(self._interval[0, 1] - self._interval[0, 0]) / 2
+            circumference = np.sum(np.linalg.norm(dd, axis=1)*weights)*(self.interval[0, 1] - self.interval[0, 0]) / 2
 
-            self._length = circumference
-        return self._length
+            self.length = circumference
+        return self.length
 
     def derivative(self, points, order=1):
         raise NotImplementedError("Derivative method must be implemented by subclasses")
@@ -30,86 +30,105 @@ class Curve:
 class Line(Curve):
     def __init__(self, line):
         if isinstance(line, dict):
-            self._location = np.array(line['location']).reshape(-1, 1).T
-            self._interval = np.array(line['interval']).reshape(-1, 1).T
-            self._direction = np.array(line['direction']).reshape(-1, 1).T
-            self._length = -1
-            self._shape_name = line['type']
+            self.location = np.array(line['location']).reshape(-1, 1).T
+            self.interval = np.array(line['interval']).reshape(-1, 1).T
+            self.direction = np.array(line['direction']).reshape(-1, 1).T
+            self.length = -1
+            self.shape_name = line['type']
         else:
-            self._location = np.array(line.get('location')[()]).reshape(-1, 1).T
-            self._interval = np.array(line.get('interval')[()]).reshape(-1, 1).T
-            self._direction = np.array(line.get('direction')[()]).reshape(-1, 1).T
-            self._length = -1
-            self._shape_name = line.get('type')[()].decode('utf8')
+            self.location = np.array(line.get('location')[()]).reshape(-1, 1).T
+            self.interval = np.array(line.get('interval')[()]).reshape(-1, 1).T
+            self.direction = np.array(line.get('direction')[()]).reshape(-1, 1).T
+            self.length = -1
+            self.shape_name = line.get('type')[()].decode('utf8')
 
     def sample(self, sample_points):
         if sample_points.size == 0:
-            return self._location
-        return self._location + sample_points * self._direction
+            return self.location
+        return self.location + sample_points * self.direction
 
-    def length(self):
-        if self._length == -1:
-            self._length = np.linalg.norm((self._interval[0, 1] - self._interval[0, 0]) * self._direction)
-        return self._length
+    def get_length(self):
+        if self.length == -1:
+            self.length = np.linalg.norm((self.interval[0, 1] - self.interval[0, 0]) * self.direction)
+        return self.length
 
     def derivative(self, sample_points, order=1):
         if order == 1:
-            return np.tile(self._direction, (sample_points.shape[0], 1))
-        return np.zeros([sample_points.shape[0], self._location.shape[1]])
+            return np.tile(self.direction, (sample_points.shape[0], 1))
+        return np.zeros([sample_points.shape[0], self.location.shape[1]])
 
     def normal(self, sample_points):
-        normal_vector = np.array([-self._direction[0, 1], self._direction[0, 0]])
+        normal_vector = np.array([-self.direction[0, 1], self.direction[0, 0]])
         return np.tile(normal_vector, (sample_points.shape[0], 1))
 
 
 class Circle(Curve):
     def __init__(self, circle):
         if isinstance(circle, dict):
-            self._location = np.array(circle['location']).reshape(-1, 1).T
-            self._radius = float(circle['radius'])
-            self._interval = np.array(circle['interval']).reshape(-1, 1).T
-            self._x_axis = np.array(circle['x_axis']).reshape(-1, 1).T
-            self._y_axis = np.array(circle['y_axis']).reshape(-1, 1).T
-            self._length = -1
-            self._shape_name = circle['type']
+            self.location = np.array(circle['location']).reshape(-1, 1).T
+            self.radius = float(circle['radius'])
+            self.interval = np.array(circle['interval']).reshape(-1, 1).T
+            self.x_axis = np.array(circle['x_axis']).reshape(-1, 1).T
+            self.y_axis = np.array(circle['y_axis']).reshape(-1, 1).T
+            self.length = -1
+            self.shape_name = circle['type']
             if 'z_axis' in circle:
-                self._z_axis = np.array(circle['z_axis']).reshape(-1, 1).T
+                self.z_axis = np.array(circle['z_axis']).reshape(-1, 1).T
         else:
-            self._location = np.array(circle.get('location')[()]).reshape(-1, 1).T
-            self._radius = float(circle.get('radius')[()])
-            self._interval = np.array(circle.get('interval')[()]).reshape(-1, 1).T
-            self._x_axis = np.array(circle.get('x_axis')[()]).reshape(-1, 1).T
-            self._y_axis = np.array(circle.get('y_axis')[()]).reshape(-1, 1).T
-            self._length = -1
-            self._shape_name = circle.get('type')[()].decode('utf8')
+            self.location = np.array(circle.get('location')[()]).reshape(-1, 1).T
+            self.radius = float(circle.get('radius')[()])
+            self.interval = np.array(circle.get('interval')[()]).reshape(-1, 1).T
+            self.x_axis = np.array(circle.get('x_axis')[()]).reshape(-1, 1).T
+            self.y_axis = np.array(circle.get('y_axis')[()]).reshape(-1, 1).T
+            self.length = -1
+            self.shape_name = circle.get('type')[()].decode('utf8')
             if 'z_axis' in circle:
-                self._z_axis = np.array(circle.get('z_axis')[()]).reshape(-1, 1).T
+                self.z_axis = np.array(circle.get('z_axis')[()]).reshape(-1, 1).T
 
     def sample(self, sample_points):
         if sample_points.size == 0:
-            return self._location
-        circle_points = self._location + self._radius * (
-            np.cos(sample_points) * self._x_axis + np.sin(sample_points) * self._y_axis)
+            return self.location
+        circle_points = self.location + self.radius * (
+            np.cos(sample_points) * self.x_axis + np.sin(sample_points) * self.y_axis)
         return circle_points
 
     def derivative(self, sample_points, order=1):
         if order == 0:
             return self.sample(sample_points)
         elif order % 4 == 0 and order != 0:
-            return self._radius * (np.cos(sample_points) * self._x_axis + np.sin(sample_points) * self._y_axis)
+            return self.radius * (np.cos(sample_points) * self.x_axis + np.sin(sample_points) * self.y_axis)
         elif order % 4 == 1:
-            return (-self._radius * np.sin(sample_points) * self._x_axis) + (
-                self._radius * np.cos(sample_points) * self._y_axis)
+            return (-self.radius * np.sin(sample_points) * self.x_axis) + (
+                self.radius * np.cos(sample_points) * self.y_axis)
         elif order % 4 == 2:
-            return -(self._radius * (np.cos(sample_points) * self._x_axis + np.sin(sample_points) * self._y_axis))
+            return -(self.radius * (np.cos(sample_points) * self.x_axis + np.sin(sample_points) * self.y_axis))
         elif order % 4 == 3:
-            return self._radius * (np.sin(sample_points) * self._x_axis - np.cos(sample_points) * self._y_axis)
+            return self.radius * (np.sin(sample_points) * self.x_axis - np.cos(sample_points) * self.y_axis)
 
     def normal(self, sample_points):
 
-        rotation_matrix = np.array([[0, 1], [-1, 0]])
-        normal_vector = self.derivative(sample_points, order=1) @ rotation_matrix.T
-        normal_vector /= np.linalg.norm(normal_vector, axis=1, keepdims=True)
+        # rotation_matrix = np.array([[0, 1], [-1, 0]])
+        # normal_vector = self.derivative(sample_points, order=1) @ rotation_matrix.T
+        # normal_vector /= np.linalg.norm(normal_vector, axis=1, keepdims=True)
+
+
+        first_deriv = self.derivative(sample_points, order=1)
+
+        # calculating the speed
+        v = np.linalg.norm(first_deriv, axis=1)
+
+        # calculating the tangent
+        tangent = first_deriv / v[:, None]
+
+        t_prime = np.gradient(tangent, axis=0)
+
+        # calculating the normal
+        normal = t_prime - np.einsum('ij,ij->i', t_prime, tangent)[:, None] * tangent
+        normal_vector = normal / np.linalg.norm(normal, axis=1)[:, None]
+
+        # calculating the binormal (to make sure they are orthogonal)
+        binormal = np.cross(tangent, normal)
+
 
         return normal_vector
 
@@ -117,137 +136,173 @@ class Circle(Curve):
 class Ellipse(Curve):
     def __init__(self, ellipse):
         if isinstance(ellipse, dict):
-            self._focus1 = np.array(ellipse['focus1']).reshape(-1, 1).T
-            self._focus2 = np.array(ellipse['focus2']).reshape(-1, 1).T
-            self._interval = np.array(ellipse['interval']).reshape(-1, 1).T
-            self._maj_radius = float(ellipse['maj_radius'])
-            self._min_radius = float(ellipse['min_radius'])
-            self._x_axis = np.array(ellipse['x_axis']).reshape(-1, 1).T
-            self._y_axis = np.array(ellipse['y_axis']).reshape(-1, 1).T
-            self._length = -1
-            self._shape_name = ellipse['type']
+            self.focus1 = np.array(ellipse['focus1']).reshape(-1, 1).T
+            self.focus2 = np.array(ellipse['focus2']).reshape(-1, 1).T
+            self.interval = np.array(ellipse['interval']).reshape(-1, 1).T
+            self.maj_radius = float(ellipse['maj_radius'])
+            self.min_radius = float(ellipse['min_radius'])
+            self.x_axis = np.array(ellipse['x_axis']).reshape(-1, 1).T
+            self.y_axis = np.array(ellipse['y_axis']).reshape(-1, 1).T
+            self.length = -1
+            self.shape_name = ellipse['type']
 
             if 'z_axis' in ellipse:
-                self._z_axis = np.array(ellipse['z_axis']).reshape(-1, 1).T
+                self.z_axis = np.array(ellipse['z_axis']).reshape(-1, 1).T
         else:
-            self._focus1 = np.array(ellipse.get('focus1')[()]).reshape(-1, 1).T
-            self._focus2 = np.array(ellipse.get('focus2')[()]).reshape(-1, 1).T
-            self._interval = np.array(ellipse.get('interval')[()]).reshape(-1, 1).T
-            self._maj_radius = float(ellipse.get('maj_radius')[()])
-            self._min_radius = float(ellipse.get('min_radius')[()])
-            self._x_axis = np.array(ellipse.get('x_axis')[()]).reshape(-1, 1).T
-            self._y_axis = np.array(ellipse.get('y_axis')[()]).reshape(-1, 1).T
-            self._length = -1
-            self._shape_name = ellipse.get('type')[()].decode('utf8')
+            self.focus1 = np.array(ellipse.get('focus1')[()]).reshape(-1, 1).T
+            self.focus2 = np.array(ellipse.get('focus2')[()]).reshape(-1, 1).T
+            self.interval = np.array(ellipse.get('interval')[()]).reshape(-1, 1).T
+            self.maj_radius = float(ellipse.get('maj_radius')[()])
+            self.min_radius = float(ellipse.get('min_radius')[()])
+            self.x_axis = np.array(ellipse.get('x_axis')[()]).reshape(-1, 1).T
+            self.y_axis = np.array(ellipse.get('y_axis')[()]).reshape(-1, 1).T
+            self.length = -1
+            self.shape_name = ellipse.get('type')[()].decode('utf8')
 
             if 'z_axis' in ellipse:
-                self._z_axis = np.array(ellipse.get('z_axis')[()]).reshape(-1, 1).T
+                self.z_axis = np.array(ellipse.get('z_axis')[()]).reshape(-1, 1).T
 
-        self._center = (self._focus1 + self._focus2) / 2
+        self.center = (self.focus1 + self.focus2) / 2
 
     def sample(self, sample_points):
-        ellipse_points = self._center + self._maj_radius * np.cos(sample_points) * self._x_axis + \
-                         self._min_radius * np.sin(sample_points) * self._y_axis
+        ellipse_points = self.center + self.maj_radius * np.cos(sample_points) * self.x_axis + \
+                         self.min_radius * np.sin(sample_points) * self.y_axis
         return ellipse_points
 
     def derivative(self, sample_points, order=1):
         if order % 4 == 0:
             if order == 0:
                 return self.sample(sample_points)
-            return self._maj_radius * np.cos(sample_points) * self._x_axis + \
-                self._min_radius * np.sin(sample_points) * self._y_axis
+            return self.maj_radius * np.cos(sample_points) * self.x_axis + \
+                self.min_radius * np.sin(sample_points) * self.y_axis
         elif order % 4 == 1:
-            return -self._maj_radius * np.sin(sample_points) * self._x_axis + \
-                self._min_radius * np.cos(sample_points) * self._y_axis
+            return -self.maj_radius * np.sin(sample_points) * self.x_axis + \
+                self.min_radius * np.cos(sample_points) * self.y_axis
         elif order % 4 == 2:
-            return -self._maj_radius * np.cos(sample_points) * self._x_axis - \
-                self._min_radius * np.sin(sample_points) * self._y_axis
-        return self._maj_radius * np.sin(sample_points) * self._x_axis - \
-            self._min_radius * np.cos(sample_points) * self._y_axis
+            return -self.maj_radius * np.cos(sample_points) * self.x_axis - \
+                self.min_radius * np.sin(sample_points) * self.y_axis
+        return self.maj_radius * np.sin(sample_points) * self.x_axis - \
+            self.min_radius * np.cos(sample_points) * self.y_axis
 
     def normal(self, sample_points):
-        rotation_matrix = np.array([[0, 1], [-1, 0]])
-        normal_vector = self.derivative(sample_points, order=1) @ rotation_matrix.T
-        normal_vector /= np.linalg.norm(normal_vector, axis=1, keepdims=True)
+
+        if hasattr(self, 'z_axis'):
+
+            first_deriv = self.derivative(sample_points, order=1)
+            v = np.linalg.norm(first_deriv, axis=1)
+            tangent = first_deriv / v[:, None]
+            t_prime = np.gradient(tangent, axis=0)
+            normal = t_prime - np.einsum('ij,ij->i', t_prime, tangent)[:, None] * tangent
+            normal_vector = normal / np.linalg.norm(normal, axis=1)[:, None]
+            # binormal = np.cross(tangent, normal)
+
+        else:
+
+            rotation_matrix = np.array([[0, 1], [-1, 0]])
+            normal_vector = self.derivative(sample_points, order=1) @ rotation_matrix.T
+            normal_vector /= np.linalg.norm(normal_vector, axis=1, keepdims=True)
+
         return normal_vector
 
 
 class BSplineCurve(Curve):
     def __init__(self, bspline):
-        # Attributes initialization for B-spline curve
-        self._length = -1
+
+        self.length = -1
         if isinstance(bspline, dict):
-            self._closed = bool(bspline['closed'])
-            self._degree = int(bspline['degree'])
-            self._continuity = int(bspline['continuity'])
-            self._poles = np.array(bspline['poles'])
-            self._knots = np.array(bspline['knots']).reshape(-1, 1).T
-            self._weights = np.array(bspline['weights']).reshape(-1, 1)
-            self._interval = np.array(bspline['interval']).reshape(-1, 1).T
-            self._rational = bool(bspline['rational'])
-            self._shape_name = bspline['type']
+            self.closed = bool(bspline['closed'])
+            self.degree = int(bspline['degree'])
+            self.continuity = int(bspline['continuity'])
+            self.poles = np.array(bspline['poles'])
+            self.knots = np.array(bspline['knots']).reshape(-1, 1).T
+            self.weights = np.array(bspline['weights']).reshape(-1, 1)
+            self.interval = np.array(bspline['interval']).reshape(-1, 1).T
+            self.rational = bool(bspline['rational'])
+            self.shape_name = bspline['type']
         else:
-            self._closed = bool(bspline.get('closed')[()])
-            self._degree = int(bspline.get('degree')[()])
-            self._continuity = int(bspline.get('continuity')[()])
-            self._poles = np.array(bspline.get('poles')[()])
-            self._knots = np.array(bspline.get('knots')[()]).reshape(-1, 1).T
-            self._weights = np.array(bspline.get('weights')[()]).reshape(-1, 1)
-            self._interval = np.array(bspline.get('interval')[()]).reshape(-1, 1).T
-            self._rational = bool(bspline.get('rational')[()])
-            self._shape_name = bspline.get('type')[()].decode('utf8')
+            self.closed = bool(bspline.get('closed')[()])
+            self.degree = int(bspline.get('degree')[()])
+            self.continuity = int(bspline.get('continuity')[()])
+            self.poles = np.array(bspline.get('poles')[()])
+            self.knots = np.array(bspline.get('knots')[()]).reshape(-1, 1).T
+            self.weights = np.array(bspline.get('weights')[()]).reshape(-1, 1)
+            self.interval = np.array(bspline.get('interval')[()]).reshape(-1, 1).T
+            self.rational = bool(bspline.get('rational')[()])
+            self.shape_name = bspline.get('type')[()].decode('utf8')
 
         # Create BSpline or NURBS curve object
-        if self._rational:
-            self._curveObject = NURBS.Curve(normalize_kv=False)
-        else:
-            self._curveObject = BSpline.Curve(normalize_kv=False)
 
-        self._curveObject.degree = self._degree
-        self._curveObject.ctrlpts = self._poles.tolist()
-        self._curveObject.knotvector = self._knots.flatten().tolist()
-        if self._rational:
-            self._curveObject.weights = self._weights.flatten().tolist()
+
+        # if self.rational:
+        #     self.curveObject = NURBS.Curve(normalize_kv=False)
+        # else:
+        #     self.curveObject = BSpline.Curve(normalize_kv=False)
+        #
+        # self.curveObject.degree = self.degree
+        # self.curveObject.ctrlpts = self.poles.tolist()
+        # self.curveObject.knotvector = self.knots.flatten().tolist()
+        # if self.rational:
+        #     self.curveObject.weights = self.weights.flatten().tolist()
+
+        ctrl_pnts = self.poles
+        if self.rational:
+            ctrl_pnts = self.poles * self.weights
+
+        self.bspline = BSpline(self.knots.T[:,0], ctrl_pnts, self.degree)
+
 
     def sample(self, sample_points):
-        if sample_points.size == 1:
-            samples = np.array(self._curveObject.evaluate_single(sample_points[0]))
-            samples = samples.reshape(-1, 1)
-            return samples.T
+        # if sample_points.size == 1:
+        #     samples = np.array(self.curveObject.evaluate_single(sample_points[0]))
+        #     samples = samples.reshape(-1, 1)
+        #     return samples.T
+        #
+        # # Evaluate the curve at the given sample points
+        # return np.array(self.curveObject.evaluate_list(sample_points[:, 0].tolist()))
 
-        # Evaluate the curve at the given sample points
-        return np.array(self._curveObject.evaluate_list(sample_points[:, 0].tolist()))
+        return np.squeeze(self.bspline(sample_points))
 
     def derivative(self, sample_points, order=1):
-        assert (sample_points.shape[1] == 1)
+
         if order == 0:
             return self.sample(sample_points)
+
+        elif self.degree < order:
+            return np.zeros([sample_points.shape[0], self.poles.shape[1]])
         else:
-            res = np.zeros([sample_points.shape[0], self._poles.shape[1]])
-            for i in range(sample_points.shape[0]):
-                d = self._curveObject.derivatives(sample_points[i, 0], order)
-                res[i, :] = d[-1]
-            return res
+            # res = np.zeros([sample_points.shape[0], self.poles.shape[1]])
+            # for i in range(sample_points.shape[0]):
+            #     d = self.curveObject.derivatives(sample_points[i, 0], order)
+            #     res[i, :] = d[-1]
+            # return res
+            b_spline_derivative = self.bspline.derivative(order)
+            return np.squeeze(b_spline_derivative(sample_points))
 
     def normal(self, sample_points):
         if sample_points.size == 0:
             return np.array([])
-        rotation_matrix = np.array([[0, -1], [1, 0]])
-        normal_vector = self.derivative(sample_points, order=1) @ rotation_matrix.T
-        normal_vector /= np.linalg.norm(normal_vector, axis=1, keepdims=True)
+
+        first_deriv = self.derivative(sample_points, order=1)
+        v = np.linalg.norm(first_deriv, axis=1)
+        tangent = first_deriv / v[:, None]
+        t_prime = np.gradient(tangent, axis=0)
+        normal = t_prime - np.einsum('ij,ij->i', t_prime, tangent)[:, None] * tangent
+        normal_vector = normal / np.linalg.norm(normal, axis=1)[:, None]
+        #binormal = np.cross(tangent, normal)
+
         return normal_vector
 
-    def length(self):
-        if self._length == -1:
-            self._length, _ = quad(lambda t: np.linalg.norm(self.derivative(np.array([[t]]), 1)),
-                                self._interval[0, 0], self._interval[0, 1], epsabs=1.49e-04, epsrel=1.49e-04)
-        return self._length
+    def get_length(self):
+        if self.length == -1:
+            self.length, _ = quad(lambda t: np.linalg.norm(self.derivative(np.array([[t]]), 1)),
+                                self.interval[0, 0], self.interval[0, 1], epsabs=1.49e-04, epsrel=1.49e-04)
+        return self.length
 
 
 class Other(Curve):
     def __init__(self, other):
-        self._shape_name = other.get('type')[()].decode('utf8')
-        self._interval = np.array(other.get('interval')[()]).reshape(-1, 1).T
+        self.shape_name = other.get('type')[()].decode('utf8')
+        self.interval = np.array(other.get('interval')[()]).reshape(-1, 1).T
 
     def sample(self, sample_points):
         return np.array([])

@@ -76,8 +76,7 @@ def ellipse2d():
         "maj_radius": 1.0,
         "min_radius": 0.5,
         "x_axis": [1, 0],
-        "y_axis": [0, 1],
-        "z_axis": [0, 0]
+        "y_axis": [0, 1]
     }
 
     return Ellipse(data)

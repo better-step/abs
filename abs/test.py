@@ -13,10 +13,11 @@ def get_normal_func(part, topo, points):
 
 
 
-name = 'Sphere'
+name = '2'
 save_type = 'ply'
 sample_name = f'{name}.hdf5'
-file_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'sample_hdf5', sample_name)
+file_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'hdf5', sample_name)
+#file_path = os.path.join(os.path.dirname(__file__),'/Users/nafiseh/Desktop', sample_name)
 file_path = os.path.normpath(file_path)
 
 
