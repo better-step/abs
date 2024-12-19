@@ -12,20 +12,26 @@ def estimate_total_surface_area(part):
     return total_area
 
 
-def process_part(part, num_samples, lambda_func, points_ratio=5):
+def estimate_total_curve_length(part):
 
+    total_length = 0
+    for edge in part.Solid.edges:
+        total_length += edge.length()
+
+    return total_length
+
+
+def process_part(part, num_samples, lambda_func, points_ratio=5):
     initial_num_points = points_ratio * num_samples
     num_points = initial_num_points
     total_area = estimate_total_surface_area(part)
+    total_length = estimate_total_curve_length(part)
 
-    # Sampling loop for surfaces
     while True:
-
         current_pts, current_ss = [], []
 
-        # Iterate through faces in topology
+        # Sampling loop for surfaces
         for face in part.Solid.faces:
-
             current_surface_num_points = int(np.ceil((face.area() / total_area) * num_points))
 
             # Sample points
@@ -34,7 +40,6 @@ def process_part(part, num_samples, lambda_func, points_ratio=5):
             s = lambda_func(part, face, uv_points)
 
             if s is not None:
-
                 if len(s) != len(pt):
                     s = np.full((pt.shape[0], pt.shape[1]), s)
 
@@ -46,6 +51,27 @@ def process_part(part, num_samples, lambda_func, points_ratio=5):
                 current_pts.append(pt[index, :])
                 current_ss.append(s[index, :])
 
+        # sample points for edges
+        for edge in part.Solid.edges:
+            if edge._3dcurve is None:
+                continue
+
+            current_edge_num_points = int(np.ceil((edge.length() / total_length) * num_points))
+
+            # Sample points
+            uv_points, pt = sampler.random_sample(edge, current_edge_num_points, 2)
+
+            s = lambda_func(part, edge, uv_points)
+
+            if s is not None:
+                if len(s) != len(pt):
+                    s = np.full((pt.shape[0], pt.shape[1]), s)
+
+                elif s.shape[1] != pt.shape[1]:
+                    s = np.tile(s, (1, pt.shape[1]))
+
+                current_pts.append(pt)
+                current_ss.append(s)
 
         pts = np.concatenate(current_pts, axis=0)
         ss = np.concatenate(current_ss, axis=0)
@@ -55,27 +81,6 @@ def process_part(part, num_samples, lambda_func, points_ratio=5):
         else:
             num_points = np.ceil(num_points *  initial_num_points / len(pts) * 1.2)
 
-    # # sample points for 3d curves
-    for edge in part.Solid.edges:
-
-
-        if edge._3dcurve is None:
-            continue
-
-        # Sample points
-        uv_points, pt = sampler.random_sample(edge, num_samples, 0, num_points)
-
-        s = lambda_func(part, edge, uv_points)
-
-        if s is not None:
-            if len(s) != len(pt):
-                s = np.full((pt.shape[0], pt.shape[1]), s)
-
-            elif s.shape[1] != pt.shape[1]:
-                s = np.tile(s, (1, pt.shape[1]))
-
-            pts = np.concatenate((pts, pt), axis=0)
-            ss = np.concatenate((ss, s), axis=0)
 
     indices = poisson_disk_downsample(pts, num_samples)
 
@@ -96,7 +101,6 @@ def get_parts(parts, num_samples, lambda_func):
     ss_list = []
 
     for part in parts:
-
         pts, ss = process_part(part, num_samples, lambda_func)
         pts_list.append(np.array(pts))
         ss_list.append(np.array(ss))
