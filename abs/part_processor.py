@@ -16,7 +16,7 @@ def estimate_total_curve_length(part):
 
     total_length = 0
     for edge in part.Solid.edges:
-        total_length += edge.length()
+        total_length += edge.get_length()
 
     return total_length
 
@@ -56,10 +56,10 @@ def process_part(part, num_samples, lambda_func, points_ratio=5):
 
         # sample points for edges
         for edge in part.Solid.edges:
-            if edge._3dcurve is None:
+            if edge.curve3d is None:
                 continue
 
-            current_edge_num_points = int(np.ceil((edge.length() / total_length) * num_points))
+            current_edge_num_points = int(np.ceil((edge.get_length() / total_length) * num_points))
 
             # Sample points
             uv_points, pt = sampler.random_sample(edge, current_edge_num_points, 2)
@@ -99,13 +99,13 @@ def process_part(part, num_samples, lambda_func, points_ratio=5):
     return pts[indices], ss[indices]
 
 
-def get_parts(parts, num_samples, lambda_func):
+def get_parts(parts, num_samples, lambda_func, points_ratio=5):
 
     pts_list = []
     ss_list = []
 
     for part in parts:
-        pts, ss = process_part(part, num_samples, lambda_func)
+        pts, ss = process_part(part, num_samples, lambda_func, points_ratio)
         pts_list.append(np.array(pts))
         ss_list.append(np.array(ss))
 
