@@ -6,6 +6,8 @@ from abs.winding_number import find_surface_uv_for_curve
 
 
 def _create_surface(surface_data):
+    index = int(surface_data.name.split("/")[-1])
+
     surface_type = surface_data.get('type')[()].decode('utf-8')
     surface_map = {
         'Plane': Plane,
@@ -17,13 +19,14 @@ def _create_surface(surface_data):
     }
     surface_class = surface_map.get(surface_type)
     if surface_class:
-        return surface_class(surface_data)
+        return index, surface_class(surface_data)
     else:
         print(f"This surface type: {surface_type}, is currently not supported")
-        return None
+        return index, None
 
 
 def _create_curve(curve_data):
+    index = int(curve_data.name.split("/")[-1])
     curve_type = curve_data.get('type')[()].decode('utf-8')
 
     curve_map = {
@@ -34,10 +37,10 @@ def _create_curve(curve_data):
     }
     curve_class = curve_map.get(curve_type)
     if curve_class:
-        return curve_class(curve_data)
+        return index, curve_class(curve_data)
     else:
         print(f"This curve type: {curve_type}, is currently not supported")
-        return None
+        return index, None
 
 def _get_edges(edge_data):
     return Edge(edge_data)
@@ -147,17 +150,23 @@ class Shape:
             self.__init_geometry(geometry_data)
 
         def __init_geometry(self, data):
-            for curve_data in data.get('2dcurves', {}).values():
-                curve = _create_curve(curve_data)
-                self.curves2d.append(curve)
+            tmp = data.get('2dcurves', {}).values()
+            self.curves2d=len(tmp)*[None]
+            for curve_data in tmp:
+                index, curve = _create_curve(curve_data)
+                self.curves2d[index] = curve
 
-            for curve_data in data.get('3dcurves', {}).values():
-                curve = _create_curve(curve_data)
-                self.curves3d.append(curve)
+            tmp = data.get('3dcurves', {}).values()
+            self.curves3d=len(tmp)*[None]
+            for curve_data in tmp:
+                index, curve = _create_curve(curve_data)
+                self.curves3d[index] = curve
 
-            for surface_data in data.get('surfaces', {}).values():
-                surface = _create_surface(surface_data)
-                self.surfaces.append(surface)
+            tmp = data.get('surfaces', {}).values()
+            self.surfaces=len(tmp)*[None]
+            for surface_data in tmp:
+                index, surface = _create_surface(surface_data)
+                self.surfaces[index] = surface
 
             self.bbox.append(np.array(data.get('bbox')[:]))
 
