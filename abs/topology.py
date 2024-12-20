@@ -41,8 +41,8 @@ class Edge(Topology):
             self.start_vertex = edge.get('start_vertex')
             self.half_edges = None
 
-    def length(self):
-        return self.curve3d.length()
+    def get_length(self):
+        return self.curve3d.get_length()
 
     def derivative(self, points, order=1):
         return self.curve3d.derivative(points, order)
@@ -107,11 +107,7 @@ class Face(Topology):
         total_winding_numbers = np.zeros((len(uv_points), 1))
         curves = self.trimming_curves_2d
         for poly in curves:
-            # period_u, period_v = self._determine_surface_periodicity(surface)
-            period_u = None
-            period_v = None
-
-            total_winding_numbers += winding_number(poly, uv_points, period_u=period_u, period_v=period_v)
+            total_winding_numbers += winding_number(poly, uv_points)
 
         res = total_winding_numbers > 0.5
         res = res.reshape(-1)

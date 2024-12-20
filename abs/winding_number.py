@@ -25,25 +25,14 @@ def compute_position(point, period_u, period_v):
         position = np.array(point)
     return position
 
-def winding_number(curve_uv_values, surface_uv_values, period_u=None, period_v=None):
+def winding_number(curve_uv_values, surface_uv_values):
     """ Compute the winding number for a polyline and surface UV values efficiently. """
-    if period_u == None and period_v == None:
-        polyline_positions = curve_uv_values
-    else:
-        polyline_positions = np.array([compute_position(point, period_u, period_v) for point in curve_uv_values])
+    a_values = curve_uv_values[:-1]
+    b_values = curve_uv_values[1:]
+    a = a_values[:, np.newaxis] - surface_uv_values
+    b = b_values[:, np.newaxis] - surface_uv_values
 
-
-    is_2D = polyline_positions.shape[1] == 2
-    a_values = polyline_positions[:-1]
-    b_values = polyline_positions[1:]
-    positions = np.array([compute_position(point, period_u, period_v) for point in surface_uv_values])
-    a = a_values[:, np.newaxis] - positions
-    b = b_values[:, np.newaxis] - positions
-
-    if is_2D:
-        det = a[..., 0] * b[..., 1] - a[..., 1] * b[..., 0]
-    else:  # 3D
-        det = np.linalg.norm(np.cross(a, b), axis=-1)
+    det = a[..., 0] * b[..., 1] - a[..., 1] * b[..., 0]
 
     dot = np.einsum('ijk,ijk->ij', a, b)
     winding_number_result = np.sum(np.arctan2(det, dot), axis=0) / (2 * np.pi)
