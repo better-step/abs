@@ -125,7 +125,7 @@ def save_to_xyz(points, filename):
     filename (str): The path to the output .xyz file.
     """
     with open(filename, 'w') as f:
-        for point in points[0]:
+        for point in points:
             # Write each point as X Y Z in a new line
             f.write(f"{point[0]} {point[1]} {point[2]}\n")
 
@@ -133,3 +133,27 @@ def save_to_xyz(points, filename):
 def save_vtu(save_file_path , P):
     m = mio.Mesh(P, cells={"triangle":np.array([np.arange(P.shape[0]), np.arange(P.shape[0]), np.arange(P.shape[0])]).T})
     m.write(save_file_path)
+
+
+def get_mesh(mesh):
+
+    global_vertices = []
+    global_faces = []
+    vertex_offset = 0
+
+    for key in mesh:
+
+        sub_mesh = mesh[key]
+
+        vertices = sub_mesh["points"][:]
+        global_vertices.append(vertices)
+
+        faces = sub_mesh["triangle"][:] + vertex_offset
+        global_faces.append(faces)
+
+        vertex_offset += vertices.shape[0]
+
+    global_vertices = np.vstack(global_vertices)
+    global_faces = np.vstack(global_faces)
+
+    return global_vertices, global_faces

@@ -44,6 +44,7 @@ class Plane(Surface):
             self.x_axis = np.array(plane['x_axis']).reshape(-1, 1).T
             self.y_axis = np.array(plane['y_axis']).reshape(-1, 1).T
             self.z_axis = np.array(plane['z_axis']).reshape(-1, 1).T
+            self.transform = np.array(plane['transform'])
             self.area = -1
             self.shape_name = plane['type']
         else:
@@ -53,6 +54,7 @@ class Plane(Surface):
             self.x_axis = np.array(plane.get('x_axis')[()]).reshape(-1, 1).T
             self.y_axis = np.array(plane.get('y_axis')[()]).reshape(-1, 1).T
             self.z_axis = np.array(plane.get('z_axis')[()]).reshape(-1, 1).T
+            self.transform = np.array(plane.get('transform')[()])
             self.area = -1
             self.shape_name = plane.get('type')[()].decode('utf8')
 
@@ -93,6 +95,7 @@ class Cylinder(Surface):
             self.x_axis = np.array(cylinder['x_axis']).reshape(-1, 1).T
             self.y_axis = np.array(cylinder['y_axis']).reshape(-1, 1).T
             self.z_axis = np.array(cylinder['z_axis']).reshape(-1, 1).T
+            self.transform = np.array(cylinder['transform'])
             self.area = -1
             self.shape_name = cylinder['type']
         else:
@@ -103,6 +106,7 @@ class Cylinder(Surface):
             self.x_axis = np.array(cylinder.get('x_axis')[()]).reshape(-1, 1).T
             self.y_axis = np.array(cylinder.get('y_axis')[()]).reshape(-1, 1).T
             self.z_axis = np.array(cylinder.get('z_axis')[()]).reshape(-1, 1).T
+            self.transform = np.array(cylinder.get('transform')[()])
             self.area = -1
             self.shape_name = cylinder.get('type')[()].decode('utf8')
 
@@ -147,6 +151,7 @@ class Cone(Surface):
             self.x_axis = np.array(cone['x_axis']).reshape(-1, 1).T
             self.y_axis = np.array(cone['y_axis']).reshape(-1, 1).T
             self.z_axis = np.array(cone['z_axis']).reshape(-1, 1).T
+            self.transform = np.array(cone['transform'])
             self.area = -1
             self.shape_name = cone['type']
         else:
@@ -159,6 +164,7 @@ class Cone(Surface):
             self.x_axis = np.array(cone.get('x_axis')[()]).reshape(-1, 1).T
             self.y_axis = np.array(cone.get('y_axis')[()]).reshape(-1, 1).T
             self.z_axis = np.array(cone.get('z_axis')[()]).reshape(-1, 1).T
+            self.transform = np.array(cone.get('transform')[()])
             self.area = -1
             self.shape_name = cone.get('type')[()].decode('utf8')
 
@@ -210,6 +216,7 @@ class Sphere(Surface):
                 self.z_axis = np.array(sphere['z_axis']).reshape(-1, 1).T
             else:
                 self._z_axis = np.cross(self._x_axis, self._y_axis)
+            self.transform = np.array(sphere['transform'])
             self.area = -1
             self.shape_name = sphere['type']
         else:
@@ -223,6 +230,7 @@ class Sphere(Surface):
                 self.z_axis = np.array(sphere.get('z_axis')[()]).reshape(-1, 1).T
             else:
                 self.z_axis = np.cross(self.x_axis, self.y_axis)
+            self.transform = np.array(sphere.get('transform')[()])
             self.area = -1
             self.shape_name = sphere.get('type')[()].decode('utf8')
 
@@ -283,6 +291,7 @@ class Torus(Surface):
             self.x_axis = np.array(torus['x_axis']).reshape(-1, 1).T
             self.y_axis = np.array(torus['y_axis']).reshape(-1, 1).T
             self.z_axis = np.array(torus['z_axis']).reshape(-1, 1).T
+            self.transform = np.array(torus['transform'])
             self.area = -1
             self.shape_name = torus['type']
         else:
@@ -293,6 +302,7 @@ class Torus(Surface):
             self.x_axis = np.array(torus.get('x_axis')[()]).reshape(-1, 1).T
             self.y_axis = np.array(torus.get('y_axis')[()]).reshape(-1, 1).T
             self.z_axis = np.array(torus.get('z_axis')[()]).reshape(-1, 1).T
+            self.transform = np.array(torus.get('transform')[()])
             self.area = -1
             self.shape_name = torus.get('type')[()].decode('utf8')
 
@@ -361,6 +371,9 @@ class BSplineSurface(Surface):
             self.v_knots = np.array(bspline_surface['v_knots']).reshape(-1, 1).T
             self.v_rational = bool(bspline_surface['v_rational'])
             self.weights = np.array(bspline_surface['weights'])
+            self.u_periodic = bool(bspline_surface['u_periodic'])
+            self.v_periodic = bool(bspline_surface['v_periodic'])
+            self.transform = np.array(bspline_surface['transform'])
             self.area = -1
             self.shape_name = bspline_surface['type']
         else:
@@ -381,6 +394,9 @@ class BSplineSurface(Surface):
             self.v_rational = bool(bspline_surface.get('v_rational')[()])
             self.weights = np.column_stack((bspline_surface.get('weights').get('0')[()],
                                              bspline_surface.get('weights').get('1')[()])).reshape(-1, 1)
+            self.u_periodic = bool(bspline_surface.get('u_periodic')[()])
+            self.v_periodic = bool(bspline_surface.get('v_periodic')[()])
+            self.transform = np.array(bspline_surface.get('transform')[()])
             self.area = -1
             self.shape_name = bspline_surface.get('type')[()].decode('utf8')
 

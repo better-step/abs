@@ -33,12 +33,16 @@ class Line(Curve):
             self.location = np.array(line['location']).reshape(-1, 1).T
             self.interval = np.array(line['interval']).reshape(-1, 1).T
             self.direction = np.array(line['direction']).reshape(-1, 1).T
+            if self.direction.shape[1] == 3:
+                self.transform = np.array(line['transform'])
             self.length = -1
             self.shape_name = line['type']
         else:
             self.location = np.array(line.get('location')[()]).reshape(-1, 1).T
             self.interval = np.array(line.get('interval')[()]).reshape(-1, 1).T
             self.direction = np.array(line.get('direction')[()]).reshape(-1, 1).T
+            if self.direction.shape[1] == 3:
+                self.transform = np.array(line.get('transform')[()])
             self.length = -1
             self.shape_name = line.get('type')[()].decode('utf8')
 
@@ -74,6 +78,7 @@ class Circle(Curve):
             self.shape_name = circle['type']
             if 'z_axis' in circle:
                 self.z_axis = np.array(circle['z_axis']).reshape(-1, 1).T
+                self.transform = np.array(circle['transform'])
         else:
             self.location = np.array(circle.get('location')[()]).reshape(-1, 1).T
             self.radius = float(circle.get('radius')[()])
@@ -84,6 +89,7 @@ class Circle(Curve):
             self.shape_name = circle.get('type')[()].decode('utf8')
             if 'z_axis' in circle:
                 self.z_axis = np.array(circle.get('z_axis')[()]).reshape(-1, 1).T
+                self.transform = np.array(circle.get('transform')[()])
 
     def sample(self, sample_points):
         if sample_points.size == 0:
@@ -148,6 +154,7 @@ class Ellipse(Curve):
 
             if 'z_axis' in ellipse:
                 self.z_axis = np.array(ellipse['z_axis']).reshape(-1, 1).T
+                self.transform = np.array(ellipse['transform'])
         else:
             self.focus1 = np.array(ellipse.get('focus1')[()]).reshape(-1, 1).T
             self.focus2 = np.array(ellipse.get('focus2')[()]).reshape(-1, 1).T
@@ -161,6 +168,7 @@ class Ellipse(Curve):
 
             if 'z_axis' in ellipse:
                 self.z_axis = np.array(ellipse.get('z_axis')[()]).reshape(-1, 1).T
+                self.transform = np.array(ellipse.get('transform')[()])
 
         self.center = (self.focus1 + self.focus2) / 2
 
@@ -218,7 +226,10 @@ class BSplineCurve(Curve):
             self.weights = np.array(bspline['weights']).reshape(-1, 1)
             self.interval = np.array(bspline['interval']).reshape(-1, 1).T
             self.rational = bool(bspline['rational'])
+            self.periodic = bool(bspline['periodic'])
             self.shape_name = bspline['type']
+            if self.poles.shape[1] == 3:
+                self.transform = np.array(bspline['transform'])
         else:
             self.closed = bool(bspline.get('closed')[()])
             self.degree = int(bspline.get('degree')[()])
@@ -228,7 +239,10 @@ class BSplineCurve(Curve):
             self.weights = np.array(bspline.get('weights')[()]).reshape(-1, 1)
             self.interval = np.array(bspline.get('interval')[()]).reshape(-1, 1).T
             self.rational = bool(bspline.get('rational')[()])
+            self.periodic = bool(bspline.get('periodic')[()])
             self.shape_name = bspline.get('type')[()].decode('utf8')
+            if self.poles.shape[1] == 3:
+                self.transform = np.array(bspline.get('transform')[()])
 
         # Create BSpline or NURBS curve object
 
