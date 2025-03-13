@@ -306,13 +306,6 @@ class BSplineCurve(Curve):
 
         return normal_vector
 
-    def get_length(self):
-        if self.length == -1:
-            self.length, _ = quad(lambda t: np.linalg.norm(self.derivative(np.array([[t]]), 1)),
-                                self.interval[0, 0], self.interval[0, 1], epsabs=1.49e-04, epsrel=1.49e-04)
-        return self.length
-
-
 class Other(Curve):
     def __init__(self, other):
         self.shape_name = other.get('type')[()].decode('utf8')
