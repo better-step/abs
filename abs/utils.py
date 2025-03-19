@@ -77,63 +77,6 @@ end_header
         else:
             np.savetxt(f, data, fmt='%f %f %f')
 
-import numpy as np
-
-def save_ply_color(filename, pts, color=None):
-    pts = np.asarray(pts)
-
-    if pts.ndim != 2 or pts.shape[1] != 3:
-        raise ValueError("Points must have shape (n, 3)")
-
-    has_color = color is not None
-
-    if has_color:
-        color = np.asarray(color)
-        if color.shape != (pts.shape[0], 3):
-            raise ValueError("Color must have the same number of rows as points and exactly 3 columns (R, G, B)")
-        if np.issubdtype(color.dtype, np.floating):
-            if np.any((color < 0) | (color > 1)):
-                raise ValueError("Floating-point color values must be in the range [0, 1]")
-            color = (color * 255).astype(np.uint8)  # Convert float [0,1] to uint8 [0,255]
-        elif np.issubdtype(color.dtype, np.integer):
-            if np.any((color < 0) | (color > 255)):
-                raise ValueError("Integer color values must be in the range [0, 255]")
-            color = color.astype(np.uint8)
-        else:
-            raise TypeError("Color values must be either integers (0-255) or floats (0-1)")
-
-        data = np.hstack((pts, color))
-        header = f"""ply
-format ascii 1.0
-element vertex {pts.shape[0]}
-property float x
-property float y
-property float z
-property uchar red
-property uchar green
-property uchar blue
-end_header
-"""
-        fmt = '%g %g %g %d %d %d'  # XYZ as float, RGB as integers
-    else:
-        data = pts
-        header = f"""ply
-format ascii 1.0
-element vertex {pts.shape[0]}
-property float x
-property float y
-property float z
-end_header
-"""
-        fmt = '%g %g %g'  # XYZ only
-
-    # Writing to file
-    with open(filename, 'w') as f:
-        f.write(header)
-        np.savetxt(f, data, fmt=fmt)
-
-
-
 
 def save_parts(name, P, S):
     num_parts = len(P)

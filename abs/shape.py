@@ -21,7 +21,7 @@ def _create_surface(surface_data):
     if surface_class:
         return index, surface_class(surface_data)
     else:
-        print(f"This surface type: {surface_type}, is currently not supported")
+        # print(f"This surface type: {surface_type}, is currently not supported")
         return index, None
 
 
@@ -39,7 +39,7 @@ def _create_curve(curve_data):
     if curve_class:
         return index, curve_class(curve_data)
     else:
-        print(f"This curve type: {curve_type}, is currently not supported")
+        # print(f"This curve type: {curve_type}, is currently not supported")
         return index, None
 
 def _get_edges(edge_data):
@@ -72,13 +72,8 @@ class Shape:
         Create 2D trimming curves.
         """
         self.trimming_curves_2d = []
-        if len(self._topology_data.solids) == 0:
-            for shell in self._topology_data.shells:
-                self._process_2d_trimming_curves_for_shell(shell, curves_2d, curves_3d, spacing)
-        else:
-            for solid in self._topology_data.solids:
-                for shell_index in solid.shells:
-                    self._process_2d_trimming_curves_for_shell(shell_index, curves_2d, curves_3d, spacing)
+        for shell in self._topology_data.shells:
+            self._process_2d_trimming_curves_for_shell(shell, curves_2d, curves_3d, spacing)
 
 
     def _process_2d_trimming_curves_for_shell(self, shell_index, curves2d, curves3d, spacing):
@@ -124,11 +119,11 @@ class Shape:
                     if hasattr(halfedge, 'curve2d'):
                         curve2d_index = halfedge.curve2d
                         curve2d = curves2d[curve2d_index]
-                        _, closest_surface_uv_values_of_curve = sampler.uniform_sample(curve2d, n_samples, 4, 300)
+                        _, closest_surface_uv_values_of_curve = sampler.uniform_sample(curve2d, n_samples, 4, 100)
                         if not modified_orientation:
                             closest_surface_uv_values_of_curve = closest_surface_uv_values_of_curve[::-1]
                     else:
-                        surface_uv_values, surface_points = sampler.uniform_sample(surface, n_samples*n_samples, 5, 300)
+                        surface_uv_values, surface_points = sampler.uniform_sample(surface, n_samples*n_samples, 5, 100)
 
 
                         # Sample the curve points to get UV values
