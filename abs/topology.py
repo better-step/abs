@@ -32,6 +32,7 @@ class Edge(Topology):
             self.curve3d = edge['3dcurve']
             self.end_vertex = int(edge['end_vertex'])
             self.start_vertex = int(edge['start_vertex'])
+            # TODO: don't use the list
             self.half_edges = None
 
         else:
@@ -41,7 +42,6 @@ class Edge(Topology):
             self.half_edges = None
 
     def get_length(self):
-       #TODO: fix this
         if self.curve3d:
             return self.curve3d.get_length()
         else:
@@ -81,10 +81,6 @@ class Face(Topology):
             normal_points = -normal_points
         return normal_points
 
-    def get_label(self):
-        return self.surface.shape_name
-
-    #TODO: fix this
     def get_area(self):
         if self.surface is not None:
             return self.surface.get_area()
