@@ -192,25 +192,26 @@ def save_vtu(save_file_path , P):
     m.write(save_file_path)
 
 
-def get_mesh(mesh):
+def get_mesh(meshes):
 
     global_vertices = []
     global_faces = []
     vertex_offset = 0
 
-    for key in mesh:
+    for mesh in meshes:
+        for key in mesh:
 
-        sub_mesh = mesh[key]
+            sub_mesh = mesh[key]
 
-        vertices = sub_mesh["points"][:]
-        if len(vertices) == 0:
-            continue
-        global_vertices.append(vertices)
+            vertices = sub_mesh["points"][:]
+            if len(vertices) == 0:
+                continue
+            global_vertices.append(vertices)
 
-        faces = sub_mesh["triangle"][:] + vertex_offset
-        global_faces.append(faces)
+            faces = sub_mesh["triangle"][:] + vertex_offset
+            global_faces.append(faces)
 
-        vertex_offset += vertices.shape[0]
+            vertex_offset += vertices.shape[0]
 
     global_vertices = np.vstack(global_vertices)
     global_faces = np.vstack(global_faces)
