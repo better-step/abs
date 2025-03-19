@@ -9,6 +9,7 @@ tox
 coverage
 Sphinx
 twine
+meshio
 
 pytest
 pytest-runner
