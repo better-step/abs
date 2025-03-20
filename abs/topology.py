@@ -32,7 +32,6 @@ class Edge(Topology):
             self.curve3d = edge['3dcurve']
             self.end_vertex = int(edge['end_vertex'])
             self.start_vertex = int(edge['start_vertex'])
-            # TODO: don't use the list
             self.half_edges = None
 
         else:
@@ -63,6 +62,11 @@ class Face(Topology):
             self.surface_orientation = face['surface_orientation']
             self.trimming_curves_2d = []
             self.shells = None
+            self.exact_domain = np.array(face['exact_domain'])
+            self.nr_singularities = face['has_singularities']
+            self.nr_singularities = face['nr_singularities']
+            self.outer_loop = face['outer_loop']
+            self.singularities = face['singularities']
 
         else:
             self.loops = face.get('loops')
@@ -70,6 +74,12 @@ class Face(Topology):
             self.surface_orientation = face.get('surface_orientation')
             self.trimming_curves_2d = []
             self.shells = None
+            self.exact_domain = face.get('exact_domain')
+            self.nr_singularities = face.get('has_singularities')
+            self.nr_singularities = face.get('nr_singularities')
+            self.outer_loop = face.get('outer_loop')
+            self.singularities = face.get('singularities')
+
 
     def normal(self, points):
 

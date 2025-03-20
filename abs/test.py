@@ -1,44 +1,37 @@
-import h5py
-import os
-from abs.shape import *
 from abs.part_processor import *
 from abs.utils import *
+import os
 
 def get_normal_func(part, topo, points):
-
     if isinstance(topo, Face):
         return topo.normal(points)
     else:
         return None
 
 
-
-name = '2'
-save_type = 'ply'
-sample_name = f'{name}.hdf5'
-file_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'hdf5', sample_name)
-#file_path = os.path.join(os.path.dirname(__file__),'/Users/nafiseh/Desktop', sample_name)
-file_path = os.path.normpath(file_path)
+base_dir = '/Users/nafiseh/Desktop/nafiseh/Desktop/'
+file_name = "test"
+num_samples = 4000
 
 
-f = h5py.File(file_path, "r")
-geo = f['geometry/parts']
-group = f['topology/parts']
-parts = []
-for i in range(len(geo)):
-    s = Shape(list(geo.values())[i], list(group.values())[i])
-    parts.append(s)
+file_path = os.path.join(base_dir, f"{file_name}.hdf5")
 
-num_samples = 2000
+print('getting parts')
+parts, meshes = get_shape(file_path)
+
+print('sampling parts with sample size:', num_samples)
 P, S = get_parts(parts, num_samples, get_normal_func)
+V, F = get_mesh(meshes)
 
-save_file_path = os.path.join(os.path.dirname(__file__), '..', 'test', 'sample_results', f'{name}.{save_type}')
+print('saving results')
+save_file_path = os.path.join(base_dir, f"{file_name}.obj")
+save_file_path_ply = os.path.join(base_dir, f"{file_name}.ply")
 
-save_ply(save_file_path, P[0], S[0])
-# save_obj(save_file_path, P[0])
-#save_vtu(save_file_path, P[0])
+save_ply(save_file_path_ply, P, S)
+save_obj_mesh(save_file_path, V, F)
 
-print('Finished')
+print('finished')
+
 
 
 

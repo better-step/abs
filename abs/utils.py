@@ -1,8 +1,9 @@
 from pathlib import Path
 import h5py
 import os
-import numpy as np
 import meshio as mio
+from shape import *
+import numpy as np
 
 
 def read_file(file_path):
@@ -13,8 +14,25 @@ def read_file(file_path):
 def get_file(sample_name):
     return os.path.abspath(os.path.join(Path(__file__), '..', '..', 'data', 'sample_hdf5', sample_name))
 
+def get_shape(file_path):
+
+    f = h5py.File(file_path, "r")
+    part = f['parts'].values()
+
+    parts = []
+    meshes = []
+    for p in part:
+        s = Shape(p['geometry'], p['topology'])
+        parts.append(s)
+        meshes.append(p['mesh'])
+
+    return parts, meshes
+
 
 def save_obj(filename, pts):
+    '''
+    Save a set of 3D points to an .obj file.
+    '''
     with open(filename, "w") as f:
         if pts.shape[1] == 2:
             [f.write(f"v {pts[i, 0]} {pts[i, 1]} 0\n") for i in range(pts.shape[0])]
@@ -23,6 +41,9 @@ def save_obj(filename, pts):
 
 
 def save_obj_mesh(filename, pts, faces):
+    '''
+    Save a set of 3D points and faces to an .obj file.
+    '''
     with open(filename, "w") as f:
         if pts.shape[1] == 2:
             [f.write(f"v {pts[i, 0]} {pts[i, 1]} 0\n") for i in range(pts.shape[0])]
@@ -32,18 +53,38 @@ def save_obj_mesh(filename, pts, faces):
         [f.write(f"f {faces[i, 0]+1} {faces[i, 1]+1} {faces[i, 2]+1}\n") for i in range(faces.shape[0])]
 
 
-def save_ply(filename, pts, normals=None):
-    pts = np.asarray(pts)
-    if normals is not None:
-        normals = np.asarray(normals)
+def save_ply(filename, P, normals=None):
+    '''
+    Save a set of 3D points to a .ply file. Optionally, also save normals.
+    '''
+    total_points = []
+    total_normals = []
+    for i, pts in enumerate(P):
+        normal = normals[i]
+        if normal is not None:
+            if pts.shape[0] != normal.shape[0]:
+                raise ValueError("The number of points and normals must be the same")
 
-        if pts.shape[0] != normals.shape[0]:
+            if pts.shape[1] != 3 or normal.shape[1] != 3:
+                raise ValueError("Both pts and normals must have shape (n, 3)")
+
+            total_points.append(pts)
+            total_normals.append(normal)
+
+    new_pts = np.asarray(total_points)
+    new_pts = np.squeeze(new_pts, axis=0)
+
+    if total_normals is not None:
+        new_normal = np.asarray(total_normals)
+        new_normal = np.squeeze(new_normal, axis=0)
+
+        if new_pts.shape[0] != new_normal.shape[0]:
             raise ValueError("The number of points and normals must be the same")
 
-        if pts.shape[1] != 3 or normals.shape[1] != 3:
+        if new_pts.shape[1] != 3 or new_normal.shape[1] != 3:
             raise ValueError("Both pts and normals must have shape (n, 3)")
 
-        data = np.hstack((pts, normals))
+        data = np.hstack((new_pts, new_normal))
 
         header = f"""ply
 format ascii 1.0
@@ -57,10 +98,10 @@ property float nz
 end_header
 """
     else:
-        if pts.shape[1] != 3:
+        if new_pts.shape[1] != 3:
             raise ValueError("Points must have shape (n, 3)")
 
-        data = pts
+        data = new_pts
 
         header = f"""ply
 format ascii 1.0
@@ -77,52 +118,9 @@ end_header
         else:
             np.savetxt(f, data, fmt='%f %f %f')
 
-
-def save_parts(name, P, S):
-    num_parts = len(P)
-    os.makedirs('sample_results', exist_ok=True)
-
-    for i in range(num_parts):
-        pts = P[i]
-        ss = S[i]
-
-        obj_filename = f'sample_results/{name}_part{i}.obj'
-        ply_filename = f'sample_results/{name}_part{i}.ply'
-
-        save_obj(obj_filename, pts)
-        save_ply(ply_filename, pts, ss)
-
-        print(f'Saved part {i} to {obj_filename} and {ply_filename}')
-
-
-def save_mesh(file_path, name):
-    with h5py.File(file_path, 'r') as hdf:
-        vv = []
-        ff = []
-        n = 0
-
-        for m in hdf['mesh']:
-            v = np.array(hdf[f'mesh/{m}']['points'])
-            f = np.array(hdf[f'mesh/{m}']['triangle'])
-
-            vv.append(v)
-            ff.append(f + n)
-            n += len(v)
-
-        if len(vv) > 0:
-            v = np.concatenate(vv)
-            f = np.concatenate(ff)
-
-            save_obj_mesh(f'sample_results/{name}_mesh.obj', v, f)
-
-
 def save_to_xyz(points, filename):
     """
     Save 3D points to an .xyz file.
-
-    Args:
-    points (array-like): List or NumPy array of 3D points (x, y, z).
-    filename (str): The path to the output .xyz file.
     """
     with open(filename, 'w') as f:
         for point in points:
