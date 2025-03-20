@@ -1,7 +1,6 @@
 import unittest
 from random import sample
 import numpy as np
-from fontTools.merge.util import first
 from test.utils.test_utilities import *
 from scipy.interpolate import BSpline
 

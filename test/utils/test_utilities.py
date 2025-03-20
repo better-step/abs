@@ -8,7 +8,8 @@ def line3d():
         "type": "Line",
         "location": [0, 0, 0],
         "direction": [1, 0, 0],
-        "interval": [0, 1]
+        "interval": [0, 1],
+        "transform": [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0]]
     }
     return Line(data)
 
@@ -32,7 +33,8 @@ def circle3d():
         "interval": [0, 2 * np.pi],
         "x_axis": [1, 0, 0],
         "y_axis": [0, 1, 0],
-        "z_axis": [0, 0, 1]
+        "z_axis": [0, 0, 1],
+        "transform": [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0]]
     }
 
     return Circle(data)
@@ -61,7 +63,8 @@ def ellipse3d():
         "min_radius": 0.5,
         "x_axis": [1, 0, 0],
         "y_axis": [0, 1, 0],
-        "z_axis": [0, 0, 1]
+        "z_axis": [0, 0, 1],
+        "transform": [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0]]
     }
 
     return Ellipse(data)
@@ -92,7 +95,9 @@ def bspline_curve3d():
         "knots": [-3.512e-17, -3.512e-17, 1.000e+0, 1.000e+0],
         "poles": [[4.217e+0, -2.184e+1, 2.540e+1], [4.217e+0, -2.184e+1, 5.080e+1]],
         "rational": False,
-        "weights": [1.000e+0, 1.000e+0]
+        "weights": [1.000e+0, 1.000e+0],
+        "transform": [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0]],
+        "periodic": False
     }
     return BSplineCurve(data)
 
@@ -103,6 +108,7 @@ def bspline_curve2d():
         "closed": False,
         "continuity": 4,
         "degree": 3,
+        "periodic": False,
         "interval": [3.46944695195361e-18, 0.00133425534020762],
         "knots": [3.46944695195361e-18, 3.46944695195361e-18, 3.46944695195361e-18, 3.46944695195361e-18,
                   6.0647970009440586e-05, 0.0001212959400188777, 0.0001819439100283148, 0.00024259188003775194,
@@ -153,7 +159,8 @@ def plane():
         "trim_domain": [[0, 1], [0, 1]],
         "x_axis": [1, 0, 0],
         "y_axis": [0, 1, 0],
-        "z_axis": [0, 0, 1]
+        "z_axis": [0, 0, 1],
+        "transform": [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0]]
     }
 
     return Plane(data)
@@ -168,7 +175,8 @@ def cylinder():
         "trim_domain": [[0, 1], [0, 1]],
         "x_axis": [1, 0, 0],
         "y_axis": [0, 1, 0],
-        "z_axis": [0, 0, 1]
+        "z_axis": [0, 0, 1],
+        "transform":[[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0]]
     }
 
     return Cylinder(data)
@@ -185,7 +193,8 @@ def cone():
         "trim_domain": [[0, 1], [0, 1]],
         "x_axis": [1, 0, 0],
         "y_axis": [0, 1, 0],
-        "z_axis": [0, 0, 1]
+        "z_axis": [0, 0, 1],
+        "transform": [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0]]
     }
 
     return Cone(data)
@@ -200,7 +209,8 @@ def sphere():
         "trim_domain": [[0, 1], [0, 1]],
         "x_axis": [1, 0, 0],
         "y_axis": [0, 1, 0],
-        "z_axis": [0, 0, 1]
+        "z_axis": [0, 0, 1],
+        "transform": [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0]]
     }
 
     return Sphere(data)
@@ -215,7 +225,8 @@ def torus():
         "trim_domain": [[0, 1], [0, 1]],
         "x_axis": [1, 0, 0],
         "y_axis": [0, 1, 0],
-        "z_axis": [0, 0, 1]
+        "z_axis": [0, 0, 1],
+        "transform": [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0]]
     }
 
     return Torus(data)
@@ -250,7 +261,10 @@ def bspline_surface():
         "weights":
             [[1.0, 0.707106781186548, 1.0],
              [0.923879532511278, 0.653281482438182, 0.923879532511278],
-             [1.0, 0.707106781186548, 1.0]]
+             [1.0, 0.707106781186548, 1.0]],
+        "transform": [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0]],
+        "u_periodic": False,
+        "v_periodic": False
     }
 
     return BSplineSurface(data)
