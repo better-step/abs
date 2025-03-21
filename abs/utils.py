@@ -2,7 +2,7 @@ from pathlib import Path
 import h5py
 import os
 import meshio as mio
-from shape import *
+from abs.shape import *
 import numpy as np
 
 

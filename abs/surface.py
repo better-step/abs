@@ -1,7 +1,8 @@
 import numpy as np
 from geomdl import BSpline
-from geomdl import operations
 from scipy.interpolate import bisplrep, bisplev
+from geomdl import operations
+
 
 
 class Surface:

@@ -1,12 +1,10 @@
 import numpy as np
 from abs.curve import Curve
 from abs.surface import Surface
-# remove these later
 from abs.utils import *
 
 
-
-def uniform_sample(geom, num_samples, min_pts=None, max_pts=None):
+def uniform_sample(topo, num_samples, min_pts=None, max_pts=None):
     """
     Sample uniform points on a curve or surface
 
@@ -21,10 +19,10 @@ def uniform_sample(geom, num_samples, min_pts=None, max_pts=None):
     parametric values and an array of sampled points on the curve/surface.
     """
 
-    if isinstance(geom, Curve):
-        return _uniform_sample_curve(geom, num_samples, min_pts, max_pts)
-    elif isinstance(geom, Surface):
-        return _uniform_sample_surface(geom, num_samples, min_pts, max_pts)
+    if hasattr(topo, 'curve3d') and isinstance(topo.curve3d, Curve):
+        return _uniform_sample_curve(topo.curve3d, num_samples, min_pts, max_pts)
+    elif isinstance(topo.surface, Surface):
+        return _uniform_sample_curve(topo.surface, num_samples, min_pts, max_pts)
     else:
         raise ValueError("Invalid geometry type")
 
@@ -52,7 +50,6 @@ def random_sample(topo, num_samples, min_pts=None, max_pts=None):
 
 
 
-#def _uniform_sample_curve(curve, spacing, min_pts=None, max_pts=None):
 def _uniform_sample_curve(curve, num_samples, min_pts=None, max_pts=None):
     """
     Sample uniform points on a curve
@@ -77,7 +74,6 @@ def _uniform_sample_curve(curve, num_samples, min_pts=None, max_pts=None):
     return t, curve.sample(t)
 
 
-#def _random_sample_curve(curve, spacing, min_pts=None, max_pts=None):
 def _random_sample_curve(curve, num_samples, min_pts=None, max_pts=None):
     """
     Sample random points on a curve
@@ -102,7 +98,6 @@ def _random_sample_curve(curve, num_samples, min_pts=None, max_pts=None):
     return t, curve.sample(t)
 
 
-# def _uniform_sample_surface(surface, spacing, min_pts=None, max_pts=None):
 def _uniform_sample_surface(surface, num_samples, min_pts=None, max_pts=None):
     """
     Sample uniform points on a surface

@@ -5,7 +5,6 @@ from test.test_geometry import *
 from abs import *
 import unittest
 import numpy as np
-
 from abs.utils import *
 
 
@@ -13,7 +12,6 @@ class Hdf5test(unittest.TestCase):
 
     def test_geometry_parts(self):
         file_path = get_file('Cylinder_Hole.hdf5')
-        # print(file_path)
         data = read_file(file_path)
         self.assertIsNotNone(data)
         self.assertIsNotNone(data['geometry']['parts'])

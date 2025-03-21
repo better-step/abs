@@ -1,5 +1,4 @@
 import numpy as np
-#from geomdl import BSpline, NURBS
 from scipy.integrate import quad
 from scipy.interpolate import BSpline
 
