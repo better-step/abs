@@ -377,7 +377,8 @@ class TestGeometry(unittest.TestCase):
         self.assertTrue(du < 1e-7)
         self.assertTrue(dv < 1e-7)
 
-        self.assertEqual(int(shape.get_area()), 1)
+        # self.assertEqual(int(shape.get_area()), 1)
+        self.assertTrue(abs(shape.get_area() - 1) < 1e-7)
 
     def test_cylinder(self):
         shape = cylinder()
@@ -403,7 +404,7 @@ class TestGeometry(unittest.TestCase):
         self.assertTrue(d2u < 1e-6)
         self.assertTrue(d2v < 1e-6)
 
-        self.assertEqual(int(shape.get_area()), 1)
+        self.assertTrue(abs(shape.get_area() - 1) < 1e-7)
 
     def test_cone(self):
         shape = cone()

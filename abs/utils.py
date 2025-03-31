@@ -2,7 +2,7 @@ from pathlib import Path
 import h5py
 import os
 import meshio as mio
-from abs.shape import *
+from shape import *
 import numpy as np
 
 
@@ -16,17 +16,30 @@ def get_file(sample_name):
 
 def get_shape(file_path):
 
-    f = h5py.File(file_path, "r")
+    f = h5py.File(file_path, 'r')
     part = f['parts'].values()
 
     parts = []
-    meshes = []
-    for p in part:
+    all_meshes = []
+    for i, p in enumerate(part):
+
         s = Shape(p['geometry'], p['topology'])
         parts.append(s)
-        meshes.append(p['mesh'])
 
-    return parts, meshes
+        meshes = {}
+        mesh_group = p['mesh']
+        for key in mesh_group:
+            submesh = mesh_group[key]
+            vertices = submesh['points']
+            faces = submesh['triangle']
+
+            meshes[key] = {
+                'points': vertices,
+                'triangle': faces
+            }
+        all_meshes.append(meshes)
+
+    return parts, all_meshes
 
 
 def save_obj(filename, pts):
@@ -158,3 +171,29 @@ def get_mesh(meshes):
     global_faces = np.vstack(global_faces)
 
     return global_vertices, global_faces
+
+def get_mesh_part(mesh):
+    global_vertices = []
+    global_faces = []
+    vertex_offset = 0
+
+    for key in mesh:
+
+        sub_mesh = mesh[key]
+
+        vertices = sub_mesh["points"][:]
+        if len(vertices) == 0:
+            continue
+        global_vertices.append(vertices)
+
+        faces = sub_mesh["triangle"][:] + vertex_offset
+        global_faces.append(faces)
+
+        vertex_offset += vertices.shape[0]
+
+    global_vertices = np.vstack(global_vertices)
+    global_faces = np.vstack(global_faces)
+
+    return global_vertices, global_faces
+
+
