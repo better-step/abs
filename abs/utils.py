@@ -1,9 +1,9 @@
 from pathlib import Path
-import h5py
 import os
 import meshio as mio
-from shape import *
+from abs.shape import *
 import numpy as np
+import h5py
 
 
 def read_file(file_path):
@@ -73,21 +73,23 @@ def save_ply(filename, P, normals=None):
     total_points = []
     total_normals = []
     for i, pts in enumerate(P):
-        normal = normals[i]
-        if normal is not None:
+        if normals:
+            normal = normals[i]
             if pts.shape[0] != normal.shape[0]:
                 raise ValueError("The number of points and normals must be the same")
-
             if pts.shape[1] != 3 or normal.shape[1] != 3:
                 raise ValueError("Both pts and normals must have shape (n, 3)")
-
             total_points.append(pts)
             total_normals.append(normal)
+        else:
+            if pts.shape[1] != 3:
+                raise ValueError("Points must have shape (n, 3)")
+            total_points.append(pts)
 
     new_pts = np.asarray(total_points)
     new_pts = np.squeeze(new_pts, axis=0)
 
-    if total_normals is not None:
+    if total_normals:
         new_normal = np.asarray(total_normals)
         new_normal = np.squeeze(new_normal, axis=0)
 
