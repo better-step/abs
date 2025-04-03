@@ -1,108 +1,37 @@
-# Contributing
+# Contributing to Better Step
 
-Contributions are welcome, and they are greatly appreciated! Every
-little bit helps, and credit will always be given.
+We welcome contributions from the community!
 
-You can contribute in many ways:
+## How to Contribute
 
-## Types of Contributions
+1. **Fork the Repository**
+   Create your own fork via GitHub.
 
-### Report Bugs
+2. **Clone Locally**
+   ```bash
+   git clone https://github.com/yourusername/better-step.git
+   cd better-step
+   ```
 
-Report bugs at <https://github.com/itsmeeChandU/HDF5MeshSampler/issues>.
+3. **Create a Feature Branch**
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
 
-If you are reporting a bug, please include:
+4. **Make Changes and Commit**
+   ```bash
+   git add .
+   git commit -m "Add feature: description"
+   git push origin feature/your-feature-name
+   ```
 
--   Your operating system name and version.
--   Any details about your local setup that might be helpful in troubleshooting.
--   Detailed steps to reproduce the bug.
+5. **Open a Pull Request**
+   Submit a PR with a clear description.
 
-### Fix Bugs
+## Code of Conduct
 
-Look through the GitHub issues for bugs. Anything tagged with `bug` and
-`help wanted` is open to whoever wants to implement it.
+Please be respectful and follow our Code of Conduct. See [Common Guidelines](common.md) for more details.
 
-### Implement Features
+## Reporting Issues
 
-Look through the GitHub issues for features. Anything tagged with
-`enhancement` and `help wanted` is open to whoever wants to implement it.
-
-### Write Documentation
-
-HDF5MeshSampler could always use more documentation,
-whether as part of the official HDF5MeshSampler docs,
-in docstrings, or even on the web in blog posts, articles, and such.
-
-### Submit Feedback
-
-The best way to send feedback is to file an issue at
-<https://github.com/itsmeeChandU/HDF5MeshSampler/issues>.
-
-If you are proposing a feature:
-
--   Explain in detail how it would work.
--   Keep the scope as narrow as possible, to make it easier to implement.
--   Remember that this is a volunteer-driven project, and that contributions are welcome :)
-
-## Get Started!
-
-Ready to contribute? Here's how to set up HDF5MeshSampler for local development.
-
-1.  Fork the HDF5MeshSampler repo on GitHub.
-
-2.  Clone your fork locally:
-
-    ```shell
-    $ git clone git@github.com:your_name_here/HDF5MeshSampler.git
-    ```
-
-3.  Install your local copy into a virtualenv. Assuming you have
-    virtualenvwrapper installed, this is how you set up your fork for
-    local development:
-
-    ```shell
-    $ mkvirtualenv HDF5MeshSampler
-    $ cd HDF5MeshSampler/
-    $ python setup.py develop
-    ```
-
-4.  Create a branch for local development:
-
-    ```shell
-    $ git checkout -b name-of-your-bugfix-or-feature
-    ```
-
-    Now you can make your changes locally.
-
-5.  When you're done making changes, check that your changes pass flake8
-    and the tests, including testing other Python versions with tox:
-
-    ```shell
-    $ flake8 HDF5MeshSampler tests
-    $ python setup.py test or pytest
-    $ tox
-    ```
-
-    To get flake8 and tox, just pip install them into your virtualenv.
-
-6.  Commit your changes and push your branch to GitHub:
-
-    ```shell
-    $ git add .
-    $ git commit -m "Your detailed description of your changes."
-    $ git push origin name-of-your-bugfix-or-feature
-    ```
-
-7.  Submit a pull request through the GitHub website.
-
-## Pull Request Guidelines
-
-Before you submit a pull request, check that it meets these guidelines:
-
-1.  The pull request should include tests.
-2.  If the pull request adds functionality, the docs should be updated.
-    Put your new functionality into a function with a docstring, and add
-    the feature to the list in README.rst.
-3.  The pull request should work for Python 3.5, 3.6, 3.7 and 3.8, and
-    for PyPy. Check <https://github.com/itsmeeChandU/HDF5MeshSampler/pull_requests> and make sure that the tests pass for all
-    supported Python versions.
+Found a bug or want to suggest a feature? Open a GitHub issue with a detailed description.

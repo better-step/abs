@@ -1,11 +1,16 @@
 # Changelog
 
-## v0.0.1 - Date
+All notable changes are documented using the Keep a Changelog format.
 
-**Improvement**:
+## Version 1.0.0 – April 1, 2025
 
--   TBD
+### Added
 
-**New Features**:
+- STEP-to-HDF5 conversion support.
+- Geometry, Topology, Sampling, and Visualization modules.
+- CLI for batch CAD file processing.
 
--   TBD
+### Fixed
+
+- Minor bugs in sampling logic.
+- Improved documentation and added examples.
