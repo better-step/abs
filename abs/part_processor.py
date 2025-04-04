@@ -91,7 +91,6 @@ def process_part(part, num_samples, lambda_func, points_ratio=5):
 
             if s is not None:
 
-                # todo: make sure this is correct
                 R = np.linalg.inv(edge.curve3d.transform[:, :3])
                 t = edge.curve3d.transform[:, 3]
                 pt = (pt - t) @ R.T
@@ -123,7 +122,7 @@ def process_part(part, num_samples, lambda_func, points_ratio=5):
 
                     current_ss.append(s[index, :])
 
-        # TODO: add in case it's empty
+
         pts = np.concatenate(current_pts, axis=0)
         if type(current_ss[0]) == list:
             ss = current_ss.copy()

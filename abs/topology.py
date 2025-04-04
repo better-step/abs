@@ -108,12 +108,13 @@ class Face(Topology):
         """
         Find the adjacent faces of a face.
         """
+        #TODO: fix this!
         adjacent_faces = set()
         for loop in self.loops:
             for halfedge in loop.halfedges:
                 if halfedge.mates:
-                    for mate in halfedge.mates:
-                        adjacent_faces.add(mate.face)
+                    # is this correct?
+                    adjacent_faces.add(halfedge.mates.loops[0].faces[0])
         return adjacent_faces
 
 
