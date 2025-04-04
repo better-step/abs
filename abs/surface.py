@@ -1,5 +1,5 @@
 import numpy as np
-from geomdl import BSpline
+from geomdl import BSpline, NURBS
 from scipy.interpolate import bisplrep, bisplev
 from geomdl import operations
 
@@ -371,6 +371,7 @@ class BSplineSurface(Surface):
             self.v_degree = int(bspline_surface['v_degree'])
             self.v_knots = np.array(bspline_surface['v_knots']).reshape(-1, 1).T
             self.v_rational = bool(bspline_surface['v_rational'])
+            #TODO: fix this
             self.weights = np.array(bspline_surface['weights'])
             self.u_periodic = bool(bspline_surface['u_periodic'])
             self.v_periodic = bool(bspline_surface['v_periodic'])
@@ -393,22 +394,31 @@ class BSplineSurface(Surface):
             self.v_degree = int(bspline_surface.get('v_degree')[()])
             self.v_knots = np.array(bspline_surface.get('v_knots')[()]).reshape(-1, 1).T
             self.v_rational = bool(bspline_surface.get('v_rational')[()])
-            self.weights = np.column_stack((bspline_surface.get('weights').get('0')[()],
-                                             bspline_surface.get('weights').get('1')[()])).reshape(-1, 1)
+            self.weights = np.column_stack(
+                [bspline_surface['weights'][str(i)][()] for i in range(len(bspline_surface['weights']))]).reshape(-1, 1)
+
             self.u_periodic = bool(bspline_surface.get('u_periodic')[()])
             self.v_periodic = bool(bspline_surface.get('v_periodic')[()])
             self.transform = np.array(bspline_surface.get('transform')[()])
             self.area = -1
             self.shape_name = bspline_surface.get('type')[()].decode('utf8')
 
-        self.surface_obj = BSpline.Surface(normalize_kv=False)
+        if self.u_rational or self.v_rational:
+            self.surface_obj = NURBS.Surface(normalize_kv=False)
+        else:
+            self.surface_obj = BSpline.Surface(normalize_kv=False)
+
         self.surface_obj.degree_u = self.u_degree
         self.surface_obj.degree_v = self.v_degree
         self.surface_obj.ctrlpts_size_u = self.poles.shape[0]
         self.surface_obj.ctrlpts_size_v = self.poles.shape[1]
         self.surface_obj.knotvector_u = self.u_knots.squeeze().tolist()
         self.surface_obj.knotvector_v = self.v_knots.squeeze().tolist()
-        self.surface_obj.ctrlpts = self.poles.reshape((-1, 1, 3)).squeeze().tolist()
+        self.surface_obj.ctrlpts = self.poles.reshape(-1, 3).tolist()
+        if self.u_rational or self.v_rational:
+            self.surface_obj.weights = self.weights.flatten().tolist()
+
+
 
     def sample(self, sample_points):
         if sample_points.size == 0:

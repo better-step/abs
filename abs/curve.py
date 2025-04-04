@@ -295,12 +295,16 @@ class BSplineCurve(Curve):
         if sample_points.size == 0:
             return np.array([])
 
+        eps = 1e-8
         first_deriv = self.derivative(sample_points, order=1)
         v = np.linalg.norm(first_deriv, axis=1)
         tangent = first_deriv / v[:, None]
         t_prime = np.gradient(tangent, axis=0)
-        normal = t_prime - np.einsum('ij,ij->i', t_prime, tangent)[:, None] * tangent
-        normal_vector = normal / np.linalg.norm(normal, axis=1)[:, None]
+        proj = np.einsum('ij,ij->i', t_prime, tangent)[:, None] * tangent
+        normal = t_prime - proj
+
+        normal_norm = np.linalg.norm(normal, axis=1)
+        normal_vector = normal / normal_norm[:, None]
         #binormal = np.cross(tangent, normal)
 
         return normal_vector

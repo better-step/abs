@@ -407,7 +407,7 @@ class Hdf5test(unittest.TestCase):
         self.assertEqual(bspline_surface.sample(sample_points).shape, (gridX.shape[0] * gridX.shape[1], 3))
 
         # derivative
-        du, dv, d2u, d2v = surface_derivative(bspline_surface, sample_points)
+        du, dv, d2u, d2v = surface_derivative(bspline_surface, sample_points, 1e-7)
         self.assertTrue(du < 1e-4)
         self.assertTrue(dv < 1e-4)
         self.assertTrue(d2u < 1e-4)

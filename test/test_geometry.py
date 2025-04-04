@@ -4,9 +4,7 @@ import numpy as np
 from test.utils.test_utilities import *
 from scipy.interpolate import BSpline
 
-def surface_derivative(surface, sample_points):
-    epsilon = 1e-6
-
+def surface_derivative(surface, sample_points, epsilon=1e-6):
     # testing ds/du order 1
     sample_points_plus = sample_points.copy()
     sample_points_plus = sample_points.copy()
@@ -236,6 +234,7 @@ class TestGeometry(unittest.TestCase):
         rotated_p = estimate_normal(shape, num_samples)
         self.assertTrue(abs(np.sum(rotated_p - shape.normal(param_points)[1:, :]) < 1e-4))
 
+        print(np.linalg.norm(shape.normal(param_points), axis=1))
         # check if normals are unit length
         self.assertTrue(np.allclose(np.linalg.norm(shape.normal(param_points), axis=1), 1, atol=1e-8))
 
