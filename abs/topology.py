@@ -114,7 +114,10 @@ class Face(Topology):
             for halfedge in loop.halfedges:
                 if halfedge.mates:
                     # is this correct?
-                    adjacent_faces.add(halfedge.mates.loops[0].faces[0])
+                    for other_loop in halfedge.mates.loops:
+                        for other_face in other_loop.faces:
+                            adjacent_faces.add(other_face)
+        adjacent_faces -= {self}
         return adjacent_faces
 
 

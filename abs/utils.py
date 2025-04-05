@@ -72,6 +72,24 @@ def save_ply(filename, P, normals=None):
     '''
     total_points = []
     total_normals = []
+
+    # for idx, part in enumerate(P):
+    #     if normals:
+    #         normal = normals[idx]
+    #     for i, pts in enumerate(part):
+    #         if normals:
+    #             if pts.shape[0] != normal.shape[0]:
+    #                 raise ValueError("The number of points and normals must be the same")
+    #             if pts.shape[1] != 3 or normal.shape[1] != 3:
+    #                 raise ValueError("Both pts and normals must have shape (n, 3)")
+    #             total_points.append(pts)
+    #             total_normals.append(normal)
+    #         else:
+    #             if pts.shape[1] != 3:
+    #                 raise ValueError("Points must have shape (n, 3)")
+    #             total_points.append(pts)
+
+
     for i, pts in enumerate(P):
         if normals:
             normal = normals[i]
@@ -87,11 +105,17 @@ def save_ply(filename, P, normals=None):
             total_points.append(pts)
 
     new_pts = np.asarray(total_points)
-    new_pts = np.squeeze(new_pts, axis=0)
+    if new_pts.shape[2] == 1:
+        new_pts = np.squeeze(new_pts, axis=0)
+    else:
+        new_pts = np.vstack(new_pts)
 
     if total_normals:
         new_normal = np.asarray(total_normals)
-        new_normal = np.squeeze(new_normal, axis=0)
+        if new_normal.shape[2] == 1:
+            new_normal = np.squeeze(new_normal, axis=0)
+        else:
+            new_normal = np.vstack(new_normal)
 
         if new_pts.shape[0] != new_normal.shape[0]:
             raise ValueError("The number of points and normals must be the same")
