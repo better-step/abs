@@ -395,7 +395,7 @@ class BSplineSurface(Surface):
             self.v_knots = np.array(bspline_surface.get('v_knots')[()]).reshape(-1, 1).T
             self.v_rational = bool(bspline_surface.get('v_rational')[()])
             self.weights = np.column_stack(
-                [bspline_surface['weights'][str(i)][()] for i in range(len(bspline_surface['weights']))]).reshape(-1, 1)
+                [bspline_surface['weights'][str(i)][()] for i in range(len(bspline_surface['weights']))]).T
 
             self.u_periodic = bool(bspline_surface.get('u_periodic')[()])
             self.v_periodic = bool(bspline_surface.get('v_periodic')[()])
