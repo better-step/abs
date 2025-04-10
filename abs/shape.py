@@ -57,15 +57,15 @@ def _get_loops(loop_data):
 
 
 class Shape:
-    def __init__(self, geometry_data, topology_data, spacing=0.1):
+    def __init__(self, geometry_data, topology_data, spacing=0.02):
 
-        #TODO: make the spacing relevant to the size of the bounding box! (2% of the bounding box size.)
         self._geometry_data = self._geometry_data(geometry_data)
         self._topology_data = self._topology_data(topology_data)
+        spacing *= np.linalg.norm(self._geometry_data.bbox[0][1] - self._geometry_data.bbox[0][0])
+
         self._create_2d_trimming_curves(self._geometry_data.curves2d, self._geometry_data.curves3d, spacing)
         self.Solid = self.Solid(self._topology_data, self._geometry_data, self.trimming_curves_2d)
 
-        spacing = self._geometry_data.bbox[0][1] - self._geometry_data.bbox[0][0]
 
     def _create_2d_trimming_curves(self, curves_2d, curves_3d, spacing):
         """
