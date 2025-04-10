@@ -19,10 +19,14 @@ def uniform_sample(topo, num_samples, min_pts=None, max_pts=None):
     parametric values and an array of sampled points on the curve/surface.
     """
 
-    if hasattr(topo, 'curve3d') and isinstance(topo.curve3d, Curve):
+    if isinstance(topo, Curve):
+        return _uniform_sample_curve(topo, num_samples, min_pts, max_pts)
+    elif isinstance(topo, Surface):
+        return _uniform_sample_surface(topo, num_samples, min_pts, max_pts)
+    elif hasattr(topo, 'curve3d') and isinstance(topo.curve3d, Curve):
         return _uniform_sample_curve(topo.curve3d, num_samples, min_pts, max_pts)
-    elif isinstance(topo.surface, Surface):
-        return _uniform_sample_curve(topo.surface, num_samples, min_pts, max_pts)
+    elif hasattr(topo, 'surface') and isinstance(topo.surface, Surface):
+        return _uniform_sample_surface(topo.surface, num_samples, min_pts, max_pts)
     else:
         raise ValueError("Invalid geometry type")
 
@@ -40,10 +44,13 @@ def random_sample(topo, num_samples, min_pts=None, max_pts=None):
     Returns:
     parametric values and an array of sampled points on the curve/surface.
     """
-
-    if hasattr(topo, 'curve3d') and isinstance(topo.curve3d, Curve):
+    if isinstance(topo, Curve):
+        return _random_sample_curve(topo, num_samples, min_pts, max_pts)
+    elif isinstance(topo, Surface):
+        return _random_sample_surface(topo, num_samples, min_pts, max_pts)
+    elif hasattr(topo, 'curve3d') and isinstance(topo.curve3d, Curve):
         return _random_sample_curve(topo.curve3d, num_samples, min_pts, max_pts)
-    elif isinstance(topo.surface, Surface):
+    elif hasattr(topo, 'surface') and isinstance(topo.surface, Surface):
         return _random_sample_surface(topo.surface, num_samples, min_pts, max_pts)
     else:
         raise ValueError("Invalid geometry type")
