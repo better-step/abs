@@ -1,6 +1,6 @@
 import numpy as np
-from scipy.integrate import quad
 from scipy.interpolate import BSpline
+from geomdl import NURBS
 
 class Curve:
     def sample(self, points):
@@ -246,32 +246,20 @@ class BSplineCurve(Curve):
         # Create BSpline or NURBS curve object
 
 
-        # if self.rational:
-        #     self.curveObject = NURBS.Curve(normalize_kv=False)
-        # else:
-        #     self.curveObject = BSpline.Curve(normalize_kv=False)
-        #
-        # self.curveObject.degree = self.degree
-        # self.curveObject.ctrlpts = self.poles.tolist()
-        # self.curveObject.knotvector = self.knots.flatten().tolist()
-        # if self.rational:
-        #     self.curveObject.weights = self.weights.flatten().tolist()
-
-        ctrl_pnts = self.poles
         if self.rational:
-            ctrl_pnts = self.poles * self.weights
+            self.bspline = NURBS.Curve(normalize_kv=False)
+            self.bspline.degree = self.degree
+            self.bspline.ctrlpts = self.poles.tolist()
+            self.bspline.knotvector = self.knots.flatten().tolist()
+            self.bspline.weights = self.weights.flatten().tolist()
+        else:
+            self.bspline = BSpline(self.knots.T[:,0], self.poles, self.degree)
 
-        self.bspline = BSpline(self.knots.T[:,0], ctrl_pnts, self.degree)
 
 
     def sample(self, sample_points):
-        # if sample_points.size == 1:
-        #     samples = np.array(self.curveObject.evaluate_single(sample_points[0]))
-        #     samples = samples.reshape(-1, 1)
-        #     return samples.T
-        #
-        # # Evaluate the curve at the given sample points
-        # return np.array(self.curveObject.evaluate_list(sample_points[:, 0].tolist()))
+        if self.rational:
+            return np.array(self.bspline.evaluate_list(sample_points.flatten().tolist()))
 
         return np.squeeze(self.bspline(sample_points))
 
@@ -283,11 +271,12 @@ class BSplineCurve(Curve):
         elif self.degree < order:
             return np.zeros([sample_points.shape[0], self.poles.shape[1]])
         else:
-            # res = np.zeros([sample_points.shape[0], self.poles.shape[1]])
-            # for i in range(sample_points.shape[0]):
-            #     d = self.curveObject.derivatives(sample_points[i, 0], order)
-            #     res[i, :] = d[-1]
-            # return res
+            if self.rational:
+                res = np.zeros([sample_points.shape[0], self.poles.shape[1]])
+                for i in range(sample_points.shape[0]):
+                    d = self.bspline.derivatives(sample_points[i, 0], order)
+                    res[i, :] = d[-1]
+                return res
             b_spline_derivative = self.bspline.derivative(order)
             return np.squeeze(b_spline_derivative(sample_points))
 

@@ -21,25 +21,20 @@ class Topology:
             key=lambda x: x[0]
         )
 
-        return [data for _, data in sorted_data]
+        return [{**data,  **{"id": id}} for id, data in sorted_data]
 
 
 
 
 class Edge(Topology):
     def __init__(self, edge):
-        if isinstance(edge, dict):
-            self.curve3d = edge['3dcurve']
-            self.end_vertex = int(edge['end_vertex'])
-            self.start_vertex = int(edge['start_vertex'])
-            # TODO: don't use the list
-            self.half_edges = None
+        self.curve3d = edge['3dcurve']
+        self.end_vertex = int(edge['end_vertex'])
+        self.start_vertex = int(edge['start_vertex'])
+        # TODO: don't use the list
+        self.half_edges = None
+        self.id = edge['id']
 
-        else:
-            self.curve3d = edge.get('3dcurve')
-            self.end_vertex = edge.get('end_vertex')
-            self.start_vertex = edge.get('start_vertex')
-            self.half_edges = None
 
     def get_length(self):
         if self.curve3d:
@@ -57,29 +52,18 @@ class Edge(Topology):
 
 class Face(Topology):
     def __init__(self, face):
-        if isinstance(face, dict):
-            self.loops = np.array(face['loops'])
-            self.surface = np.int64(face['surface'])
-            self.surface_orientation = face['surface_orientation']
-            self.trimming_curves_2d = []
-            self.shells = None
-            self.exact_domain = np.array(face['exact_domain'])
-            self.nr_singularities = face['has_singularities']
-            self.nr_singularities = face['nr_singularities']
-            self.outer_loop = face['outer_loop']
-            self.singularities = face['singularities']
+        self.loops = np.array(face['loops'])
+        self.surface = np.int64(face['surface'])
+        self.surface_orientation = face['surface_orientation']
+        self.trimming_curves_2d = []
+        self.shells = None
+        self.exact_domain = np.array(face['exact_domain'])
+        self.nr_singularities = face['has_singularities']
+        self.nr_singularities = face['nr_singularities']
+        self.outer_loop = face['outer_loop']
+        self.singularities = face['singularities']
 
-        else:
-            self.loops = face.get('loops')
-            self.surface = face.get('surface')
-            self.surface_orientation = face.get('surface_orientation')
-            self.trimming_curves_2d = []
-            self.shells = None
-            self.exact_domain = face.get('exact_domain')
-            self.nr_singularities = face.get('has_singularities')
-            self.nr_singularities = face.get('nr_singularities')
-            self.outer_loop = face.get('outer_loop')
-            self.singularities = face.get('singularities')
+        self.id = face['id']
 
 
     def normal(self, points):
@@ -135,29 +119,19 @@ class Face(Topology):
         return res
 
 
-
-
 class Halfedge(Topology):
     def __init__(self, halfedge):
-        if isinstance(halfedge, dict):
-            self.curve2d = np.int64(halfedge['2dcurve'])
-            self.edge = np.int64(halfedge['edge'])
-            self.orientation_wrt_edge = halfedge['orientation_wrt_edge']
-            if halfedge['mates']:
-                self.mates = np.array(halfedge['mates'])
-            else:
-                self.mates = None
-            self.loops = None
-
+        self.curve2d = np.int64(halfedge['2dcurve'])
+        self.edge = np.int64(halfedge['edge'])
+        self.orientation_wrt_edge = halfedge['orientation_wrt_edge']
+        if halfedge['mates']:
+            self.mates = np.array(halfedge['mates'])
         else:
-            self.curve2d = halfedge.get('2dcurve')
-            self.edge = halfedge.get('edge')
-            self.orientation_wrt_edge = halfedge.get('orientation_wrt_edge')
-            if halfedge.get('mates'):
-                self.mates = halfedge.get('mates')
-            else:
-                self.mates = None
-            self.loops = None
+            self.mates = None
+        self.loops = None
+
+        self.id = halfedge['id']
+
 
     def get_length(self):
         return self.curve2d.get_length()
@@ -173,34 +147,23 @@ class Halfedge(Topology):
 
 class Loop(Topology):
     def __init__(self, loop):
-        if isinstance(loop, dict):
-            self.halfedges = np.array(loop['halfedges'])
-            self.faces = None
+        self.halfedges = np.array(loop['halfedges'])
+        self.faces = None
 
-        else:
-            self.halfedges = loop.get('halfedges')
-            self.orientation = loop.get('orientation')
-            self.faces = None
-
+        self.id = loop['id']
 
 class Shell(Topology):
     def __init__(self, shell):
-        if isinstance(shell, dict):
-            self.faces = np.array(shell['faces'], dtype=object)
-            self.orientation_wrt_solid = shell['orientation_wrt_solid']
-            self.solids = None
+        self.faces = np.array(shell['faces'], dtype=object)
+        self.orientation_wrt_solid = shell['orientation_wrt_solid']
+        self.solids = None
 
-        else:
-            self.faces = np.array(shell['faces'], dtype=object)
-            self.orientation_wrt_solid = shell.get('orientation_wrt_solid')
-            self.solids = None
+        self.id = shell['id']
+
 
 
 
 class Solid(Topology):
     def __init__(self, solid):
-        if isinstance(solid, dict):
-            self.shells = np.array(solid['shells'])
-
-        else:
-            self.shells = solid.get('shells')
+        self.shells = np.array(solid['shells'])
+        self.id = solid['id']

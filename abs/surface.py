@@ -1,6 +1,5 @@
 import numpy as np
 from geomdl import BSpline, NURBS
-from scipy.interpolate import bisplrep, bisplev
 from geomdl import operations
 
 
