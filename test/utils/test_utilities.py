@@ -3,6 +3,51 @@ from abs.curve import *
 from abs.surface import *
 
 
+class H5Dataset:
+    def __init__(self, value):
+        self.value = value
+
+    def __getitem__(self, key):
+        if key == ():
+            return self.value
+
+        elif isinstance(key, str) and isinstance(self.value, (list, np.ndarray)):
+            try:
+                index = int(key)
+                return H5Dataset(self.value[index])
+            except (ValueError, IndexError):
+                return None
+        return None
+
+    def __len__(self):
+        return len(self.value)
+
+class H5Group:
+    def __init__(self, data_dict):
+        self._data = {
+            k: H5Group(v) if isinstance(v, dict) else H5Dataset(
+                v.encode('utf-8') if isinstance(v, str) else np.array(v)
+            )
+            for k, v in data_dict.items()
+        }
+
+    def get(self, key):
+        return self._data.get(key)
+
+    def __contains__(self, key):
+        return key in self._data
+
+    def __getitem__(self, key):
+        return self._data[key]
+
+
+
+
+
+
+
+
+
 def line3d():
     data = {
         "type": "Line",
@@ -11,6 +56,7 @@ def line3d():
         "interval": [0, 1],
         "transform": [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0]]
     }
+    data = H5Group(data)
     return Line(data)
 
 
@@ -22,6 +68,7 @@ def line2d():
         "interval": [0, 1]
     }
 
+    data = H5Group(data)
     return Line(data)
 
 
@@ -37,6 +84,7 @@ def circle3d():
         "transform": [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0]]
     }
 
+    data = H5Group(data)
     return Circle(data)
 
 
@@ -50,6 +98,7 @@ def circle2d():
         "y_axis": [0, 1]
     }
 
+    data = H5Group(data)
     return Circle(data)
 
 
@@ -67,6 +116,7 @@ def ellipse3d():
         "transform": [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0]]
     }
 
+    data = H5Group(data)
     return Ellipse(data)
 
 
@@ -82,6 +132,7 @@ def ellipse2d():
         "y_axis": [0, 1]
     }
 
+    data = H5Group(data)
     return Ellipse(data)
 
 
@@ -99,6 +150,8 @@ def bspline_curve3d():
         "transform": [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0]],
         "periodic": False
     }
+
+    data = H5Group(data)
     return BSplineCurve(data)
 
 
@@ -148,6 +201,7 @@ def bspline_curve2d():
                     1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
     }
 
+    data = H5Group(data)
     return BSplineCurve(data)
 
 
@@ -163,6 +217,7 @@ def plane():
         "transform": [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0]]
     }
 
+    data = H5Group(data)
     return Plane(data)
 
 
@@ -179,6 +234,7 @@ def cylinder():
         "transform":[[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0]]
     }
 
+    data = H5Group(data)
     return Cylinder(data)
 
 
@@ -197,6 +253,7 @@ def cone():
         "transform": [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0]]
     }
 
+    data = H5Group(data)
     return Cone(data)
 
 
@@ -213,6 +270,7 @@ def sphere():
         "transform": [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0]]
     }
 
+    data = H5Group(data)
     return Sphere(data)
 
 
@@ -229,6 +287,7 @@ def torus():
         "transform": [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0]]
     }
 
+    data = H5Group(data)
     return Torus(data)
 
 
@@ -267,5 +326,6 @@ def bspline_surface():
         "v_periodic": False
     }
 
+    data = H5Group(data)
     return BSplineSurface(data)
 

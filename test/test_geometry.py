@@ -234,7 +234,6 @@ class TestGeometry(unittest.TestCase):
         rotated_p = estimate_normal(shape, num_samples)
         self.assertTrue(abs(np.sum(rotated_p - shape.normal(param_points)[1:, :]) < 1e-4))
 
-        print(np.linalg.norm(shape.normal(param_points), axis=1))
         # check if normals are unit length
         self.assertTrue(np.allclose(np.linalg.norm(shape.normal(param_points), axis=1), 1, atol=1e-8))
 
