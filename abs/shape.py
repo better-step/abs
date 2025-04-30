@@ -33,7 +33,8 @@ def _create_curve(curve_data):
         'Line': Line,
         'Circle': Circle,
         'Ellipse': Ellipse,
-        'BSpline': BSplineCurve
+        'BSpline': BSplineCurve,
+        'Other': Other
     }
     curve_class = curve_map.get(curve_type)
     if curve_class:
@@ -62,6 +63,8 @@ class Shape:
         self._geometry_data = self._geometry_data(geometry_data)
         self._topology_data = self._topology_data(topology_data)
         spacing *= np.linalg.norm(self._geometry_data.bbox[0][1] - self._geometry_data.bbox[0][0])
+        self.bbox = self._geometry_data.bbox
+        self.vertices = self._geometry_data.vertices
 
         self._create_2d_trimming_curves(self._geometry_data.curves2d, self._geometry_data.curves3d, spacing)
         self.Solid = self.Solid(self._topology_data, self._geometry_data, self.trimming_curves_2d)
@@ -141,7 +144,7 @@ class Shape:
 
     class _geometry_data:
         def __init__(self, geometry_data):
-            self.curves2d, self.curves3d, self.surfaces, self.bbox = [], [], [], []
+            self.curves2d, self.curves3d, self.surfaces, self.bbox, self.vertices = [], [], [], [], []
             self.__init_geometry(geometry_data)
 
         def __init_geometry(self, data):
@@ -164,6 +167,8 @@ class Shape:
                 self.surfaces[index] = surface
 
             self.bbox.append(np.array(data.get('bbox')[:]))
+
+            self.vertices.append(np.array(data.get('vertices')))
 
 
     class _topology_data:
