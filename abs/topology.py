@@ -31,7 +31,6 @@ class Edge(Topology):
         self.curve3d = edge['3dcurve']
         self.end_vertex = int(edge['end_vertex'])
         self.start_vertex = int(edge['start_vertex'])
-        # TODO: don't use the list
         self.half_edges = None
         self.id = edge['id']
 
