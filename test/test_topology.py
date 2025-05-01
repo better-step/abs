@@ -30,7 +30,7 @@ class TestTopology(unittest.TestCase):
         # adjacent_faces = s.Solid.faces[face_index]
         current_face = s.Solid.faces[face_index]
         adjacent_faces = current_face.find_adjacent_faces()
-        print(adjacent_faces)
+        # print(adjacent_faces)
 
     # def test_find_connected_components(self):
     #     sample_name = 'cone.hdf5'
