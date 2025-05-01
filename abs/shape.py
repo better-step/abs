@@ -210,7 +210,7 @@ class Shape:
                 halfedge.curve2d = geo.curves2d[halfedge.curve2d]
                 halfedge.edge = self.edges[halfedge.edge]
                 if halfedge.mates:
-                    halfedge.mates = topo.halfedges[int(halfedge.mates)]
+                    halfedge.mates = topo.halfedges[int(halfedge.mates[0])]
                 self.halfedges.append(halfedge)
 
             # Loop over loops
