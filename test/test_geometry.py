@@ -63,13 +63,25 @@ def generate_points_on_curve(curve, num_samples=1000):
 
 
 def estimate_normal(curve, num_samples=1000):
+
     _, points = generate_points_on_curve(curve, num_samples)
-    lines = np.diff(points, axis=0)
-    lengths = np.linalg.norm(lines, axis=1)
-    normalized_lines = lines / lengths[:, np.newaxis]
-    rotation_matrix = np.array([[0, -1], [1, 0]])
-    rotated_p = normalized_lines @ rotation_matrix.T
-    return rotated_p
+
+    if points.shape[1] == 3:
+        tangents = np.gradient(points, axis=0)
+        tangents = tangents / np.linalg.norm(tangents, axis=1, keepdims=True)
+        dT = np.gradient(tangents, axis=0)
+        norms = np.linalg.norm(dT, axis=1, keepdims=True)
+        norms[norms == 0] = 1.0
+        normals = dT / norms
+        return normals
+
+    else:
+        lines = np.diff(points, axis=0)
+        lengths = np.linalg.norm(lines, axis=1)
+        normalized_lines = lines / lengths[:, np.newaxis]
+        rotation_matrix = np.array([[0, -1], [1, 0]])
+        rotated_p = normalized_lines @ rotation_matrix.T
+        return rotated_p
 
 
 class TestGeometry(unittest.TestCase):
@@ -317,6 +329,9 @@ class TestGeometry(unittest.TestCase):
         num_samples = 1000
         param_points, points = generate_points_on_curve(ellipse, num_samples)
         self.assertTrue(abs(np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1)) - ellipse.get_length() < 1e-4))
+
+        #normals
+        rotated_p = estimate_normal(ellipse, num_samples)
 
     def test_bspline_curve3d(self):
         shape = bspline_curve3d()

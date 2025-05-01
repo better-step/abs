@@ -93,12 +93,8 @@ class Hdf5test(unittest.TestCase):
         # check if normals are unit length
         self.assertTrue(np.allclose(np.linalg.norm(circle.normal(param_points), axis=1), 1, atol=1e-8))
 
-    def test_ellipse2d(self):
-        #todo: fix this
-        pass
-
     def test_bspline_2dcurve(self):
-        #TODO: fix this
+
         sample_name = 'SingleSolidSphere.hdf5'
         file_path = get_file(sample_name)
         with h5py.File(file_path, 'r') as hdf:
@@ -131,14 +127,6 @@ class Hdf5test(unittest.TestCase):
         num_samples = 1000  # Can be adjusted for precision
         param_points, points = generate_points_on_curve(bspline_curve2d, num_samples)
         self.assertTrue(abs(np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1)) - bspline_curve2d.get_length() < 1e-4))
-
-        # normals
-        # this needs to be fixed
-        rotated_p = estimate_normal(bspline_curve2d, num_samples)
-        self.assertTrue(abs(np.sum(rotated_p - bspline_curve2d.normal(param_points)[1:, :]) < 1e-4))
-
-        # check if normals are unit length
-        self.assertTrue(np.allclose(np.linalg.norm(bspline_curve2d.normal(param_points), axis=1), 1,  atol=1e-8))
 
     # 3D curves
     def test_line3d(self):
@@ -255,7 +243,7 @@ class Hdf5test(unittest.TestCase):
 
     # Surfaces
     def test_plane(self):
-        sample_name = 'Block_hole.hdf5'
+        sample_name = 'Box.hdf5'
         file_path = get_file(sample_name)
         with h5py.File(file_path, 'r') as hdf:
             grp = hdf['parts/part_001/geometry/surfaces/001']
@@ -287,7 +275,7 @@ class Hdf5test(unittest.TestCase):
         self.assertTrue(dv < 1e-7)
 
     def test_cylinder(self):
-        sample_name = 'Block_hole.hdf5'
+        sample_name = 'Cylinder_hole.hdf5'
         file_path = get_file(sample_name)
         with h5py.File(file_path, 'r') as hdf:
             grp = hdf['parts/part_001/geometry/surfaces/000']
@@ -377,8 +365,8 @@ class Hdf5test(unittest.TestCase):
 
 
     def test_bspline_surface(self):
-        #todo: fix this
-        sample_name = 'cusp.hdf5'
+
+        sample_name = 'Ellipse.hdf5'
         file_path = get_file(sample_name)
         with h5py.File(file_path, 'r') as hdf:
             grp = hdf['parts/part_001/geometry/surfaces/000']

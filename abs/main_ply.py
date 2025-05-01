@@ -9,7 +9,7 @@ import numpy as np
 
 
 def get_normal_func(part, topo, points):
-    if isinstance(topo, Face):
+    if topo.is_face():
         return topo.normal(points)
     else:
         return None
@@ -21,13 +21,8 @@ def process_file(file_path, num_samples, get_normal_func):
         geo = hdf['geometry/parts']
         topo = hdf['topology/parts']
 
-        parts = []
-        for i in range(len(geo)):
-            # Load data lazily using h5py
-            s = Shape(geo.get(list(geo.keys())[i]), topo.get(list(topo.keys())[i]))
-            parts.append(s)
+        parts = read_parts(file_path)
 
-        # Generate points and normals using lazy access if possible
         P, S = get_parts(parts, num_samples, get_normal_func)
 
     return P, S
@@ -38,7 +33,7 @@ def save_to_ply(points, normals, file_path):
     assert len(points) == len(normals), "Points and normals length must match"
 
     with open(file_path, 'w') as f:
-        # Write PLY header
+
         f.write("ply\n")
         f.write("format ascii 1.0\n")
         f.write(f"element vertex {len(points)}\n")
@@ -50,7 +45,6 @@ def save_to_ply(points, normals, file_path):
         f.write("property float nz\n")
         f.write("end_header\n")
 
-        # Write vertex data (points + normals)
         for p, n in zip(points, normals):
             f.write(f"{p[0]} {p[1]} {p[2]} {n[0]} {n[1]} {n[2]}\n")
 
@@ -87,10 +81,10 @@ def process_directory_parallel(directory_path, output_dir, num_samples, get_norm
             except Exception as e:
                 file_index = futures.index(future)
                 failed_file = hdf5_files[file_index]
-                error_files.append(failed_file)  # Log the name of the problematic file
+                error_files.append(failed_file)
                 print(f"Task failed for {failed_file}: {e}")
 
-    # Report the files that failed
+
     if error_files:
         print("\nThe following files failed to process:")
         for error_file in error_files:

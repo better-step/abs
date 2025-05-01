@@ -14,6 +14,39 @@ def read_file(file_path):
 def get_file(sample_name):
     return os.path.abspath(os.path.join(Path(__file__), '..', '..', 'data', 'sample_hdf5', sample_name))
 
+def read_parts(file_path):
+    f = h5py.File(file_path, 'r')
+    part = f['parts'].values()
+
+    parts = []
+    for i, p in enumerate(part):
+        s = Shape(p['geometry'], p['topology'])
+        parts.append(s)
+
+    return parts
+
+def read_meshes(file_path):
+    f = h5py.File(file_path, 'r')
+    part = f['parts'].values()
+
+    meshes = []
+    for i, p in enumerate(part):
+        s = Shape(p['geometry'], p['topology'])
+        mesh_group = p['mesh']
+        current_mesh = [()] * len(s.Solid.faces)
+        for key in mesh_group:
+            submesh = mesh_group[key]
+            vertices = submesh['points']
+            faces = submesh['triangle']
+
+            current_mesh[int(key)] = {
+                'points': vertices,
+                'triangle': faces
+            }
+        meshes.append(current_mesh)
+
+    return meshes
+
 def get_shape(file_path):
 
     f = h5py.File(file_path, 'r')
@@ -172,22 +205,45 @@ def save_vtu(save_file_path , P):
     m.write(save_file_path)
 
 
-def get_mesh(meshes):
+# def get_mesh(meshes):
+#
+#     global_vertices = []
+#     global_faces = []
+#     vertex_offset = 0
+#
+#     for mesh in meshes:
+#         for key in mesh:
+#
+#             sub_mesh = mesh[key]
+#
+#             vertices = sub_mesh["points"][:]
+#             if len(vertices) == 0:
+#                 continue
+#             global_vertices.append(vertices)
+#
+#             faces = sub_mesh["triangle"][:] + vertex_offset
+#             global_faces.append(faces)
+#
+#             vertex_offset += vertices.shape[0]
+#
+#     global_vertices = np.vstack(global_vertices)
+#     global_faces = np.vstack(global_faces)
+#
+#     return global_vertices, global_faces
 
+def get_mesh(meshes):
     global_vertices = []
     global_faces = []
     vertex_offset = 0
 
     for mesh in meshes:
-        for key in mesh:
+        for key in range(len(mesh)):
 
             sub_mesh = mesh[key]
-
             vertices = sub_mesh["points"][:]
             if len(vertices) == 0:
                 continue
             global_vertices.append(vertices)
-
             faces = sub_mesh["triangle"][:] + vertex_offset
             global_faces.append(faces)
 
@@ -197,6 +253,7 @@ def get_mesh(meshes):
     global_faces = np.vstack(global_faces)
 
     return global_vertices, global_faces
+
 
 def get_mesh_part(mesh):
     global_vertices = []
