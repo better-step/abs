@@ -11,14 +11,14 @@ from abs.utils import *
 class Hdf5test(unittest.TestCase):
 
     def test_geometry_parts(self):
-        file_path = get_file('cone.hdf5')
+        file_path = get_file('Cone.hdf5')
         data = h5py.File(file_path, 'r')
         self.assertIsNotNone(data)
         self.assertIsNotNone(data['parts']['part_001']['geometry'])
 
     #  2D curves
     def test_line2d(self):
-        sample_name = 'cone.hdf5'
+        sample_name = 'Cone.hdf5'
         file_path = get_file(sample_name)
         with h5py.File(file_path, 'r') as hdf:
             grp = hdf['parts/part_001/geometry/2dcurves/000']
@@ -155,7 +155,7 @@ class Hdf5test(unittest.TestCase):
 
 
     def test_circle3d(self):
-        sample_name = 'cone.hdf5'
+        sample_name = 'Cone.hdf5'
         file_path = get_file(sample_name)
         with h5py.File(file_path, 'r') as hdf:
             grp = hdf['parts/part_001/geometry/3dcurves/000']
@@ -212,7 +212,7 @@ class Hdf5test(unittest.TestCase):
         self.assertTrue(d2 < 1e-4)
 
     def test_bspline_3dcurve(self):
-        sample_name = 'cone.hdf5'
+        sample_name = 'Cone.hdf5'
         file_path = get_file(sample_name)
         with h5py.File(file_path, 'r') as hdf:
             grp = hdf['parts/part_001/geometry/3dcurves/001']
@@ -402,7 +402,7 @@ class Hdf5test(unittest.TestCase):
         self.assertTrue(d2v < 1e-4)
 
     def test_cone(self):
-        sample_name = 'cone.hdf5'
+        sample_name = 'Cone.hdf5'
         file_path = get_file(sample_name)
         with h5py.File(file_path, 'r') as hdf:
             grp = hdf['parts/part_001/geometry/surfaces/000']
