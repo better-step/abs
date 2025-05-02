@@ -33,7 +33,7 @@ def read_meshes(file_path):
     for i, p in enumerate(part):
         s = Shape(p['geometry'], p['topology'])
         mesh_group = p['mesh']
-        current_mesh = [()] * len(s.Solid.faces)
+        current_mesh = [None] * len(s.Solid.faces)
         for key in mesh_group:
             submesh = mesh_group[key]
             vertices = submesh['points']
@@ -190,32 +190,6 @@ def save_vtu(save_file_path , P):
     m = mio.Mesh(P, cells={"triangle":np.array([np.arange(P.shape[0]), np.arange(P.shape[0]), np.arange(P.shape[0])]).T})
     m.write(save_file_path)
 
-
-# def get_mesh(meshes):
-#
-#     global_vertices = []
-#     global_faces = []
-#     vertex_offset = 0
-#
-#     for mesh in meshes:
-#         for key in mesh:
-#
-#             sub_mesh = mesh[key]
-#
-#             vertices = sub_mesh["points"][:]
-#             if len(vertices) == 0:
-#                 continue
-#             global_vertices.append(vertices)
-#
-#             faces = sub_mesh["triangle"][:] + vertex_offset
-#             global_faces.append(faces)
-#
-#             vertex_offset += vertices.shape[0]
-#
-#     global_vertices = np.vstack(global_vertices)
-#     global_faces = np.vstack(global_faces)
-#
-#     return global_vertices, global_faces
 
 def get_mesh(meshes):
     global_vertices = []
