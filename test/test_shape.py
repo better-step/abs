@@ -25,7 +25,7 @@ class TestShapeFunctions(unittest.TestCase):
 
         parts, _ = get_shape(file_path)
 
-        P, S = get_parts(parts, num_samples, get_normal_func)
+        P, S = sample_parts(parts, num_samples, get_normal_func)
         save_file_path = os.path.join(os.path.dirname(__file__), '..', 'test', 'sample_results', f'{name}_normals.obj')
 
         # save_ply(save_file_path, P, S)
