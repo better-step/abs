@@ -1,18 +1,9 @@
 from pathlib import Path
-import os
 import meshio as mio
 from abs.shape import *
 import numpy as np
 import h5py
 
-
-def read_file(file_path):
-    assert Path(file_path).exists(), "Please provide valid file path"
-    return h5py.File(file_path, 'r')
-
-
-def get_file(sample_name):
-    return os.path.abspath(os.path.join(Path(__file__), '..', '..', 'data', 'sample_hdf5', sample_name))
 
 def read_parts(file_path):
     f = h5py.File(file_path, 'r')
@@ -46,19 +37,6 @@ def read_meshes(file_path):
         meshes.append(current_mesh)
 
     return meshes
-
-def get_shape(file_path):
-
-    f = h5py.File(file_path, 'r')
-    part = f['parts'].values()
-
-    parts = []
-    for p in part:
-
-        s = Shape(p['geometry'], p['topology'])
-        parts.append(s)
-
-    return parts
 
 
 def save_obj(filename, pts):
@@ -197,9 +175,10 @@ def get_mesh(meshes):
     vertex_offset = 0
 
     for mesh in meshes:
-        for key in range(len(mesh)):
+        for sub_mesh in mesh:
+            if sub_mesh is None:
+                continue
 
-            sub_mesh = mesh[key]
             vertices = sub_mesh["points"][:]
             if len(vertices) == 0:
                 continue

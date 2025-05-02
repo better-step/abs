@@ -12,7 +12,7 @@ class Hdf5test(unittest.TestCase):
 
     def test_geometry_parts(self):
         file_path = get_file('cone.hdf5')
-        data = read_file(file_path)
+        data = h5py.File(file_path, 'r')
         self.assertIsNotNone(data)
         self.assertIsNotNone(data['parts']['part_001']['geometry'])
 
