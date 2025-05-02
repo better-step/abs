@@ -53,26 +53,12 @@ def get_shape(file_path):
     part = f['parts'].values()
 
     parts = []
-    all_meshes = []
-    for i, p in enumerate(part):
+    for p in part:
 
         s = Shape(p['geometry'], p['topology'])
         parts.append(s)
 
-        meshes = {}
-        mesh_group = p['mesh']
-        for key in mesh_group:
-            submesh = mesh_group[key]
-            vertices = submesh['points']
-            faces = submesh['triangle']
-
-            meshes[key] = {
-                'points': vertices,
-                'triangle': faces
-            }
-        all_meshes.append(meshes)
-
-    return parts, all_meshes
+    return parts
 
 
 def save_obj(filename, pts):
