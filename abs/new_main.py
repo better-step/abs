@@ -25,7 +25,7 @@ def process_file(file_path, num_samples, get_normal_func):
 
         parts = read_parts(file_path)
 
-        P, S = get_parts(parts, num_samples, get_normal_func)
+        P, S = sample_parts(parts, num_samples, get_normal_func)
 
     return P, S
 

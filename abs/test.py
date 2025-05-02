@@ -23,7 +23,7 @@ meshes = read_meshes(file_path)
 
 
 print('sampling parts with sample size:', num_samples)
-P, S = get_parts(parts, num_samples, get_normal_func)
+P, S = sample_parts(parts, num_samples, get_normal_func)
 V, F = get_mesh(meshes)
 
 print('saving results')

@@ -152,7 +152,7 @@ def process_part(part, num_samples, lambda_func, points_ratio=5):
         return pts[indices], ss[indices]
 
 
-def get_parts(parts, num_samples, lambda_func, points_ratio=5):
+def sample_parts(parts, num_samples, lambda_func, points_ratio=5):
 
     pts_list = []
     ss_list = []
