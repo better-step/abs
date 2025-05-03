@@ -144,6 +144,7 @@ def process_part(part, num_samples, lambda_func, points_ratio=5):
     indices = poisson_disk_downsample(pts, num_samples)
 
 
+
     if len(indices) < num_samples:
         remaining_pts = [i for i in range(len(pts)) if i not in indices]
         additional_indices = np.random.choice(remaining_pts, num_samples - len(indices), replace=False)
