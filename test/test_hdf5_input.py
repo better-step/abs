@@ -274,7 +274,7 @@ class Hdf5test(unittest.TestCase):
         self.assertTrue(dv < 1e-7)
 
     def test_cylinder(self):
-        sample_name = 'Cylinder_hole.hdf5'
+        sample_name = 'Cylinder_Hole.hdf5'
         file_path = get_file(sample_name)
         with h5py.File(file_path, 'r') as hdf:
             grp = hdf['parts/part_001/geometry/surfaces/000']
