@@ -2,6 +2,29 @@ import numpy as np
 from geomdl import BSpline, NURBS
 from geomdl import operations
 
+from abs.curve import create_curve
+
+
+def create_surface(surface_data):
+    index = int(surface_data.name.split("/")[-1])
+
+    surface_type = surface_data.get('type')[()].decode('utf-8')
+    surface_map = {
+        'Plane': Plane,
+        'Cylinder': Cylinder,
+        'Cone': Cone,
+        'Sphere': Sphere,
+        'Torus': Torus,
+        'BSpline': BSplineSurface,
+        'Extrusion': Extrusion,
+        'Revolution': Revolution
+    }
+    surface_class = surface_map.get(surface_type)
+    if surface_class:
+        return index, surface_class(surface_data)
+    else:
+        # print(f"This surface type: {surface_type}, is currently not supported")
+        return index, None
 
 class Surface:
     def sample(self, points):
@@ -371,3 +394,168 @@ class BSplineSurface(Surface):
         normal_vectors = np.array([n[-1] for n in normals])
 
         return normal_vectors
+
+
+
+class Extrusion(Surface):
+    def __init__(self, extrusion):
+        self.direction = np.array(extrusion.get('direction')[()]).reshape(-1, 1).T
+        self.trim_domain = np.array(extrusion.get('trim_domain')[()])
+        self.transform = np.array(extrusion.get('transform')[()])
+        self.area = -1
+        self.shape_name = extrusion.get('type')[()].decode('utf8')
+        _, self.curve = create_curve(extrusion['curve'], False)
+
+    def sample(self, points):
+        return self.curve.sample(points[:, 0][:, np.newaxis]) + points[:, 1][:, np.newaxis] * self.direction
+
+    def derivative(self, points, order=1):
+        if order == 0:
+            return self.sample(points)
+        elif order == 1:
+            res = np.zeros((points.shape[0], 3, 2))
+            res[:, :, 0] = self.curve.derivative(points[:, 0][:, np.newaxis], order=1)
+            res[:, :, 1] = self.direction
+            return res
+        elif order == 2:
+            res = np.zeros((points.shape[0], 3, 2, 2))
+            res[:, :, 0, 0] = self.curve.derivative(points[:, 0][:, np.newaxis], order=2)
+
+        return res
+
+
+class Revolution(Surface):
+    def __init__(self, revolution):
+        self.location = np.array(revolution.get('location')[()]).reshape(-1, 1).T
+        self.trim_domain = np.array(revolution.get('trim_domain')[()])
+        self.transform = np.array(revolution.get('transform')[()])
+        self.area = -1
+        self.shape_name = revolution.get('type')[()].decode('utf8')
+        self.z_axis = np.array(revolution.get('z_axis')[()]).reshape(-1, 1).T
+        _, self.curve = create_curve(revolution['curve'], False)
+
+    def sample(self, points):
+        dx, dy, dz = self.z_axis[0, 0], self.z_axis[0, 1], self.z_axis[0, 2]
+
+        cos_t = np.cos(points[:, 0])
+        sin_t = np.sin(points[:, 0])
+        one_minus_cos = 1 - cos_t
+
+        R = np.array([
+            [cos_t + dx * dx * one_minus_cos, dx * dy * one_minus_cos - dz * sin_t,
+             dx * dz * one_minus_cos + dy * sin_t],
+            [dy * dx * one_minus_cos + dz * sin_t, cos_t + dy * dy * one_minus_cos,
+             dy * dz * one_minus_cos - dx * sin_t],
+            [dz * dx * one_minus_cos - dy * sin_t, dz * dy * one_minus_cos + dx * sin_t,
+             cos_t + dz * dz * one_minus_cos]
+        ])
+
+        return np.einsum('ijk,ik->ij', R.transpose(2, 0, 1), self.curve.sample(points[:, 1][:, np.newaxis]) - self.location) + self.location
+
+    def derivative(self, points, order=1):
+        if order == 0:
+            return self.sample(points)
+        elif order == 1:
+            res = np.ones((points.shape[0], 3, 2))*10
+            theta = points[:, 0]
+            u = self.z_axis[0, :]
+            v_param = points[:, 1]
+            dx, dy, dz = self.z_axis[0, 0], self.z_axis[0, 1], self.z_axis[0, 2]
+
+            cos_t = np.cos(points[:, 0])
+            sin_t = np.sin(points[:, 0])
+            one_minus_cos = 1 - cos_t
+
+            cos_t = np.cos(theta)
+            sin_t = np.sin(theta)
+
+            # outer product u ⊗ u, shape (3, 3)
+            uuT = np.outer(u, u)
+            I = np.eye(3)
+            u_skew = np.array([
+                [0, -u[2], u[1]],
+                [u[2], 0, -u[0]],
+                [-u[1], u[0], 0]
+            ])
+
+            # dR/dtheta, vectorized version for each theta
+            dR_dtheta = (
+                -sin_t[:, None, None] * I
+                + sin_t[:, None, None] * uuT
+                + cos_t[:, None, None] * u_skew
+            )  # shape (N, 3, 3)
+
+            R = np.array([
+                [cos_t + dx * dx * one_minus_cos, dx * dy * one_minus_cos - dz * sin_t,
+                 dx * dz * one_minus_cos + dy * sin_t],
+                [dy * dx * one_minus_cos + dz * sin_t, cos_t + dy * dy * one_minus_cos,
+                 dy * dz * one_minus_cos - dx * sin_t],
+                [dz * dx * one_minus_cos - dy * sin_t, dz * dy * one_minus_cos + dx * sin_t,
+                 cos_t + dz * dz * one_minus_cos]
+            ])
+
+            # v = sampled curve points - self.location
+            v = self.curve.sample(v_param[:, None]) - self.location  # shape (N, 3)
+            dv_dtheta = np.einsum('nij,nj->ni', dR_dtheta, v)
+
+            # df/dv (i.e., derivative of curve)
+            df_dv = self.curve.derivative(v_param[:, None], order=1)  # shape (N, 3)
+            dv_dv = np.einsum('nij,nj->ni', R.transpose(2, 0, 1), df_dv)
+            res[:, :, 0] = dv_dtheta
+            res[:, :, 1] = dv_dv
+        elif order == 2:
+            res = np.zeros((points.shape[0], 3, 2, 2))
+
+            u = self.z_axis[0,:]
+
+            N = len(points)
+            theta = points[:, 0]
+            v_param = points[:, 1]
+
+            cos_t = np.cos(theta)
+            sin_t = np.sin(theta)
+            one_minus_cos = 1 - cos_t
+
+            # Basic components
+            uuT = np.outer(u, u)
+            I = np.eye(3)
+            u_skew = skew(u)
+
+            # Rotation matrices R
+            R = (
+                cos_t[:, None, None] * I
+                + one_minus_cos[:, None, None] * uuT
+                + sin_t[:, None, None] * u_skew
+            )  # shape (N, 3, 3)
+
+            # Derivative of R wrt theta
+            dR_dtheta = (
+                -sin_t[:, None, None] * I
+                + sin_t[:, None, None] * uuT
+                + cos_t[:, None, None] * u_skew
+            )  # shape (N, 3, 3)
+
+            # Second derivative of R wrt theta
+            d2R_dtheta2 = (
+                -cos_t[:, None, None] * I
+                + cos_t[:, None, None] * uuT
+                - sin_t[:, None, None] * u_skew
+            )  # shape (N, 3, 3)
+
+            # Sample and differentiate the curve
+            f = self.curve.sample(v_param[:, None]) - self.location  # shape (N, 3)
+            df_dv = self.curve.derivative(v_param[:, None], order=2)  # shape (N, 3)
+            d2f_dv2 = self.curve.derivative(v_param[:, None], order=2)  # shape (N, 3)
+
+
+            # Second derivative outputs
+            d2y_dtheta2 = np.einsum('nij,nj->ni', d2R_dtheta2, f)
+            d2y_dthetadv = np.einsum('nij,nj->ni', dR_dtheta, df_dv)
+            d2y_dv2 = np.einsum('nij,nj->ni', R, d2f_dv2)
+
+            res[:, :, 0, 0] = d2y_dtheta2
+            res[:, :, 0, 1] = d2y_dthetadv
+            res[:, :, 1, 0] = d2y_dthetadv
+            res[:, :, 1, 1] = d2y_dv2
+
+        return res

@@ -12,7 +12,7 @@ from tqdm import tqdm
 
 def get_normal_func(part, topo, points):
 
-    if isinstance(topo, Face):
+    if topo.is_face():
         return topo.normal(points)
     else:
         return None
@@ -23,12 +23,9 @@ def process_file(file_path, num_samples, get_normal_func):
         geo = hdf['geometry/parts']
         topo = hdf['topology/parts']
 
-        parts = []
-        for i in range(len(geo)):
-            s = Shape(geo.get(list(geo.keys())[i]), topo.get(list(topo.keys())[i]))
-            parts.append(s)
+        parts = read_parts(file_path)
 
-        P, S = get_parts(parts, num_samples, get_normal_func)
+        P, S = sample_parts(parts, num_samples, get_normal_func)
 
     return P, S
 

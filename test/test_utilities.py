@@ -1,7 +1,11 @@
 import numpy as np
 from abs.curve import *
 from abs.surface import *
+import os
+from pathlib import Path
 
+def get_file(sample_name):
+    return os.path.abspath(os.path.join(Path(__file__), '..', '..', 'data', 'sample_hdf5', sample_name))
 
 class H5Dataset:
     def __init__(self, value):

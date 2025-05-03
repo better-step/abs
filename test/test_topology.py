@@ -4,12 +4,12 @@ import h5py
 import os
 from abs.topology import Topology
 from abs.utils import *
-
+from test_utilities import *
 
 class TestTopology(unittest.TestCase):
 
     def test_topology(self):
-        sample_name = 'cone.hdf5'
+        sample_name = 'Cone.hdf5'
         file_path = get_file(sample_name)
         with h5py.File(file_path, 'r') as hdf:
             grp = hdf['parts/part_001/topology']
@@ -19,7 +19,7 @@ class TestTopology(unittest.TestCase):
 
 
     def test_find_adjacent_faces(self):
-        sample_name = 'cone.hdf5'
+        sample_name = 'Cone.hdf5'
         file_path = get_file(sample_name)
         with h5py.File(file_path, 'r') as hdf:
             grp = hdf['parts/part_001/topology']
@@ -30,10 +30,10 @@ class TestTopology(unittest.TestCase):
         # adjacent_faces = s.Solid.faces[face_index]
         current_face = s.Solid.faces[face_index]
         adjacent_faces = current_face.find_adjacent_faces()
-        print(adjacent_faces)
+        # print(adjacent_faces)
 
     # def test_find_connected_components(self):
-    #     sample_name = 'cone.hdf5'
+    #     sample_name = 'Cone.hdf5'
     #     file_path = get_file(sample_name)
     #     with h5py.File(file_path, 'r') as hdf:
     #         grp = hdf['parts/part_001/topology']

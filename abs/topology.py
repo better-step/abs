@@ -16,12 +16,21 @@ class Topology:
                 for key, item in group.items()
             }
 
+        if isinstance(topo_data[entity], h5py.Dataset):
+            return []
+
         sorted_data = sorted(
             ((int(k), recursive_hdf5_to_dict(topo_data[entity][k])) for k in topo_data[entity].keys()),
             key=lambda x: x[0]
         )
 
         return [{**data,  **{"id": id}} for id, data in sorted_data]
+
+    def is_face(self):
+        return True if isinstance(self, Face) else False
+
+    def is_edge(self):
+        return True if isinstance(self, Edge) else False
 
 
 
@@ -61,7 +70,6 @@ class Face(Topology):
         self.nr_singularities = face['nr_singularities']
         self.outer_loop = face['outer_loop']
         self.singularities = face['singularities']
-
         self.id = face['id']
 
 

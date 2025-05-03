@@ -3,13 +3,13 @@ from abs.utils import *
 import os
 
 def get_normal_func(part, topo, points):
-    if isinstance(topo, Face):
+    if topo.is_face():
         return topo.normal(points)
     else:
         return None
 
 
-base_dir = '/Users/nafiseh/Desktop/nafiseh/Desktop/'
+base_dir = '/Users/nafiseh/Desktop/'
 file_name = "test"
 num_samples = 4000
 
@@ -17,10 +17,13 @@ num_samples = 4000
 file_path = os.path.join(base_dir, f"{file_name}.hdf5")
 
 print('getting parts')
-parts, meshes = get_shape(file_path)
+
+parts = read_parts(file_path)
+meshes = read_meshes(file_path)
+
 
 print('sampling parts with sample size:', num_samples)
-P, S = get_parts(parts, num_samples, get_normal_func)
+P, S = sample_parts(parts, num_samples, get_normal_func)
 V, F = get_mesh(meshes)
 
 print('saving results')

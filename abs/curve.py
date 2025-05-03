@@ -2,6 +2,30 @@ import numpy as np
 from scipy.interpolate import BSpline
 from geomdl import NURBS
 
+
+
+def create_curve(curve_data, compute_index=True):
+    if compute_index:
+        index = int(curve_data.name.split("/")[-1])
+    else:
+        index = None
+    curve_type = curve_data.get('type')[()].decode('utf-8')
+
+    curve_map = {
+        'Line': Line,
+        'Circle': Circle,
+        'Ellipse': Ellipse,
+        'BSpline': BSplineCurve,
+        'Other': Other
+    }
+    curve_class = curve_map.get(curve_type)
+    if curve_class:
+        return index, curve_class(curve_data)
+    else:
+        # print(f"This curve type: {curve_type}, is currently not supported")
+        return index, None
+
+
 class Curve:
     def sample(self, points):
         raise NotImplementedError("Sample method must be implemented by subclasses")
@@ -22,8 +46,6 @@ class Curve:
     def derivative(self, points, order=1):
         raise NotImplementedError("Derivative method must be implemented by subclasses")
 
-    def normal(self, points):
-        raise NotImplementedError("Normal method must be implemented by subclasses")
 
 
 class Line(Curve):
@@ -50,10 +72,6 @@ class Line(Curve):
         if order == 1:
             return np.tile(self.direction, (sample_points.shape[0], 1))
         return np.zeros([sample_points.shape[0], self.location.shape[1]])
-
-    def normal(self, sample_points):
-        normal_vector = np.array([-self.direction[0, 1], self.direction[0, 0]])
-        return np.tile(normal_vector, (sample_points.shape[0], 1))
 
 
 class Circle(Curve):
@@ -89,33 +107,6 @@ class Circle(Curve):
             return -(self.radius * (np.cos(sample_points) * self.x_axis + np.sin(sample_points) * self.y_axis))
         elif order % 4 == 3:
             return self.radius * (np.sin(sample_points) * self.x_axis - np.cos(sample_points) * self.y_axis)
-
-    def normal(self, sample_points):
-
-        # rotation_matrix = np.array([[0, 1], [-1, 0]])
-        # normal_vector = self.derivative(sample_points, order=1) @ rotation_matrix.T
-        # normal_vector /= np.linalg.norm(normal_vector, axis=1, keepdims=True)
-
-
-        first_deriv = self.derivative(sample_points, order=1)
-
-        # calculating the speed
-        v = np.linalg.norm(first_deriv, axis=1)
-
-        # calculating the tangent
-        tangent = first_deriv / v[:, None]
-
-        t_prime = np.gradient(tangent, axis=0)
-
-        # calculating the normal
-        normal = t_prime - np.einsum('ij,ij->i', t_prime, tangent)[:, None] * tangent
-        normal_vector = normal / np.linalg.norm(normal, axis=1)[:, None]
-
-        # calculating the binormal (to make sure they are orthogonal)
-        binormal = np.cross(tangent, normal)
-
-
-        return normal_vector
 
 
 class Ellipse(Curve):
@@ -156,26 +147,6 @@ class Ellipse(Curve):
                 self.min_radius * np.sin(sample_points) * self.y_axis
         return self.maj_radius * np.sin(sample_points) * self.x_axis - \
             self.min_radius * np.cos(sample_points) * self.y_axis
-
-    def normal(self, sample_points):
-
-        if hasattr(self, 'z_axis'):
-
-            first_deriv = self.derivative(sample_points, order=1)
-            v = np.linalg.norm(first_deriv, axis=1)
-            tangent = first_deriv / v[:, None]
-            t_prime = np.gradient(tangent, axis=0)
-            normal = t_prime - np.einsum('ij,ij->i', t_prime, tangent)[:, None] * tangent
-            normal_vector = normal / np.linalg.norm(normal, axis=1)[:, None]
-            # binormal = np.cross(tangent, normal)
-
-        else:
-
-            rotation_matrix = np.array([[0, 1], [-1, 0]])
-            normal_vector = self.derivative(sample_points, order=1) @ rotation_matrix.T
-            normal_vector /= np.linalg.norm(normal_vector, axis=1, keepdims=True)
-
-        return normal_vector
 
 
 class BSplineCurve(Curve):
@@ -233,22 +204,6 @@ class BSplineCurve(Curve):
             b_spline_derivative = self.bspline.derivative(order)
             return np.squeeze(b_spline_derivative(sample_points))
 
-    def normal(self, sample_points):
-        if sample_points.size == 0:
-            return np.array([])
-
-        first_deriv = self.derivative(sample_points, order=1)
-        v = np.linalg.norm(first_deriv, axis=1)
-        tangent = first_deriv / v[:, None]
-        t_prime = np.gradient(tangent, axis=0)
-        proj = np.einsum('ij,ij->i', t_prime, tangent)[:, None] * tangent
-        normal = t_prime - proj
-
-        normal_norm = np.linalg.norm(normal, axis=1)
-        normal_vector = normal / normal_norm[:, None]
-        #binormal = np.cross(tangent, normal)
-
-        return normal_vector
 
 class Other(Curve):
     def __init__(self, other):
@@ -261,8 +216,3 @@ class Other(Curve):
     def derivative(self, sample_points, order=1):
         return np.array([])
 
-    def normal(self, sample_points):
-        return np.array([])
-
-    def get_length(self):
-        return 0

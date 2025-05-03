@@ -4,45 +4,6 @@ from abs.surface import *
 from abs import sampler
 from abs.winding_number import find_surface_uv_for_curve
 
-
-def _create_surface(surface_data):
-    index = int(surface_data.name.split("/")[-1])
-
-    surface_type = surface_data.get('type')[()].decode('utf-8')
-    surface_map = {
-        'Plane': Plane,
-        'Cylinder': Cylinder,
-        'Cone': Cone,
-        'Sphere': Sphere,
-        'Torus': Torus,
-        'BSpline': BSplineSurface
-    }
-    surface_class = surface_map.get(surface_type)
-    if surface_class:
-        return index, surface_class(surface_data)
-    else:
-        # print(f"This surface type: {surface_type}, is currently not supported")
-        return index, None
-
-
-def _create_curve(curve_data):
-    index = int(curve_data.name.split("/")[-1])
-    curve_type = curve_data.get('type')[()].decode('utf-8')
-
-    curve_map = {
-        'Line': Line,
-        'Circle': Circle,
-        'Ellipse': Ellipse,
-        'BSpline': BSplineCurve,
-        'Other': Other
-    }
-    curve_class = curve_map.get(curve_type)
-    if curve_class:
-        return index, curve_class(curve_data)
-    else:
-        # print(f"This curve type: {curve_type}, is currently not supported")
-        return index, None
-
 def _get_edges(edge_data):
     return Edge(edge_data)
 
@@ -151,19 +112,19 @@ class Shape:
             tmp = data.get('2dcurves', {}).values()
             self.curves2d=len(tmp)*[None]
             for curve_data in tmp:
-                index, curve = _create_curve(curve_data)
+                index, curve = create_curve(curve_data)
                 self.curves2d[index] = curve
 
             tmp = data.get('3dcurves', {}).values()
             self.curves3d=len(tmp)*[None]
             for curve_data in tmp:
-                index, curve = _create_curve(curve_data)
+                index, curve = create_curve(curve_data)
                 self.curves3d[index] = curve
 
             tmp = data.get('surfaces', {}).values()
             self.surfaces=len(tmp)*[None]
             for surface_data in tmp:
-                index, surface = _create_surface(surface_data)
+                index, surface = create_surface(surface_data)
                 self.surfaces[index] = surface
 
             self.bbox.append(np.array(data.get('bbox')[:]))
@@ -207,10 +168,10 @@ class Shape:
 
             # loop over halfedges
             for halfedge in topo.halfedges:
-                halfedge.curve2d = geo.curves2d[halfedge.curve2d]
+                halfedge.curve2d = geo.curves2d[halfedge.curve2d] if halfedge.curve2d < len(geo.curves2d) else None
                 halfedge.edge = self.edges[halfedge.edge]
                 if halfedge.mates:
-                    halfedge.mates = topo.halfedges[int(halfedge.mates)]
+                    halfedge.mates = topo.halfedges[int(halfedge.mates[0])]
                 self.halfedges.append(halfedge)
 
             # Loop over loops

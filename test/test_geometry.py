@@ -1,7 +1,7 @@
 import unittest
 from random import sample
 import numpy as np
-from test.utils.test_utilities import *
+from test_utilities import *
 from scipy.interpolate import BSpline
 
 def surface_derivative(surface, sample_points, epsilon=1e-6):
@@ -62,14 +62,25 @@ def generate_points_on_curve(curve, num_samples=1000):
     return param_range, points
 
 
-def estimate_normal(curve, num_samples=1000):
-    _, points = generate_points_on_curve(curve, num_samples)
-    lines = np.diff(points, axis=0)
-    lengths = np.linalg.norm(lines, axis=1)
-    normalized_lines = lines / lengths[:, np.newaxis]
-    rotation_matrix = np.array([[0, -1], [1, 0]])
-    rotated_p = normalized_lines @ rotation_matrix.T
-    return rotated_p
+# def estimate_normal(curve, num_samples=1000):
+
+#     _, points = generate_points_on_curve(curve, num_samples)
+
+#     if points.shape[1] == 3:
+#         tangents = np.gradient(points, axis=0)
+#         tangents = tangents / np.linalg.norm(tangents, axis=1, keepdims=True)
+#         dT = np.gradient(tangents, axis=0)
+#         norms = np.linalg.norm(dT, axis=1, keepdims=True)
+#         norms[norms == 0] = 1.0
+#         normals = dT / norms
+#         return normals
+#     else:
+#         lines = np.diff(points, axis=0)
+#         lengths = np.linalg.norm(lines, axis=1)
+#         normalized_lines = lines / lengths[:, np.newaxis]
+#         rotation_matrix = np.array([[0, -1], [1, 0]])
+#         rotated_p = normalized_lines @ rotation_matrix.T
+#         return rotated_p
 
 
 class TestGeometry(unittest.TestCase):
@@ -120,11 +131,11 @@ class TestGeometry(unittest.TestCase):
                             (shape.length if shape.length != -1 else shape.get_length()) < 1e-4))
 
         # normals
-        rotated_p = estimate_normal(shape, num_samples)
-        self.assertTrue(abs(np.sum(rotated_p - shape.normal(param_points)[1:, :]) < 1e-4))
+        # rotated_p = estimate_normal(shape, num_samples)
+        # self.assertTrue(abs(np.sum(rotated_p - shape.normal(param_points)[1:, :]) < 1e-4))
 
         # check if normals are unit length
-        self.assertTrue(np.allclose(np.linalg.norm(shape.normal(param_points), axis=1), 1, atol=1e-8))
+        # self.assertTrue(np.allclose(np.linalg.norm(shape.normal(param_points), axis=1), 1, atol=1e-8))
 
     def test_circle2d(self):
         shape = circle2d()
@@ -155,11 +166,11 @@ class TestGeometry(unittest.TestCase):
                             (shape.length if shape.length != -1 else shape.get_length()) < 1e-4))
 
         # normals
-        rotated_p = estimate_normal(shape, num_samples)
-        self.assertTrue(abs(np.sum(rotated_p - shape.normal(param_points)[1:, :]) < 1e-4))
+        # rotated_p = estimate_normal(shape, num_samples)
+        # self.assertTrue(abs(np.sum(rotated_p - shape.normal(param_points)[1:, :]) < 1e-4))
 
         # check if normals are unit length
-        self.assertTrue(np.allclose(np.linalg.norm(shape.normal(param_points), axis=1), 1, atol=1e-8))
+        # self.assertTrue(np.allclose(np.linalg.norm(shape.normal(param_points), axis=1), 1, atol=1e-8))
 
     def test_ellipse2d(self):
 
@@ -191,11 +202,11 @@ class TestGeometry(unittest.TestCase):
                             (ellipse.length if ellipse.length != -1 else ellipse.get_length()) < 1e-4))
 
         # normals
-        rotated_p = estimate_normal(ellipse, num_samples)
-        self.assertTrue(abs(np.sum(rotated_p - ellipse.normal(param_points)[1:, :]) < 1e-4))
+        # rotated_p = estimate_normal(ellipse, num_samples)
+        # self.assertTrue(abs(np.sum(rotated_p - ellipse.normal(param_points)[1:, :]) < 1e-4))
 
         # check if normals are unit length
-        self.assertTrue(np.allclose(np.linalg.norm(ellipse.normal(param_points), axis=1), 1, atol=1e-8))
+        # self.assertTrue(np.allclose(np.linalg.norm(ellipse.normal(param_points), axis=1), 1, atol=1e-8))
 
     def test_bspline_curve2d(self):
 
@@ -231,11 +242,11 @@ class TestGeometry(unittest.TestCase):
         self.assertTrue(abs(np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1)) - shape.get_length() < 1e-4))
 
         # normals
-        rotated_p = estimate_normal(shape, num_samples)
-        self.assertTrue(abs(np.sum(rotated_p - shape.normal(param_points)[1:, :]) < 1e-4))
+        # rotated_p = estimate_normal(shape, num_samples)
+        # self.assertTrue(abs(np.sum(rotated_p - shape.normal(param_points)[1:, :]) < 1e-4))
 
         # check if normals are unit length
-        self.assertTrue(np.allclose(np.linalg.norm(shape.normal(param_points), axis=1), 1, atol=1e-8))
+        # self.assertTrue(np.allclose(np.linalg.norm(shape.normal(param_points), axis=1), 1, atol=1e-8))
 
 
 
@@ -317,6 +328,9 @@ class TestGeometry(unittest.TestCase):
         num_samples = 1000
         param_points, points = generate_points_on_curve(ellipse, num_samples)
         self.assertTrue(abs(np.sum(np.linalg.norm(np.diff(points, axis=0), axis=1)) - ellipse.get_length() < 1e-4))
+
+        #normals
+        # rotated_p = estimate_normal(ellipse, num_samples)
 
     def test_bspline_curve3d(self):
         shape = bspline_curve3d()
