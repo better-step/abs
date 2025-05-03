@@ -2,6 +2,30 @@ import numpy as np
 from scipy.interpolate import BSpline
 from geomdl import NURBS
 
+
+
+def create_curve(curve_data, compute_index=True):
+    if compute_index:
+        index = int(curve_data.name.split("/")[-1])
+    else:
+        index = None
+    curve_type = curve_data.get('type')[()].decode('utf-8')
+
+    curve_map = {
+        'Line': Line,
+        'Circle': Circle,
+        'Ellipse': Ellipse,
+        'BSpline': BSplineCurve,
+        'Other': Other
+    }
+    curve_class = curve_map.get(curve_type)
+    if curve_class:
+        return index, curve_class(curve_data)
+    else:
+        # print(f"This curve type: {curve_type}, is currently not supported")
+        return index, None
+
+
 class Curve:
     def sample(self, points):
         raise NotImplementedError("Sample method must be implemented by subclasses")
