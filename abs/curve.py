@@ -263,3 +263,6 @@ class Other(Curve):
 
     def normal(self, sample_points):
         return np.array([])
+
+    def get_length(self):
+        return 0
