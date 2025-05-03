@@ -123,17 +123,23 @@ def process_part(part, num_samples, lambda_func, points_ratio=5):
                     current_ss.append(s[index, :])
 
 
-        pts = np.concatenate(current_pts, axis=0)
-        if type(current_ss[0]) == list:
-            ss = current_ss.copy()
+        if len(current_pts) == 0:
+            pts = np.zeros((0,3))
         else:
-            ss = np.concatenate(current_ss, axis=0)
+            pts = np.concatenate(current_pts, axis=0)
+            if type(current_ss[0]) == list:
+                ss = current_ss.copy()
+            else:
+                ss = np.concatenate(current_ss, axis=0)
 
-        if len(pts) >= initial_num_points:
+        if len(pts) >= initial_num_points or len(pts) == 0:
             break
         else:
             num_points = np.ceil(num_points *  initial_num_points / len(pts) * 1.2)
 
+
+    if len(pts) ==0:
+        return pts, pts
 
     indices = poisson_disk_downsample(pts, num_samples)
 

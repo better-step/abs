@@ -88,6 +88,8 @@ def save_ply(filename, P, normals=None):
 
 
     for i, pts in enumerate(P):
+        if (pts.shape[0] == 0):
+            continue
         if normals:
             normal = normals[i]
             if pts.shape[0] != normal.shape[0]:

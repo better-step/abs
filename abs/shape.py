@@ -168,7 +168,7 @@ class Shape:
 
             # loop over halfedges
             for halfedge in topo.halfedges:
-                halfedge.curve2d = geo.curves2d[halfedge.curve2d]
+                halfedge.curve2d = geo.curves2d[halfedge.curve2d] if halfedge.curve2d < len(geo.curves2d) else None
                 halfedge.edge = self.edges[halfedge.edge]
                 if halfedge.mates:
                     halfedge.mates = topo.halfedges[int(halfedge.mates[0])]
