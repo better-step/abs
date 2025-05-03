@@ -305,7 +305,7 @@ class Hdf5test(unittest.TestCase):
 
 
     def test_sphere(self):
-        sample_name = 'sphere.hdf5'
+        sample_name = 'Sphere.hdf5'
         file_path = get_file(sample_name)
         with h5py.File(file_path, 'r') as hdf:
             grp = hdf['parts/part_001/geometry/surfaces/000']
