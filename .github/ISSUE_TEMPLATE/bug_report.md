@@ -8,7 +8,7 @@ labels: bug
 
 ### Environment Information
 
--   hdf5_mesh_sampler version:
+-   abs version:
 -   Python version:
 -   Operating System:
 
