@@ -216,3 +216,6 @@ class Other(Curve):
     def derivative(self, sample_points, order=1):
         return np.array([])
 
+    def get_length(self):
+        return 0
+
