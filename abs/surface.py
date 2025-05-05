@@ -5,8 +5,11 @@ from geomdl import operations
 from abs.curve import create_curve
 
 
-def create_surface(surface_data):
-    index = int(surface_data.name.split("/")[-1])
+def create_surface(surface_data, compute_index=True):
+    if compute_index:
+        index = int(surface_data.name.split("/")[-1])
+    else:
+        index = None
 
     surface_type = surface_data.get('type')[()].decode('utf-8')
     surface_map = {
@@ -17,7 +20,8 @@ def create_surface(surface_data):
         'Torus': Torus,
         'BSpline': BSplineSurface,
         'Extrusion': Extrusion,
-        'Revolution': Revolution
+        'Revolution': Revolution,
+        'Offset': Offset
     }
     surface_class = surface_map.get(surface_type)
     if surface_class:
@@ -456,7 +460,7 @@ class Revolution(Surface):
         if order == 0:
             return self.sample(points)
         elif order == 1:
-            res = np.ones((points.shape[0], 3, 2))*10
+            res = np.zeros((points.shape[0], 3, 2))
             theta = points[:, 0]
             u = self.z_axis[0, :]
             v_param = points[:, 1]
@@ -559,3 +563,46 @@ class Revolution(Surface):
             res[:, :, 1, 1] = d2y_dv2
 
         return res
+
+
+class Offset(Surface):
+    def __init__(self, offset):
+        self.trim_domain = np.array(offset.get('trim_domain')[()])
+        self.transform = np.array(offset.get('transform')[()])
+        self.area = -1
+        self.value = np.float64(offset.get('value')[()])
+        self.shape_name = offset.get('type')[()].decode('utf8')
+        _, self.surface = create_surface(offset['surface'], False)
+
+    def sample(self, points):
+
+        N = points.shape[0]
+        base_points = self.surface.sample(points)
+        normals = self.surface.normal(points)
+        offset_points = base_points + self.value * normals
+
+        return offset_points
+
+    def derivative(self, points, order=1):
+        if order == 0:
+            return self.sample(points)
+        elif order == 1:
+            diff = self.surface.derivative(points, order=1)
+
+            res = diff.copy()
+
+            du = diff[:, :, 0]
+            dv = diff[:, :, 1]
+
+            diffdiff = self.surface.derivative(points, order=2)
+
+            c = np.cross(du, dv) # diff[:, :, 0] x diff[:, :, 1]
+            norm = np.linalg.norm(c, axis=1)[:, None]
+            dcdu = np.cross(diffdiff[:, :, 0, 0], diff[:, :, 1]) + np.cross(diff[:, :, 0], diffdiff[: ,:, 1, 0])
+            dcdv = np.cross(diffdiff[:, :, 0, 1], diff[:, :, 1]) + np.cross(diff[:, :, 0], diffdiff[:, :, 1, 1])
+
+            res[:, :, 0] += self.value * (dcdu/norm - c @ (c.T @ dcdu)/norm**3)
+            res[:, :, 1] += self.value * (dcdv/norm - c @ (c.T @ dcdv)/norm**3)
+
+            return res
+

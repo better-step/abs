@@ -16,6 +16,8 @@ def read_parts(file_path):
 
     return parts
 
+import h5py
+
 def read_meshes(file_path):
     f = h5py.File(file_path, 'r')
     part = f['parts'].values()
@@ -23,6 +25,11 @@ def read_meshes(file_path):
     meshes = []
     for i, p in enumerate(part):
         s = Shape(p['geometry'], p['topology'])
+
+        if not hasattr(s, 'Solid') or not hasattr(s.Solid, 'faces') or not s.Solid.faces:
+            meshes.append([])
+            continue
+
         mesh_group = p['mesh']
         current_mesh = [None] * len(s.Solid.faces)
         for key in mesh_group:
@@ -37,6 +44,7 @@ def read_meshes(file_path):
         meshes.append(current_mesh)
 
     return meshes
+
 
 
 def save_obj(filename, pts):
@@ -54,6 +62,10 @@ def save_obj_mesh(filename, pts, faces):
     '''
     Save a set of 3D points and faces to an .obj file.
     '''
+    if pts.shape[0] == 0:
+        print("Skipping saving meshes: mesh is empty")
+        return
+
     with open(filename, "w") as f:
         if pts.shape[1] == 2:
             [f.write(f"v {pts[i, 0]} {pts[i, 1]} 0\n") for i in range(pts.shape[0])]
@@ -171,6 +183,8 @@ def save_vtu(save_file_path , P):
     m.write(save_file_path)
 
 
+import numpy as np
+
 def get_mesh(meshes):
     global_vertices = []
     global_faces = []
@@ -184,16 +198,25 @@ def get_mesh(meshes):
             vertices = sub_mesh["points"][:]
             if len(vertices) == 0:
                 continue
+
             global_vertices.append(vertices)
             faces = sub_mesh["triangle"][:] + vertex_offset
             global_faces.append(faces)
 
             vertex_offset += vertices.shape[0]
 
-    global_vertices = np.vstack(global_vertices)
-    global_faces = np.vstack(global_faces)
+    if global_vertices:
+        global_vertices = np.vstack(global_vertices)
+    else:
+        global_vertices = np.empty((0, 3))
+
+    if global_faces:
+        global_faces = np.vstack(global_faces)
+    else:
+        global_faces = np.empty((0, 3), dtype=int)
 
     return global_vertices, global_faces
+
 
 
 def get_mesh_part(mesh):
