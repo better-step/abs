@@ -29,6 +29,8 @@ include(eigen)
 ################################################################################
 pybind11_add_module(abspy cpp/poisson_disk_downsample.cpp)
 target_link_libraries(abspy PRIVATE pybind11::module Eigen3::Eigen)
+install(TARGETS abspy DESTINATION .)
+
 
 
 

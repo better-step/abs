@@ -4,7 +4,7 @@ Functions for processing Shape parts: sampling points and computing normals.
 
 import numpy as np
 from . import sampler
-from abs.abspy import poisson_disk_downsample
+from abspy import poisson_disk_downsample
 
 
 
