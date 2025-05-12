@@ -14,9 +14,9 @@ from importlib import import_module
 from warnings import warn
 
 # ── public sub-modules (relative imports!) ────────────────────
-from . import utils, sampler, part_processor
-from .utils import read_parts, read_meshes
-from .part_processor import sample_parts
+from abs import utils, sampler, part_processor
+from abs.utils import read_parts, read_meshes
+from abs.part_processor import sample_parts
 
 # ── optional C++ extension (abspy) ────────────────────────────
 try:
