@@ -1,0 +1,9 @@
+name: wheels
+
+on: [push, pull_request, release]
+
+jobs:
+  build:
+    uses: scikit-build/scikit-build/.github/workflows/wheels.yml@v0
+    with:
+      build_cmd_opts: ""

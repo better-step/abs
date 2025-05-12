@@ -1,12 +1,16 @@
+"""
+Sampling routines for curves and surfaces.
+Provides uniform and random sampling of points along parametric entities.
+"""
+
 import numpy as np
-from abs.curve import Curve
-from abs.surface import Surface
-from abs.utils import *
+from .curve import Curve
+from .surface import Surface
 
 
 def uniform_sample(topo, num_samples, min_pts=None, max_pts=None):
     """
-    Sample uniform points on a curve or surface
+    Sample approximately uniform distributed points on a curve or surface.
 
     Args:
     curve: The curve entity to be sampled.
@@ -32,7 +36,7 @@ def uniform_sample(topo, num_samples, min_pts=None, max_pts=None):
 
 def random_sample(topo, num_samples, min_pts=None, max_pts=None):
     """
-    Sample random points on a curve or surface
+    Sample random (uniformly random in parameter domain) points on a curve or surface.
 
     Args:
     curve: The curve entity to be sampled.
@@ -59,7 +63,7 @@ def random_sample(topo, num_samples, min_pts=None, max_pts=None):
 
 def _uniform_sample_curve(curve, num_samples, min_pts=None, max_pts=None):
     """
-    Sample uniform points on a curve
+    Helper: Uniformly sample points on a Curve.
 
     Args:
     curve: The curve entity to be sampled.
@@ -76,14 +80,14 @@ def _uniform_sample_curve(curve, num_samples, min_pts=None, max_pts=None):
         num_samples = max(num_samples, min_pts)
     if max_pts is not None:
         num_samples = min(num_samples, max_pts)
-
+    # parameter values evenly spaced over interval
     t = np.linspace(curve.interval[0, 0], curve.interval[0, 1], num_samples).reshape(-1, 1)
     return t, curve.sample(t)
 
 
 def _random_sample_curve(curve, num_samples, min_pts=None, max_pts=None):
     """
-    Sample random points on a curve
+    Helper: Randomly sample points on a Curve.
 
     Args:
     curve: The curve entity to be sampled.
@@ -94,20 +98,18 @@ def _random_sample_curve(curve, num_samples, min_pts=None, max_pts=None):
     parametric values and an array of sampled points on the curve.
     """
 
-    #num_samples = max(int(curve.length() / spacing), 1)
-
     if min_pts is not None:
         num_samples = max(num_samples, min_pts)
     if max_pts is not None:
         num_samples = min(num_samples, max_pts)
-
+    # random parameters uniformly distributed in interval
     t = np.random.uniform(low=curve.interval[0, 0], high=curve.interval[0, 1], size=num_samples).reshape(-1, 1)
     return t, curve.sample(t)
 
 
 def _uniform_sample_surface(surface, num_samples, min_pts=None, max_pts=None):
     """
-    Sample uniform points on a surface
+    Helper: Uniformly sample points on a Surface (grid sampling).
 
     Args:
     surface: The surface entity to be sampled.
@@ -118,15 +120,13 @@ def _uniform_sample_surface(surface, num_samples, min_pts=None, max_pts=None):
     parametric values and an array of sampled points on the surface.
     """
 
-    # num_samples = max(int(np.sqrt(surface.area()) / spacing), 1)
-
     if min_pts is not None:
         num_samples = max(num_samples, min_pts)
     if max_pts is not None:
         num_samples = min(num_samples, max_pts)
 
     num_samples = np.sqrt(num_samples).astype(int)
-
+    # Parameter ranges
     u_values = np.linspace(surface.trim_domain[0, 0], surface.trim_domain[0, 1], num_samples)
     v_values = np.linspace(surface.trim_domain[1, 0], surface.trim_domain[1, 1], num_samples)
 
@@ -136,7 +136,7 @@ def _uniform_sample_surface(surface, num_samples, min_pts=None, max_pts=None):
 
 def _random_sample_surface(surface, num_samples, min_pts=None, max_pts=None):
     """
-    Sample random points on a surface
+    Helper: Randomly sample points on a Surface.
 
     Args:
     surface: The surface entity to be sampled.
@@ -147,17 +147,13 @@ def _random_sample_surface(surface, num_samples, min_pts=None, max_pts=None):
     parametric values and an array of sampled points on the surface.
     """
 
-    # num_samples = max(int(np.sqrt(surface.area()) / spacing), 1)**2
-
     if min_pts is not None:
         num_samples = max(num_samples, min_pts)
     if max_pts is not None:
         num_samples = min(num_samples, max_pts)
-
+    # Uniform random sampling in the UV domain rectangle
     points = np.random.uniform(low=[surface.trim_domain[0, 0], surface.trim_domain[1, 0]],
                           high=[surface.trim_domain[0, 1], surface.trim_domain[1, 1]],
                           size=(num_samples,2))
-
-
     return points, surface.sample(points)
 

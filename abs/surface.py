@@ -1,8 +1,13 @@
+"""
+Surface classes for various surface types (Plane, Cylinder, Cone, Sphere, Torus, etc.).
+Provide methods to sample points on surfaces and compute derivatives and normals.
+"""
+
 import numpy as np
 from geomdl import BSpline, NURBS
 from geomdl import operations
-
-from abs.curve import create_curve
+from .curve import create_curve
+from scipy.stats import skew
 
 
 def create_surface(surface_data, compute_index=True):
@@ -27,16 +32,15 @@ def create_surface(surface_data, compute_index=True):
     if surface_class:
         return index, surface_class(surface_data)
     else:
-        # print(f"This surface type: {surface_type}, is currently not supported")
+        # Unsupported surface type
         return index, None
 
 class Surface:
+    """Base class for all surface types."""
     def sample(self, points):
         raise NotImplementedError("Sample method must be implemented by subclasses")
-
     def derivative(self, points, order=1):
         raise NotImplementedError("Derivative method must be implemented by subclasses")
-
     def normal(self, points):
         derivatives = self.derivative(points, order=1)
         normals = np.cross(derivatives[:, :, 0], derivatives[:, :, 1])
@@ -44,26 +48,29 @@ class Surface:
         return normals
 
     def get_area(self):
-        if self.area == -1:
-            x, w = np.polynomial.legendre.leggauss(4)
-            pts = np.array(np.meshgrid(x, x, indexing='ij')).reshape(2, -1).T+1
-            pts *= 0.5 * (self.trim_domain[:, 1] - self.trim_domain[:, 0])
-            pts += self.trim_domain[:, 0]
-            weights = (w * w[:, None]).ravel()
+        if getattr(self, "area", None) is not None and self.area != -1:
+            return self.area
+        # Approximate area via 4x4 Gauss-Legendre quadrature
 
-            dd = self.derivative(pts)
-            EE = np.sum(dd[:, :, 0] * dd[:, :, 0], axis=1)
-            FF = np.sum(dd[:, :, 0] * dd[:, :, 1], axis=1)
-            GG = np.sum(dd[:, :, 1] * dd[:, :, 1], axis=1)
+        x, w = np.polynomial.legendre.leggauss(4)
+        pts = np.array(np.meshgrid(x, x, indexing='ij')).reshape(2, -1).T+1
+        pts *= 0.5 * (self.trim_domain[:, 1] - self.trim_domain[:, 0])
+        pts += self.trim_domain[:, 0]
+        weights = (w * w[:, None]).ravel()
 
-            self.area = np.sum(np.sqrt(EE * GG - FF ** 2)*weights)*np.prod(self.trim_domain[:, 1] - self.trim_domain[:, 0]) / 4
+        dd = self.derivative(pts)
+        EE = np.sum(dd[:, :, 0] * dd[:, :, 0], axis=1)
+        FF = np.sum(dd[:, :, 0] * dd[:, :, 1], axis=1)
+        GG = np.sum(dd[:, :, 1] * dd[:, :, 1], axis=1)
+
+        self.area = np.sum(np.sqrt(EE * GG - FF ** 2)*weights)*np.prod(self.trim_domain[:, 1] - self.trim_domain[:, 0]) / 4
 
         return self.area
 
 
 class Plane(Surface):
+    """Plane surface."""
     def __init__(self, plane):
-
         self.location = np.array(plane.get('location')[()]).reshape(-1, 1).T
         self.coefficients = np.array(plane.get('coefficients')[()]).reshape(-1, 1).T
         self.trim_domain = np.array(plane.get('trim_domain')[()])
@@ -84,11 +91,13 @@ class Plane(Surface):
         if order == 0:
             return self.sample(sample_points)
         elif order == 1:
+            # Partial derivatives in u and v directions
             deriv = np.zeros((sample_points.shape[0], 3, 2))
             deriv[:, :, 0] = self.x_axis
             deriv[:, :, 1] = self.y_axis
             return deriv
         elif order == 2:
+            # Second derivative is zero
             return np.zeros((sample_points.shape[0], 3, 2, 2))
         else:
             raise ValueError("Order must be 0, 1, or 2")
@@ -101,6 +110,7 @@ class Plane(Surface):
 
 
 class Cylinder(Surface):
+    """Cylindrical surface."""
     def __init__(self, cylinder):
 
         self.location = np.array(cylinder.get('location')[()]).reshape(-1, 1).T
@@ -144,6 +154,7 @@ class Cylinder(Surface):
 
 
 class Cone(Surface):
+    """Conical surface."""
     def __init__(self, cone):
         self.location = np.array(cone.get('location')[()]).reshape(-1, 1).T
         self.radius = float(cone.get('radius')[()])
@@ -194,6 +205,7 @@ class Cone(Surface):
 
 
 class Sphere(Surface):
+    """Spherical surface."""
     def __init__(self, sphere):
 
         self.location = np.array(sphere.get('location')[()]).reshape(-1, 1).T
@@ -251,6 +263,8 @@ class Sphere(Surface):
             raise ValueError("Order must be 0, 1, or 2")
 
     def normal(self, sample_points):
+        if sample_points.size == 0:
+            return np.array([])
         sphere_points = self.sample(sample_points)
         normals = sphere_points - self.location
         normals = normals / np.linalg.norm(normals, axis=1)[:, np.newaxis]
@@ -258,6 +272,7 @@ class Sphere(Surface):
 
 
 class Torus(Surface):
+    """Torus (donut-shaped) surface."""
     def __init__(self, torus):
 
         self.location = np.array(torus.get('location')[()]).reshape(-1, 1).T
@@ -318,6 +333,7 @@ class Torus(Surface):
 
 
 class BSplineSurface(Surface):
+    """B-spline or NURBS surface (possibly trimmed)."""
     def __init__(self, bspline_surface):
 
         self.continuity = int(bspline_surface.get('continuity')[()])

@@ -1,11 +1,15 @@
+"""
+Utility functions for reading shape parts from files and saving data in common formats.
+"""
 from pathlib import Path
 import meshio as mio
-from abs.shape import *
 import numpy as np
 import h5py
+from .shape import Shape
 
 
 def read_parts(file_path):
+    """Read all parts from an HDF5 file and construct Shape objects for each."""
     f = h5py.File(file_path, 'r')
     part = f['parts'].values()
 
@@ -16,20 +20,19 @@ def read_parts(file_path):
 
     return parts
 
-import h5py
 
 def read_meshes(file_path):
+    """Read pre-computed mesh data (points and triangles) for each face of each part from an HDF5 file."""
     f = h5py.File(file_path, 'r')
     part = f['parts'].values()
 
     meshes = []
     for i, p in enumerate(part):
         s = Shape(p['geometry'], p['topology'])
-
+        # If shape has no faces, append empty
         if not hasattr(s, 'Solid') or not hasattr(s.Solid, 'faces') or not s.Solid.faces:
             meshes.append([])
             continue
-
         mesh_group = p['mesh']
         current_mesh = [None] * len(s.Solid.faces)
         for key in mesh_group:
@@ -46,7 +49,7 @@ def read_meshes(file_path):
     return meshes
 
 
-
+# Functions for saving data (if needed)
 def save_obj(filename, pts):
     '''
     Save a set of 3D points to an .obj file.
@@ -183,7 +186,7 @@ def save_vtu(save_file_path , P):
     m.write(save_file_path)
 
 
-import numpy as np
+
 
 def get_mesh(meshes):
     global_vertices = []

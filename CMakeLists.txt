@@ -1,36 +1,23 @@
-################################################################################
-# Check required CMake version
-set(REQUIRED_CMAKE_VERSION "3.14.0")
-cmake_minimum_required(VERSION ${REQUIRED_CMAKE_VERSION})
-
+cmake_minimum_required(VERSION 3.22)
 project(abs LANGUAGES CXX)
-################################################################################
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cpp/")
+# ------------------------------------------------------------
+# Dependencies (pulled once per wheel build)
+# ------------------------------------------------------------
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cpp")
 
+include(CPM)          # from cpp/CPM.cmake
+include(pybind11)     # from cpp/pybind11.cmake
+include(eigen)        # from cpp/eigen.cmake
 
-# Sort projects inside the solution
-set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Generate position independent code by default
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-
-################################################################################
-# Polyfem library
-################################################################################
-
-# dependencies
-include(pybind11)
-include(eigen)
-
-
-################################################################################
-# Subdirectories
-################################################################################
+# ------------------------------------------------------------
+# Build the pybind11 extension  (name = abspy)
+# ------------------------------------------------------------
 pybind11_add_module(abspy cpp/poisson_disk_downsample.cpp)
 target_link_libraries(abspy PRIVATE pybind11::module Eigen3::Eigen)
 
-
-
-
-
+# Install into the pure-python package dir that ends up inside the wheel
+install(TARGETS abspy LIBRARY DESTINATION abs)
