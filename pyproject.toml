@@ -8,7 +8,7 @@ requires = ["scikit-build-core>=0.4.0",
 build-backend = "scikit_build_core.build"
 
 [project]
-name = "abs-cad"
+name = "abs-hdf5"
 version = "0.1.0"
 description = "ABS geometry processing toolkit for CAD models."
 authors = [

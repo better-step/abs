@@ -1,6 +1,7 @@
 from abs.utils import *
 from abs.part_processor import *
 import unittest
+from abs.topology import Face
 import os
 
 def get_normal_func(part, topo, points):

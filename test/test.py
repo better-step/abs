@@ -9,8 +9,8 @@ def get_normal_func(part, topo, points):
         return None
 
 
-base_dir = '/Users/nafiseh/Desktop/'
-file_name = "test"
+base_dir = '/Users/chandu/Workspace/GM/better_step/abs/data/sample_hdf5/'
+file_name = "Ellipse"
 num_samples = 4000
 
 

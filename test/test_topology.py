@@ -4,7 +4,7 @@ import h5py
 import os
 from abs.topology import Topology
 from abs.utils import *
-from test_utilities import *
+from .test_utilities import *
 
 class TestTopology(unittest.TestCase):
 

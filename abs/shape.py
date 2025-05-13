@@ -142,7 +142,7 @@ class Shape:
                 'halfedges': (self.halfedges, _get_halfedges),
                 'loops': (self.loops, _get_loops),
                 'shells': (self.shells, Shell),
-                'solids': (self.solids, Solid)
+                'solids': (self.solids, TopoSolid)
             }
 
             for entity, (attr_list, constructor) in entity_map.items():

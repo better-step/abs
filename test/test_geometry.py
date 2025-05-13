@@ -1,7 +1,7 @@
 import unittest
 from random import sample
 import numpy as np
-from test_utilities import *
+from .test_utilities import *
 from scipy.interpolate import BSpline
 
 def surface_derivative(surface, sample_points, epsilon=1e-6):

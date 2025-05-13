@@ -92,6 +92,9 @@ class Circle(Curve):
         self.interval = np.array(circle.get('interval')[()]).reshape(-1, 1).T
         self.x_axis = np.array(circle.get('x_axis')[()]).reshape(-1, 1).T
         self.y_axis = np.array(circle.get('y_axis')[()]).reshape(-1, 1).T
+        if 'z_axis' in circle:
+            self.z_axis = np.array(circle.get('z_axis')[()]).reshape(-1, 1).T
+            self.transform = np.array(circle.get('transform')[()])
         self.length = -1
         self.shape_name = circle.get('type')[()].decode('utf8')
     def sample(self, sample_points):
@@ -149,14 +152,66 @@ class Ellipse(Curve):
             return self.maj_radius * np.sin(sample_points) * self.x_axis - self.min_radius * np.cos(sample_points) * self.y_axis
 
 
+# class BSplineCurve(Curve):
+#     """B-spline or NURBS curve."""
+#     def __init__(self, bspline):
+#         self.length = -1
+#         self.closed = bool(bspline.get('closed')[()])
+#         self.degree = int(bspline.get('degree')[()])
+#         self.continuity = int(bspline.get('continuity')[()])
+#         self.poles = np.array(bspline.get('poles')[()])  # control points array
+#         self.knots = np.array(bspline.get('knots')[()]).reshape(-1, 1).T
+#         self.weights = np.array(bspline.get('weights')[()]).reshape(-1, 1)
+#         self.interval = np.array(bspline.get('interval')[()]).reshape(-1, 1).T
+#         self.rational = bool(bspline.get('rational')[()])
+#         self.periodic = bool(bspline.get('periodic')[()])
+#         self.shape_name = bspline.get('type')[()].decode('utf8')
+#         if self.poles.shape[1] == 3:
+#             self.transform = np.array(bspline.get('transform')[()])  # apply if present
+#         # Create underlying BSpline or NURBS curve object
+#         if self.rational:
+#             # Use NURBS-Python for rational B-spline
+#             self.bspline = NURBS.Curve()  # no normalization of knots to allow exact usage
+#             self.bspline.degree = self.degree
+#             self.bspline.ctrlpts = self.poles.tolist()
+#             self.bspline.knotvector = self.knots.flatten().tolist()
+#             self.bspline.weights = self.weights.flatten().tolist()
+#         else:
+#             # Use SciPy BSpline for non-rational
+#             self.bspline = BSpline(self.knots.T[0], self.poles, self.degree)
+#     def sample(self, sample_points):
+#         if sample_points.size == 0:
+#             return np.array([]).reshape(0, self.poles.shape[1])
+#         if self.rational:
+#             # Evaluate rational B-spline (list of points)
+#             return np.array(self.bspline.evaluate_list(sample_points.flatten().tolist()))
+#         # Evaluate SciPy BSpline (returns (n_points, dim) array)
+#         return np.squeeze(self.bspline(sample_points))
+#     def derivative(self, sample_points, order=1):
+#         if order == 0:
+#             return self.sample(sample_points)
+#         # If requested derivative order is higher than degree, derivative is zero vector
+#         if self.degree < order:
+#             return np.zeros((sample_points.shape[0], self.poles.shape[1]))
+#         if self.rational:
+#             # Use geomdl to compute derivatives for rational curves
+#             res = np.zeros((sample_points.shape[0], self.poles.shape[1]))
+#             for i in range(sample_points.shape[0]):
+#                 d = self.bspline.derivatives(sample_points[i, 0], order)
+#                 res[i, :] = d[-1]  # d[-1] is highest derivative (order-th)
+#             return res
+#         # For non-rational, SciPy's BSpline object can provide derivative by constructing a new BSpline
+#         b_spline_deriv = self.bspline.derivative(nu=order)
+#         return np.squeeze(b_spline_deriv(sample_points))
 class BSplineCurve(Curve):
-    """B-spline or NURBS curve."""
     def __init__(self, bspline):
+
         self.length = -1
+
         self.closed = bool(bspline.get('closed')[()])
         self.degree = int(bspline.get('degree')[()])
         self.continuity = int(bspline.get('continuity')[()])
-        self.poles = np.array(bspline.get('poles')[()])  # control points array
+        self.poles = np.array(bspline.get('poles')[()])
         self.knots = np.array(bspline.get('knots')[()]).reshape(-1, 1).T
         self.weights = np.array(bspline.get('weights')[()]).reshape(-1, 1)
         self.interval = np.array(bspline.get('interval')[()]).reshape(-1, 1).T
@@ -164,43 +219,44 @@ class BSplineCurve(Curve):
         self.periodic = bool(bspline.get('periodic')[()])
         self.shape_name = bspline.get('type')[()].decode('utf8')
         if self.poles.shape[1] == 3:
-            self.transform = np.array(bspline.get('transform')[()])  # apply if present
-        # Create underlying BSpline or NURBS curve object
+            self.transform = np.array(bspline.get('transform')[()])
+
+        # Create BSpline or NURBS curve object
+
+
         if self.rational:
-            # Use NURBS-Python for rational B-spline
-            self.bspline = NURBS.Curve()  # no normalization of knots to allow exact usage
+            self.bspline = NURBS.Curve(normalize_kv=False)
             self.bspline.degree = self.degree
             self.bspline.ctrlpts = self.poles.tolist()
             self.bspline.knotvector = self.knots.flatten().tolist()
             self.bspline.weights = self.weights.flatten().tolist()
         else:
-            # Use SciPy BSpline for non-rational
-            self.bspline = BSpline(self.knots.T[0], self.poles, self.degree)
+            self.bspline = BSpline(self.knots.T[:,0], self.poles, self.degree)
+
+
+
     def sample(self, sample_points):
-        if sample_points.size == 0:
-            return np.array([]).reshape(0, self.poles.shape[1])
         if self.rational:
-            # Evaluate rational B-spline (list of points)
             return np.array(self.bspline.evaluate_list(sample_points.flatten().tolist()))
-        # Evaluate SciPy BSpline (returns (n_points, dim) array)
+
         return np.squeeze(self.bspline(sample_points))
+
     def derivative(self, sample_points, order=1):
+
         if order == 0:
             return self.sample(sample_points)
-        # If requested derivative order is higher than degree, derivative is zero vector
-        if self.degree < order:
-            return np.zeros((sample_points.shape[0], self.poles.shape[1]))
-        if self.rational:
-            # Use geomdl to compute derivatives for rational curves
-            res = np.zeros((sample_points.shape[0], self.poles.shape[1]))
-            for i in range(sample_points.shape[0]):
-                d = self.bspline.derivatives(sample_points[i, 0], order)
-                res[i, :] = d[-1]  # d[-1] is highest derivative (order-th)
-            return res
-        # For non-rational, SciPy's BSpline object can provide derivative by constructing a new BSpline
-        b_spline_deriv = self.bspline.derivative(nu=order)
-        return np.squeeze(b_spline_deriv(sample_points))
 
+        elif self.degree < order:
+            return np.zeros([sample_points.shape[0], self.poles.shape[1]])
+        else:
+            if self.rational:
+                res = np.zeros([sample_points.shape[0], self.poles.shape[1]])
+                for i in range(sample_points.shape[0]):
+                    d = self.bspline.derivatives(sample_points[i, 0], order)
+                    res[i, :] = d[-1]
+                return res
+            b_spline_derivative = self.bspline.derivative(order)
+            return np.squeeze(b_spline_derivative(sample_points))
 class Other(Curve):
     """Fallback for unsupported curve types."""
     def __init__(self, other):

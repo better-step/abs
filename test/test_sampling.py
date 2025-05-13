@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from test_utilities import *
+from .test_utilities import *
 import abs.sampler as cs
 from abs import poisson_disk_downsample
 import abs.utils as au
