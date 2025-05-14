@@ -22,6 +22,7 @@ from abs.part_processor import sample_parts
 try:
     _abspy = import_module("abspy")
     poisson_disk_downsample = _abspy.poisson_disk_downsample
+    __version__ = version("abs-hdf5")
 except ModuleNotFoundError as exc:
     poisson_disk_downsample = None
     warn(
@@ -30,6 +31,8 @@ except ModuleNotFoundError as exc:
         RuntimeWarning,
         stacklevel=2,
     )
+except PackageNotFoundError:
+    __version__ = "0.1.0"
 
 __all__ = [
     "read_parts",
