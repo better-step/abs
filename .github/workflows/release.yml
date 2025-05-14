@@ -1,18 +1,16 @@
 # .github/workflows/release.yml
+
 name: Build & publish
 
 on:
   push:
-    tags: [ 'v[0-9]+.[0-9]+.[0-9]+*' ]   # run on version-tags only
+    tags: [ 'v[0-9]+.[0-9]+.[0-9]+*' ]   # release on version tags
 
 permissions:
   contents: read
-  id-token: write                        # required for trusted publishing
+  id-token: write                         # for OIDC PyPI upload
 
 jobs:
-# ────────────────────────────────────────────────────────────────────
-# 1) Build binary wheels for the three major OS families
-# ────────────────────────────────────────────────────────────────────
   build-wheels:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -23,32 +21,32 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0                # include tags for versioning
+          fetch-depth: 0                # get full history & tags
+
+      - name: Set up QEMU for ARM64 emulation
+        if: runner.os == 'Linux'
+        uses: docker/setup-qemu-action@v2
+        with:
+          platforms: linux/arm64        # emulates aarch64 in manylinux :contentReference[oaicite:0]{index=0}
 
       - name: Build wheels with cibuildwheel
-        uses: pypa/cibuildwheel@2.x
+        uses: pypa/cibuildwheel@2.x      # official build action :contentReference[oaicite:1]{index=1}
         env:
           CIBW_BUILD: "cp39-* cp310-* cp311-*"
-          CIBW_ARCHS_LINUX: "x86_64 aarch64"
+          CIBW_ARCHS_LINUX: "x86_64 aarch64"  # include aarch64 under QEMU :contentReference[oaicite:2]{index=2}
 
-      - name: Upload wheel artefacts
+      - name: Upload wheel artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: wheels-${{ matrix.os }}   # unique per OS → no 409 conflicts
+          name: wheels-${{ matrix.os }}    # unique per-OS avoids conflicts :contentReference[oaicite:3]{index=3}
           path: wheelhouse/*
 
-# ────────────────────────────────────────────────────────────────────
-# 2) Build the source distribution once (Linux is fine)
-# ────────────────────────────────────────────────────────────────────
   sdist:
     needs: build-wheels
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -61,28 +59,23 @@ jobs:
           name: sdist
           path: dist/*.tar.gz
 
-# ────────────────────────────────────────────────────────────────────
-# 3) Publish wheels + sdist to PyPI (trusted-publishing / OIDC)
-# ────────────────────────────────────────────────────────────────────
   publish:
     needs: [ build-wheels, sdist ]
     runs-on: ubuntu-latest
 
     steps:
-      # download & merge all wheel bundles
       - uses: actions/download-artifact@v4
         with:
-          pattern: wheels-*
+          pattern: wheels-*               # grab all wheel bundles
           path: dist
-          merge-multiple: true          # flatten into dist/
+          merge-multiple: true            # flatten into dist/ :contentReference[oaicite:4]{index=4}
 
-      # download the sdist
       - uses: actions/download-artifact@v4
         with:
           name: sdist
           path: dist
 
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@release/v1  # trusted OIDC publish :contentReference[oaicite:5]{index=5}
         with:
-          packages_dir: dist            # contains wheels + sdist
+          packages_dir: dist
