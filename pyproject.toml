@@ -1,11 +1,6 @@
 [build-system]
 requires = [
-  "scikit-build-core>=0.4.0",
-  "cmake>=3.14",
-  "pybind11>=2.10.0",
-  "setuptools>=61",
-  "wheel",
-  "ninja"
+  "scikit-build-core>=0.4.0"
 ]
 build-backend = "scikit_build_core.build"
 
@@ -48,6 +43,7 @@ abs-to-pickle = "abs.cli:to_pickle_main"
 [tool.scikit-build]
 cmake.minimum-version = "3.14"
 wheel.packages = ["abs"]
+cmake.args = ["-DPYBIND11_FINDPYTHON=OFF"]
 
 wheel.exclude = [
   "**/.git/**/*"                       # no embedded Git repos
