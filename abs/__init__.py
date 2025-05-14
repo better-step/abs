@@ -33,7 +33,7 @@ except ModuleNotFoundError as exc:
         stacklevel=2,
     )
 except PackageNotFoundError:
-    __version__ = "0.1.1"
+    __version__ = "0.3.0"
 
 __all__ = [
     "read_parts",
