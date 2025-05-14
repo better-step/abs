@@ -12,13 +12,14 @@ name = "abs-hdf5"
 version = "0.1.0"
 description = "ABS geometry processing toolkit for CAD models."
 authors = [
-  { name = "Better Step", email = "teseo@uvic.ca" }
+  { name = "Sai Chandra Madduri, Nafiseh Izadyar, Teseo Schneider", email = "teseo@uvic.ca" }
 ]
-license = { text = "MPL-2.0" }
+license = { text = "MIT" }
 readme = "README.md"
 requires-python = ">=3.8"
 keywords        = ["CAD", "geometry", "sampling", "blue-noise"]
 classifiers = [
+    "License :: OSI Approved :: MIT License",
   "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
   "Programming Language :: C++",
   "Programming Language :: Python :: 3",

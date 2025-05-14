@@ -106,7 +106,7 @@ Visit our website: [better-step.github.io](https://better-step.github.io)
 
 Contributions are welcome! Please follow these guidelines:
 
-1. **Fork the Repository:**  
+1. **Fork the Repository:**
    Click the "Fork" button on GitHub.
 
 2. **Clone Your Fork Locally:**
@@ -122,7 +122,7 @@ Contributions are welcome! Please follow these guidelines:
    git checkout -b feature/your-feature-name
    ```
 
-4. **Make Your Changes:**  
+4. **Make Your Changes:**
    Ensure your code follows our coding standards (PEP 8) and include docstrings and tests where applicable.
 
 5. **Commit and Push:**
@@ -133,14 +133,16 @@ Contributions are welcome! Please follow these guidelines:
    git push origin feature/your-feature-name
    ```
 
-6. **Submit a Pull Request:**  
+6. **Submit a Pull Request:**
    Open a pull request on GitHub with a clear description of your changes.
 
 > **Note:** Please also review our Code of Conduct before contributing.
 
 ## License
 
-This project is licensed under the MIT License. See the `LICENSE` file for details.
+
+- **Python bindings, packaging scripts, tests** – **MIT License** (see `LICENSE-MIT`)
+- **Embedded C++ core** – **Mozilla Public License 2.0** (see `LICENSE-MPL-2.0`)
 
 ## Acknowledgments
 
