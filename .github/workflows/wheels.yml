@@ -1,9 +1,9 @@
-name: wheels
-
+name: Wheels
 on: [push, pull_request, release]
-
 jobs:
   build:
-    uses: scikit-build/scikit-build/.github/workflows/wheels.yml@v0
+    uses: pypa/cibuildwheel@v2
     with:
-      build_cmd_opts: ""
+      package-dir: .
+    env:
+      CIBW_BUILD: "cp38-* cp39-* cp310-* cp311-*"
