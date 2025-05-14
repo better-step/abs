@@ -20,7 +20,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 ################################################################################
 
 # dependencies
-include(pybind11)
+find_package(pybind11 CONFIG REQUIRED)
 include(eigen)
 
 
