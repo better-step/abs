@@ -12,6 +12,7 @@ read_parts, read_meshes, sample_parts, poisson_disk_downsample
 
 from importlib import import_module
 from warnings import warn
+from importlib.metadata import version, PackageNotFoundError
 
 # ── public sub-modules (relative imports!) ────────────────────
 from abs import utils, sampler, part_processor
