@@ -5,7 +5,7 @@
 
 
 ## Description
-ABS-CAD is a Python + C++ toolkit that turns the raw B-Rep information stored in
+ABS-HDF5 is a Python + C++ toolkit that turns the raw B-Rep information stored in
 **HDF5** CAD datasets into immediately useful geometry:
 
 * read **curves, surfaces, topology** into convenient Python objects
