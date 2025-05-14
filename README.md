@@ -1,6 +1,6 @@
 
 
-# ABS-HDF5 — Geometry processing & blue-noise sampling for HDF5 B-Rep data
+# ABS-HDF5: Geometry processing & blue-noise sampling for HDF5 B-Rep data
 [![image](https://img.shields.io/pypi/v/HDF5MeshSampler.svg)](https://pypi.python.org/pypi/abs-hdf5)
 
 
