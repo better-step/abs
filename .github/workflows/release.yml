@@ -1,0 +1,63 @@
+name: Build & publish
+
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+*"]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # build Linux, macOS (universal2) and Windows wheels
+      matrix:
+        os: [ubuntu-22.04, macos-14, windows-2022]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    # ---------- Build the wheels ----------
+    - name: Build wheel(s) with cibuildwheel
+      uses: pypa/cibuildwheel@v2
+      env:
+        CIBW_BUILD: "cp39-* cp310-* cp311-*"
+        CIBW_ARCHS_LINUX: "x86_64 aarch64"   # manylinux for both arches
+    - uses: actions/upload-artifact@v4
+      with:
+        name: wheels
+        path: wheelhouse/*.whl
+
+  # ---------- Build the sdist once (Linux is enough) ----------
+  sdist:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with: {python-version: "3.11"}
+    - run: pip install build
+    - run: python -m build --sdist
+    - uses: actions/upload-artifact@v4
+      with:
+        name: sdist
+        path: dist/*.tar.gz
+
+  # ---------- Publish everything ----------
+  publish:
+    needs: [build, sdist]
+    runs-on: ubuntu-latest
+    # the permissions block is what PyPI checks!
+    permissions:
+      id-token: write           # OIDC token for trusted publishing
+    environment:
+      name: pypi                # optional hardening
+      url: https://pypi.org/p/abs-hdf5   # link shown in Actions UI
+    steps:
+    - uses: actions/download-artifact@v4
+      with: {name: wheels, path: dist}
+    - uses: actions/download-artifact@v4
+      with: {name: sdist,  path: dist}
+
+    - name: Publish to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        packages_dir: dist        # where wheels + sdist now live
