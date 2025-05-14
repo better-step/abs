@@ -9,7 +9,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "abs-hdf5"
-version = "0.1.0"
+version = "v0.1.0"
 description = "ABS geometry processing toolkit for CAD models."
 authors = [
   { name = "Sai Chandra Madduri, Nafiseh Izadyar, Teseo Schneider", email = "teseo@uvic.ca" }
