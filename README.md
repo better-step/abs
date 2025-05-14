@@ -1,93 +1,91 @@
 
 
-# Better Step
-[![image](https://img.shields.io/pypi/v/HDF5MeshSampler.svg)](https://pypi.python.org/pypi/HDF5MeshSampler)
-[![image](https://img.shields.io/conda/vn/conda-forge/HDF5MeshSampler.svg)](https://anaconda.org/conda-forge/HDF5MeshSampler)
+# ABS-HDF5 — Geometry processing & blue-noise sampling for HDF5 B-Rep data
+[![image](https://img.shields.io/pypi/v/HDF5MeshSampler.svg)](https://pypi.python.org/pypi/abs-hdf5)
+
 
 ## Description
-Better Step is an open‑source project that unlocks CAD data by converting proprietary STEP files into an open, HDF5‑based format. This approach enables efficient processing on large‑scale computing clusters—eliminating expensive per‑node licenses and opening up CAD data for research and industrial applications.
-## Key Features
-- **Modular Architecture**: The project is structured into distinct modules such as geometry, topology, and sampling, promoting maintainability and scalability.
-- **Advanced Geometric Entities**: Supports handling and manipulation of complex geometric shapes, curves, and surfaces.
-- **Sophisticated Sampling Techniques**: Implements various sampling methods, with a focus on Poisson disk sampling, tailored for mesh data.
-- **Topology Integration**: Seamlessly integrates geometric data with topological structures for comprehensive mesh analysis.
-- **HDF5 Data Handling**: Optimized for working with HDF5 file format, ensuring efficient storage and retrieval of large mesh datasets.
+ABS-CAD is a Python + C++ toolkit that turns the raw B-Rep information stored in
+**HDF5** CAD datasets into immediately useful geometry:
 
+* read **curves, surfaces, topology** into convenient Python objects
+* sample points on faces/edges with exact parametric control
+* perform fast **Poisson-disk (blue-noise) down-sampling** via a native
+  pybind11 C++ extension
+* export ready-to-visualise point clouds in **PLY** or analysis-ready
+  **Pickle** files
+---
 
-## Key Features
-
-- **Open Format:** Converts proprietary CAD files into an accessible HDF5 format.
-- **Comprehensive Representation:** Captures both geometry (curves, surfaces) and topology (solids, shells, faces, loops) of CAD models.
-- **Robust Sampling Methods:** Provides reliable methods for sampling points, computing normals, detecting sharp features, and generating point clouds for machine learning.
-- **Extensible API:** Designed to integrate seamlessly into Python workflows.
-- **Command‑Line Interface (CLI):** Supports batch processing and pipeline integration.
-
-## Installation
-
-### Prerequisites
-
-- **Python:** Version 3.7 or later.
-- **Dependencies:** HDF5 libraries (via the `h5py` package) and other dependencies listed in `requirements.txt`.
-
-### Via PyPI
-
-Install the package directly from PyPI using pip:
+## Quick install
 
 ```bash
-pip install hdf5_mesh_sampler
+pip install abs-hdf5        # pre-built wheels for CPython 3.8 – 3.12
 ```
 
-### From Source
+Building from source?  You need
 
-1. **Clone the Repository:**
+* Python 3.8 +
+* a C++17 compiler (GCC 9 / Clang 12 / MSVC 17.6 or newer)
+* CMake ≥ 3.22 and Ninja
 
-   ```bash
-   git clone https://github.com/yourusername/better-step.git
-   cd better-step
-   ```
+```bash
+pip install .  # inside a git checkout – scikit-build-core will compile abspy
+```
 
-2. **Install Dependencies:**
+---
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+## Command-line tools
 
-3. **Install the Package:**
+### `abs-to-ply`
 
-   ```bash
-   python setup.py install
-   ```
+Convert one file (or a directory of *.hdf5* files) to point-cloud PLY.
+
+```bash
+abs-to-ply data/Cone.hdf5   out/          -n 5000  -j 8
+# ^input file / dir          ^output dir   ^pts/part ^workers
+```
+
+Each face gets uniformly-random samples; Poisson-disk down-sampling keeps only
+*5000* nearly-evenly-spaced points per part.
+Normals are written alongside every vertex in ASCII PLY.
+
+### `abs-to-pickle`
+
+Same interface, but saves a per-part `*.pkl` with a dict:
+
+```python
+{'file': 'Cone.hdf5', 'part': 0, 'points': ndarray(N,3), 'normals': ndarray(N,3)}
+```
+
+Useful for machine-learning pipelines that prefer NumPy-pickles.
+
+---
+
+## Library use
+
+```python
+import abs                       # auto-loads the C++ extension `abspy`
+
+# Read every part stored in a single HDF5 file
+parts = abs.read_parts("data/Cylinder.hdf5")
+
+# How to extract 10 000 blue-noise samples on each part (with normals)
+def face_normals(part, topo, uv):
+    return topo.normal(uv) if topo.is_face() else None
+
+points_per_part, normals_per_part = abs.sample_parts(
+        parts, num_samples=10_000, lambda_func=face_normals)
+
+# Poisson-disk down-sample an arbitrary XYZ array to 1 000 pts
+idx = abs.poisson_disk_downsample(points_per_part[0], 1000)
+sub_pts = points_per_part[0][idx]
+```
+
+See the doc-strings in `abs.part_processor`, `abs.sampler`, and
+`abs.shape.Shape` for the full low-level API.
 
 > **Tip:** It is recommended to use a virtual environment for isolated installations.
 
-## Usage
-
-Better Step provides both a Python API and a command‑line interface for processing CAD data.
-
-### Python API Example
-
-Load a CAD model and sample its geometry:
-
-```python
-from hdf5_mesh_sampler import Shape_archive
-from hdf5_mesh_sampler.sampling import surface_sampler
-
-# Load an HDF5 file containing CAD data
-shape = Shape_archive.load("data/sample_hdf5/Box.hdf5")
-print("Loaded shape:", shape)
-
-# Sample the surface with a specified resolution
-samples = surface_sampler.sample(shape, resolution=0.1)
-print("Sampled points:", samples)
-```
-
-### Command‑Line Interface
-
-Process files in batch mode using the CLI:
-
-```bash
-python -m hdf5_mesh_sampler.cli --input data/sample_hdf5/Box.hdf5 --output output_directory
-```
 
 For more usage details, please refer to the Usage page in our documentation.
 
@@ -112,8 +110,10 @@ Contributions are welcome! Please follow these guidelines:
 2. **Clone Your Fork Locally:**
 
    ```bash
-   git clone https://github.com/yourusername/better-step.git
-   cd better-step
+   git clone https://github.com/better-step/abs.git
+   cd abs
+   python -m pip install -e .
+   pytest
    ```
 
 3. **Create a Branch:**
@@ -147,3 +147,7 @@ Contributions are welcome! Please follow these guidelines:
 ## Acknowledgments
 
 Better Step is developed and maintained by a dedicated team. For a complete list of contributors, please see the Authors page.
+
+---
+
+*Happy sampling!*  – The Better Step maintainers
