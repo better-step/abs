@@ -1,3 +1,4 @@
+# .github/workflows/release.yml
 name: Build & publish
 
 on:
@@ -5,59 +6,89 @@ on:
     tags: ["v[0-9]+.[0-9]+.[0-9]+*"]
 
 jobs:
+  # --------------------------------------------------------------------------
+  # Build binary wheels for Linux, macOS (universal2) and Windows
+  # --------------------------------------------------------------------------
   build:
     runs-on: ${{ matrix.os }}
     strategy:
-      # build Linux, macOS (universal2) and Windows wheels
       matrix:
         os: [ubuntu-22.04, macos-14, windows-2022]
 
     steps:
-    - uses: actions/checkout@v4
+      # make the full git history (incl. tags) available to versioning tools
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    # ---------- Build the wheels ----------
-    - name: Build wheel(s) with cibuildwheel
-      uses: pypa/cibuildwheel@v2
-      env:
-        CIBW_BUILD: "cp39-* cp310-* cp311-*"
-        CIBW_ARCHS_LINUX: "x86_64 aarch64"   # manylinux for both arches
-    - uses: actions/upload-artifact@v4
-      with:
-        name: wheels
-        path: wheelhouse/*.whl
+      - name: Build wheel(s) with cibuildwheel
+        uses: pypa/cibuildwheel@2.x        # or pin a tag, e.g. v2.19.0
+        env:
+          CIBW_BUILD: "cp39-* cp310-* cp311-*"
+          CIBW_ARCHS_LINUX: "x86_64 aarch64"
 
-  # ---------- Build the sdist once (Linux is enough) ----------
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels
+          path: wheelhouse/                # keep whole folder; easier to move later
+
+  # --------------------------------------------------------------------------
+  # Build the sdist once (Linux is enough)
+  # --------------------------------------------------------------------------
   sdist:
     needs: build
     runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-python@v5
-      with: {python-version: "3.11"}
-    - run: pip install build
-    - run: python -m build --sdist
-    - uses: actions/upload-artifact@v4
-      with:
-        name: sdist
-        path: dist/*.tar.gz
 
-  # ---------- Publish everything ----------
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install build
+      - run: python -m build --sdist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+
+  # --------------------------------------------------------------------------
+  # Publish wheels + sdist to PyPI (trusted publishing via OIDC)
+  # --------------------------------------------------------------------------
   publish:
     needs: [build, sdist]
     runs-on: ubuntu-latest
-    # the permissions block is what PyPI checks!
-    permissions:
-      id-token: write           # OIDC token for trusted publishing
-    environment:
-      name: pypi                # optional hardening
-      url: https://pypi.org/p/abs-hdf5   # link shown in Actions UI
-    steps:
-    - uses: actions/download-artifact@v4
-      with: {name: wheels, path: dist}
-    - uses: actions/download-artifact@v4
-      with: {name: sdist,  path: dist}
 
-    - name: Publish to PyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        packages_dir: dist        # where wheels + sdist now live
+    # PyPI checks the OIDC token permissions:
+    permissions:
+      id-token: write
+
+    environment:
+      name: pypi                      # delete this block if you don’t use env-protection
+      url: https://pypi.org/p/abs-hdf5
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: wheels
+          path: dist
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: sdist
+          path: dist
+
+      # flatten dist/wheelhouse → dist/  (gh-action-pypi-publish is not recursive)
+      - name: Move wheels to dist root
+        run: |
+          mv dist/wheelhouse/* dist/
+          rmdir dist/wheelhouse
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages_dir: dist
