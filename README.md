@@ -215,10 +215,4 @@ pytest -q
 Please review the Code of Conduct and open an issue before submitting larger changes.
 
 ---
-
-*Happy converting & sampling!*
-
-
----
-
-*Happy sampling!*  – The Better Step maintainers
+*Happy converting & sampling!*  – The Better Step maintainers
