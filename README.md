@@ -30,7 +30,7 @@ This README will cover the installation of both tools, then walk through the con
 Since **steptohdf5** is not yet on PyPI or Conda, the easiest way to use it is through its Docker image (which comes with all required dependencies, such as OpenCASCADE). Ensure you have Docker installed, then pull the steptohdf5 image from the registry:
 
 ```bash
-docker pull itsmechandu/steptohdf5:0.1.1
+docker pull itsmechandu/steptohdf5:latest
 ```
 
 
@@ -60,8 +60,16 @@ Run the Docker container with your input and output folders bind-mounted:
 docker run --rm \
   -v /path/to/cad_workspace:/workspace \
   -w /workspace \
-  itsmechandu/steptohdf5:0.1.1 \
+  itsmechandu/steptohdf5:latest \
   steptohdf5 <input.step> -o hdf5 -l logs
+
+docker run --rm \
+  -v /path/to/cad_workspace:/workspace \
+  -w /workspace \
+  itsmechandu/steptohdf5:latest \
+  <input.step> \
+  -o output \
+  -l logs
 ```
 
 - `<input.step>`: Path inside `/workspace`, e.g., `cad_files/Model.step`.  
@@ -77,7 +85,7 @@ cd ~/cad_jobs
 docker run --rm \
   -v "$PWD":/workspace \
   -w /workspace \
-  itsmechandu/steptohdf5:0.1.1 \
+  itsmechandu/steptohdf5:latest \
   steptohdf5 cad_files/MyModel.step -o hdf5 -l logs
 
 ```
@@ -95,7 +103,7 @@ ls cad_files/*.step > cad_files/list.txt
 docker run --rm \
   -v "$PWD":/workspace \
   -w /workspace \
-  itsmechandu/steptohdf5:0.1.1 \
+  itsmechandu/steptohdf5:latest \
   steptohdf5 --list cad_files/list.txt -o hdf5 -l logs -j 4
 
 ```
