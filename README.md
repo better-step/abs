@@ -170,8 +170,8 @@ success, failed = process_step_files(
 from  abs import read_parts, sample_parts
 
 # Sample points + normals
-def compute_labels 126 (part , topo , points ):
-  if topo . is_face (): return 1
+def compute_labels(part, topo, points ):
+  if topo.is_face(): return 1
   else : return 0
 
 # Read parts from HDF5
