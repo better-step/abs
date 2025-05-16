@@ -156,7 +156,6 @@ Generates `.pkl` files containing Python dicts:
 #### steptohdf5 Python API (cadmesh)
 
 ```python
-from steptohdf5 import convert_step
 from steptohdf5.utils.processing import process_step_files
 
 success, failed = process_step_files(
