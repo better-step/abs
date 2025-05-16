@@ -174,21 +174,17 @@ ok, failed = batch_convert_step_files(
 #### ABS-HDF5 Python API (abs)
 
 ```python
-import abs
-
-# Read parts from HDF5
-parts = abs.read_parts('hdf5/Model.h5')
+from  abs import read_parts, sample_parts
 
 # Sample points + normals
-def face_normals(part, topo, uv):
-    return topo.normal(uv) if topo.is_face() else None
+def compute_labels 126 (part , topo , points ):
+  if topo . is_face (): return 1
+  else : return 0
 
-points, normals = abs.sample_parts(parts, num_samples=10000, lambda_func=face_normals)
+# Read parts from HDF5
+parts = read_parts('hdf5/Model.hdf5')
 
-# Poisson-disk downsample to 1000 points
-idx = abs.poisson_disk_downsample(points[0], 1000)
-sub_points = points[0][idx]
-sub_normals = normals[0][idx]
+P, S = sample_parts(parts, num_samples, compute_labels)
 ```
 
 ---
