@@ -142,7 +142,7 @@ abs-to-pickle hdf5/ pickles -n 5000 -j 4
 Generates `.pkl` files containing Python dicts:
 ```python
 {
-  'file': 'MyModel.h5',
+  'file': 'MyModel.hdf5',
   'part': 1,
   'points': ndarray(N,3),
   'normals': ndarray(N,3)
@@ -156,19 +156,13 @@ Generates `.pkl` files containing Python dicts:
 #### steptohdf5 Python API (cadmesh)
 
 ```python
-from cadmesh import convert_step
-from cadmesh.utils.processing import batch_convert_step_files
+from steptohdf5 import convert_step
+from steptohdf5.utils.processing import process_step_files
 
-# Single conversion
-h5 = convert_step('cad_files/Model.step', output_dir='hdf5', log_dir='logs')
-
-# Batch conversion
-ok, failed = batch_convert_step_files(
-    input_list_path='cad_files/list.txt',
-    output_dir='hdf5',
-    log_dir='logs',
-    n_jobs=4
-)
+success, failed = process_step_files(
+    input='cad_files/list.txt,
+    output='/hdf5',
+    log='/log')
 ```
 
 #### ABS-HDF5 Python API (abs)
