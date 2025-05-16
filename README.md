@@ -159,7 +159,7 @@ Generates `.pkl` files containing Python dicts:
 from steptohdf5.utils.processing import process_step_files
 
 success, failed = process_step_files(
-    input='cad_files/list.txt,
+    input='cad_files/list.txt',
     output='/hdf5',
     log='/log')
 ```
