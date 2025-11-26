@@ -122,3 +122,4 @@ abs/CMakeCache.txt
 *_install.cmake
 *-lock.cmake
 Makefile
+bin*
