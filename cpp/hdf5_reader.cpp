@@ -484,7 +484,7 @@ void read_surface(const h5pp::File &file,
 
 void read_parts(const std::string &path, std::vector<Part> &part_list)
 {
-	h5pp::File hdf5(path, h5pp::FileAccess::READONLY);
+	h5pp::File hdf5(path, h5pp::FileAccess::READONLY, 6);
 
 	auto parts = hdf5.findGroups("part_", "parts", -1, 0);
 
@@ -585,7 +585,14 @@ void read_parts(const std::string &path, std::vector<Part> &part_list)
 					const std::string edge_path = "parts/" + part + "/topology/halfedges/" + e;
 					current_part.half_edges[edge_id].curve_id = hdf5.readDataset<int64_t>(edge_path + "/2dcurve");
 					current_part.half_edges[edge_id].edge = hdf5.readDataset<int64_t>(edge_path + "/edge");
-					current_part.half_edges[edge_id].mates = hdf5.readDataset<std::vector<int64_t>>(edge_path + "/mates");
+					try
+					{
+						current_part.half_edges[edge_id].mates = hdf5.readDataset<std::vector<int64_t>>(edge_path + "/mates");
+					}
+					catch (std::runtime_error &)
+					{
+						current_part.half_edges[edge_id].mates = {};
+					}
 					current_part.half_edges[edge_id].orientation = hdf5.readDataset<bool>(edge_path + "/orientation_wrt_edge");
 				}
 			}
