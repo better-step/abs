@@ -19,18 +19,21 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 # library
 ################################################################################
 
-# # dependencies
-# find_package(pybind11 CONFIG REQUIRED)
-# include(eigen)
-
+# dependencies
+find_package(pybind11 CONFIG REQUIRED)
+include(eigen)
+include(hdf5)
+include(h5pp)
+include(nanospline)
 
 # ################################################################################
 # # Subdirectories
 # ################################################################################
-# pybind11_add_module(abspy cpp/poisson_disk_downsample.cpp)
-# target_link_libraries(abspy PRIVATE pybind11::module Eigen3::Eigen)
-# #install(TARGETS abspy DESTINATION .)
-# install(TARGETS abspy LIBRARY DESTINATION .)
+pybind11_add_module(abspy cpp/poisson_disk_downsample.cpp cpp/hdf5_reader.cpp)
+target_link_libraries(abspy PRIVATE pybind11::module Eigen3::Eigen hdf5::hdf5 h5pp::h5pp nanospline::nanospline)
+target_include_directories(abspy PRIVATE cpp)
+#install(TARGETS abspy DESTINATION .)
+install(TARGETS abspy LIBRARY DESTINATION .)
 
 
 
@@ -46,16 +49,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 
 # h5pp + HDF5 library
-add_executable(hdf5_reader cpp/hdf5_reader.cpp)
-include(hdf5)
-target_link_libraries(hdf5_reader PUBLIC hdf5::hdf5)
 
-include(h5pp)
-target_link_libraries(hdf5_reader PUBLIC h5pp::h5pp)
-
-
-include(nanospline)
-target_link_libraries(hdf5_reader PUBLIC nanospline::nanospline)
 
 
 

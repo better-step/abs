@@ -1,5 +1,7 @@
 #include <cstdlib>
 
+#include "hdf5_reader.hpp"
+
 #include <h5pp/h5pp.h>
 
 #include <nanospline/BSpline.h>
@@ -22,11 +24,14 @@
 template <int N>
 void read_curve(const h5pp::File &file,
 				const std::string &curve_path,
-				std::vector<std::pair<std::shared_ptr<nanospline::CurveBase<double, N>>, Eigen::Matrix<double, 3, 4, Eigen::RowMajor>>> &ret_curves,
+				std::vector<CurveND<N>> &ret_curves,
 				int curve_id)
 {
 	std::array<double, 2> interval = file.readDataset<std::array<double, 2>>(curve_path + "/interval");
-	Eigen::Matrix<double, 3, 4, Eigen::RowMajor> &transform = ret_curves[curve_id].second;
+	ret_curves[curve_id].interval(0) = interval[0];
+	ret_curves[curve_id].interval(1) = interval[1];
+
+	Eigen::Matrix<double, 3, 4, Eigen::RowMajor> &transform = ret_curves[curve_id].transform;
 	if (!file.linkExists(curve_path + "/transform"))
 	{
 		transform.setZero();
@@ -40,6 +45,7 @@ void read_curve(const h5pp::File &file,
 		transform = Eigen::Matrix<double, 3, 4, Eigen::RowMajor>::Map(transform_vec.data());
 	}
 	std::string type = file.readDataset<std::string>(curve_path + "/type");
+	ret_curves[curve_id].type = type;
 
 	if (type == "Circle")
 	{
@@ -61,7 +67,7 @@ void read_curve(const h5pp::File &file,
 		curve->set_domain_lower_bound(interval[0]);
 		curve->set_domain_upper_bound(interval[1]);
 		curve->initialize();
-		ret_curves[curve_id].first = curve;
+		ret_curves[curve_id].curve = curve;
 	}
 	else if (type == "Line")
 	{
@@ -76,7 +82,7 @@ void read_curve(const h5pp::File &file,
 		curve->set_location(start);
 		curve->set_direction(dir);
 		curve->initialize();
-		ret_curves[curve_id].first = curve;
+		ret_curves[curve_id].curve = curve;
 	}
 	else if (type == "BSpline")
 	{
@@ -96,7 +102,7 @@ void read_curve(const h5pp::File &file,
 			curve->set_control_points(control_points);
 			curve->set_knots(knots);
 			curve->initialize();
-			ret_curves[curve_id].first = curve;
+			ret_curves[curve_id].curve = curve;
 		}
 		else
 		{
@@ -104,7 +110,7 @@ void read_curve(const h5pp::File &file,
 			curve->set_control_points(control_points);
 			curve->set_knots(knots);
 			curve->initialize();
-			ret_curves[curve_id].first = curve;
+			ret_curves[curve_id].curve = curve;
 		}
 	}
 	else if (type == "Ellipse")
@@ -132,11 +138,11 @@ void read_curve(const h5pp::File &file,
 		curve->set_domain_lower_bound(interval[0]);
 		curve->set_domain_upper_bound(interval[1]);
 		curve->initialize();
-		ret_curves[curve_id].first = curve;
+		ret_curves[curve_id].curve = curve;
 	}
 	else if (type == "Other")
 	{
-		ret_curves[curve_id].first = nullptr;
+		ret_curves[curve_id].curve = nullptr;
 	}
 	else
 	{
@@ -146,10 +152,10 @@ void read_curve(const h5pp::File &file,
 
 void read_surface(const h5pp::File &file,
 				  const std::string &surface_path,
-				  std::vector<std::pair<std::shared_ptr<nanospline::PatchBase<double, 3>>, Eigen::Matrix<double, 3, 4, Eigen::RowMajor>>> &ret_patches,
+				  std::vector<Patch> &ret_patches,
 				  int patch_id)
 {
-	Eigen::Matrix<double, 3, 4, Eigen::RowMajor> &transform = ret_patches[patch_id].second;
+	Eigen::Matrix<double, 3, 4, Eigen::RowMajor> &transform = ret_patches[patch_id].transform;
 	if (!file.linkExists(surface_path + "/transform"))
 	{
 		transform.setZero();
@@ -163,8 +169,13 @@ void read_surface(const h5pp::File &file,
 		transform = Eigen::Matrix<double, 3, 4, Eigen::RowMajor>::Map(transform_vec.data());
 	}
 	std::string type = file.readDataset<std::string>(surface_path + "/type");
+	ret_patches[patch_id].type = type;
 
 	std::array<double, 4> trimmed_domain = file.readDataset<std::array<double, 4>>(surface_path + "/trim_domain");
+	ret_patches[patch_id].domain(0, 0) = trimmed_domain[0];
+	ret_patches[patch_id].domain(0, 1) = trimmed_domain[1];
+	ret_patches[patch_id].domain(1, 0) = trimmed_domain[2];
+	ret_patches[patch_id].domain(1, 1) = trimmed_domain[3];
 
 	if (type == "Plane")
 	{
@@ -186,7 +197,7 @@ void read_surface(const h5pp::File &file,
 		patch->set_v_lower_bound(trimmed_domain[2]);
 		patch->set_v_upper_bound(trimmed_domain[3]);
 		patch->initialize();
-		ret_patches[patch_id].first = patch;
+		ret_patches[patch_id].patch = patch;
 	}
 	else if (type == "BSpline")
 	{
@@ -243,7 +254,7 @@ void read_surface(const h5pp::File &file,
 			// patch->set_v_upper_bound(trimmed_domain[3]);
 			patch->set_weights(weights_matrix);
 			patch->initialize();
-			ret_patches[patch_id].first = patch;
+			ret_patches[patch_id].patch = patch;
 		}
 		else
 		{
@@ -260,7 +271,7 @@ void read_surface(const h5pp::File &file,
 			patch->set_periodic_u(u_periodic);
 			patch->set_periodic_v(v_periodic);
 			patch->initialize();
-			ret_patches[patch_id].first = patch;
+			ret_patches[patch_id].patch = patch;
 		}
 	}
 	else if (type == "Torus")
@@ -303,7 +314,7 @@ void read_surface(const h5pp::File &file,
 		// } else {
 		//   torus.set_periodic_v(false);
 		// }
-		ret_patches[patch_id].first = patch;
+		ret_patches[patch_id].patch = patch;
 	}
 	else if (type == "Cylinder")
 	{
@@ -341,7 +352,7 @@ void read_surface(const h5pp::File &file,
 		//   cylinder.set_periodic_u(false);
 		// }
 		// cylinder.set_periodic_v(false);
-		ret_patches[patch_id].first = patch;
+		ret_patches[patch_id].patch = patch;
 	}
 	else if (type == "Cone")
 	{
@@ -380,7 +391,7 @@ void read_surface(const h5pp::File &file,
 		// }
 		// patch->set_periodic_v(false);
 
-		ret_patches[patch_id].first = patch;
+		ret_patches[patch_id].patch = patch;
 	}
 	else if (type == "Sphere")
 	{
@@ -415,7 +426,7 @@ void read_surface(const h5pp::File &file,
 		//   patch->set_periodic_u(false);
 		// }
 		// patch->set_periodic_v(false);
-		ret_patches[patch_id].first = patch;
+		ret_patches[patch_id].patch = patch;
 	}
 	else if (type == "Revolution")
 	{
@@ -471,88 +482,11 @@ void read_surface(const h5pp::File &file,
 	}
 }
 
-using Mesh = std::pair<Eigen::Matrix<double, Eigen::Dynamic, 3>, Eigen::Matrix<int64_t, Eigen::Dynamic, 3>>;
-
-class Edge
+void read_parts(const std::string &path, std::vector<Part> &part_list)
 {
-public:
-	int64_t start_vertex;
-	int64_t end_vertex;
-	int64_t curve_id;
-};
-
-class Face
-{
-public:
-	std::array<double, 4> exact_domain;
-	bool has_singularities;
-	std::vector<int64_t> loops;
-	int64_t nr_singularities;
-	int64_t outer_loop;
-	int64_t surface;
-	bool surface_orientation;
-	// TODO add singularities
-};
-
-class HalfEdge
-{
-public:
-	int64_t curve_id;
-	int64_t edge;
-	std::vector<int64_t> mates;
-	bool orientation;
-};
-
-class Loop
-{
-public:
-	std::vector<int64_t> half_edges;
-};
-
-class Shell
-{
-public:
-	std::vector<int64_t> faces;
-	bool orientation;
-};
-
-class Solid
-{
-public:
-	std::vector<int64_t> shells;
-};
-
-class Part
-{
-public:
-	Eigen::Matrix<double, Eigen::Dynamic, 3> vertices;
-	std::vector<Mesh> meshes;
-	Eigen::Matrix<double, 2, 3> bbox;
-
-	std::vector<std::pair<std::shared_ptr<nanospline::CurveBase<double, 2>>, Eigen::Matrix<double, 3, 4, Eigen::RowMajor>>> curves2d;
-	std::vector<std::pair<std::shared_ptr<nanospline::CurveBase<double, 3>>, Eigen::Matrix<double, 3, 4, Eigen::RowMajor>>> curves3d;
-	std::vector<std::pair<std::shared_ptr<nanospline::PatchBase<double, 3>>, Eigen::Matrix<double, 3, 4, Eigen::RowMajor>>> surfaces;
-
-	std::vector<Edge> edges;
-	std::vector<Face> faces;
-	std::vector<HalfEdge> half_edges;
-	std::vector<Loop> loops;
-	std::vector<Shell> shells;
-	std::vector<Solid> solids;
-};
-
-int main(int argc, char **argv)
-{
-	if (argc < 2)
-	{
-		return EXIT_FAILURE;
-	}
-	const std::string path = argv[1];
 	h5pp::File hdf5(path, h5pp::FileAccess::READONLY);
 
 	auto parts = hdf5.findGroups("part_", "parts", -1, 0);
-
-	std::vector<Part> part_list;
 
 	for (const auto &part : parts)
 	{
@@ -691,6 +625,4 @@ int main(int argc, char **argv)
 			}
 		}
 	}
-
-	return EXIT_SUCCESS;
 }
