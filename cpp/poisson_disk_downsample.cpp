@@ -460,7 +460,7 @@ class BSpline
 public:
 	using Vect1 = Eigen::Matrix<double, Eigen::Dynamic, 1>;
 	using Vect2 = Eigen::Matrix<double, Eigen::Dynamic, 2>;
-	using Vect3 = Eigen::Matrix<double, Eigen::Dynamic, 3, 0>;
+	using Vect3 = Eigen::Matrix<double, Eigen::Dynamic, 3>;
 
 	BSpline(int degree_u, int degree_v,
 			bool u_rational, bool v_rational,
@@ -473,10 +473,10 @@ public:
 		{
 			if (degree_u == 3 || degree_v == 3)
 			{
-				auto patch = std::make_shared<nanospline::NURBSPatch<double, 3, 3, 3>>();
+				auto patch = std::make_unique<nanospline::NURBSPatch<double, 3, 3, 3>>();
 				patch->set_knots_u(u_knots);
 				patch->set_knots_v(v_knots);
-				patch->swap_control_grid(grid);
+				patch->set_control_grid(grid);
 				patch->set_periodic_u(u_periodic);
 				patch->set_periodic_v(v_periodic);
 				patch->set_degree_u(degree_u);
@@ -484,14 +484,14 @@ public:
 				patch->set_weights(weights);
 				patch->initialize();
 
-				this->patch = patch;
+				this->patch = std::move(patch);
 			}
 			else
 			{
-				auto patch = std::make_shared<nanospline::NURBSPatch<double, 3, -1, -1>>();
+				auto patch = std::make_unique<nanospline::NURBSPatch<double, 3, -1, -1>>();
 				patch->set_knots_u(u_knots);
 				patch->set_knots_v(v_knots);
-				patch->swap_control_grid(grid);
+				patch->set_control_grid(grid);
 				patch->set_periodic_u(u_periodic);
 				patch->set_periodic_v(v_periodic);
 				patch->set_degree_u(degree_u);
@@ -499,38 +499,38 @@ public:
 				patch->set_weights(weights);
 				patch->initialize();
 
-				this->patch = patch;
+				this->patch = std::move(patch);
 			}
 		}
 		else
 		{
 			if (degree_u == 3 || degree_v == 3)
 			{
-				auto patch = std::make_shared<nanospline::BSplinePatch<double, 3, 3, 3>>();
+				auto patch = std::make_unique<nanospline::BSplinePatch<double, 3, 3, 3>>();
 				patch->set_degree_u(degree_u);
 				patch->set_degree_v(degree_v);
 				patch->set_knots_u(u_knots);
 				patch->set_knots_v(v_knots);
-				patch->swap_control_grid(grid);
+				patch->set_control_grid(grid);
 				patch->set_periodic_u(u_periodic);
 				patch->set_periodic_v(v_periodic);
 				patch->initialize();
 
-				this->patch = patch;
+				this->patch = std::move(patch);
 			}
 			else
 			{
-				auto patch = std::make_shared<nanospline::BSplinePatch<double, 3, -1, -1>>();
+				auto patch = std::make_unique<nanospline::BSplinePatch<double, 3, -1, -1>>();
 				patch->set_degree_u(degree_u);
 				patch->set_degree_v(degree_v);
 				patch->set_knots_u(u_knots);
 				patch->set_knots_v(v_knots);
-				patch->swap_control_grid(grid);
+				patch->set_control_grid(grid);
 				patch->set_periodic_u(u_periodic);
 				patch->set_periodic_v(v_periodic);
 				patch->initialize();
 
-				this->patch = patch;
+				this->patch = std::move(patch);
 			}
 		}
 	}
@@ -573,7 +573,7 @@ public:
 	}
 
 private:
-	std::shared_ptr<nanospline::PatchBase<double, 3>> patch;
+	std::unique_ptr<nanospline::PatchBase<double, 3>> patch;
 };
 
 PYBIND11_MODULE(abspy, m)
