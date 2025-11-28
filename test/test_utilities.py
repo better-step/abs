@@ -1,6 +1,7 @@
 import numpy as np
 from abs.curve import *
 from abs.surface import *
+from abs import BSpline
 import os
 from pathlib import Path
 
@@ -330,6 +331,25 @@ def bspline_surface():
         "v_periodic": False
     }
 
+    u_knots = np.array([data["u_knots"]]).T
+    v_knots = np.array([data["v_knots"]]).T
+    weights = np.array([data["weights"]]).T
+    weights = weights.reshape(-1, 1)
+    grid = np.array(data["poles"]).reshape(-1, 3)
+
+    fast_spline = BSpline(
+        degree_u=data["u_degree"],
+        degree_v=data["v_degree"],
+        u_rational=data["u_rational"],
+        v_rational=data["v_rational"],
+        u_knots=u_knots,
+        v_knots=v_knots,
+        grid=grid,
+        weights=weights,
+        u_periodic=data["u_periodic"],
+        v_periodic=data["v_periodic"]
+    )
+
     data = H5Group(data)
-    return BSplineSurface(data)
+    return BSplineSurface(data), fast_spline
 

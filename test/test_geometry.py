@@ -495,7 +495,7 @@ class TestGeometry(unittest.TestCase):
         self.assertTrue(d2v < 1e-6)
 
     def test_bspline_surface(self):
-        shape = bspline_surface()
+        shape, fast = bspline_surface()
 
         self.assertEqual(type(shape.continuity), int)
         self.assertEqual(shape.face_domain.shape, (1, 4))
@@ -520,12 +520,20 @@ class TestGeometry(unittest.TestCase):
         sample_points = np.column_stack((gridX, gridY)).reshape(-1, 2)
         self.assertEqual(shape.sample(sample_points).shape, (gridX.shape[0] * gridX.shape[1], 3))
 
+        print(shape.sample(sample_points) - fast.sample(sample_points))
+        # self.assertTrue(np.allclose(shape.sample(sample_points), fast.sample(sample_points)))
+
         # derivative
         du, dv, d2u, d2v = surface_derivative(shape, sample_points)
         self.assertTrue(du < 1e-6)
         self.assertTrue(dv < 1e-6)
         self.assertTrue(d2u < 1e-6)
         self.assertTrue(d2v < 1e-6)
+
+        fdu, fdv = fast.first_derivative(sample_points)
+        fduu, fdvv, fduv = fast.second_derivative(sample_points)
+
+        # test secnd deriv
 
 
 
