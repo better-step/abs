@@ -135,19 +135,89 @@ class Shape:
             self.__init_topology(topology_data)
 
         def __init_topology(self, data):
+            edge_index = data.get('edge_index', {})
+            edge_data = data.get('edges', {})
 
-            entity_map = {
-                'edges': (self.edges, _get_edges),
-                'faces': (self.faces, _get_faces),
-                'halfedges': (self.halfedges, _get_halfedges),
-                'loops': (self.loops, _get_loops),
-                'shells': (self.shells, Shell),
-                'solids': (self.solids, TopoSolid)
-            }
+            for i in range(len(edge_index)-1):
+                tmp = edge_data[edge_index[i]:edge_index[i+1]]
+                local_edge = {'id': i, '3dcurve': tmp[0], 'start_vertex': tmp[1], 'end_vertex': tmp[2]}
+                self.edges.append(Edge(local_edge))
 
-            for entity, (attr_list, constructor) in entity_map.items():
-                entity_data = Topology._get_topo_data(data, entity)
-                attr_list.extend(constructor(item) for item in entity_data)
+            halfedge_index = data.get('halfedge_index', {})
+            halfedge_data = data.get('halfedges', {})
+
+            for i in range(len(halfedge_index)-1):
+                tmp = halfedge_data[halfedge_index[i]:halfedge_index[i+1]]
+                mates = tmp[3:] if len(tmp) > 3 else []
+                local_halfedge = {'id': i, '2dcurve': tmp[0], 'edge': tmp[1], 'orientation_wrt_edge': bool(tmp[2]), 'mates': mates}
+                self.halfedges.append(Halfedge(local_halfedge))
+
+            loop_index = data.get('loop_index', {})
+            loop_data = data.get('loops', {})
+
+            for i in range(len(loop_index)-1):
+                tmp = loop_data[loop_index[i]:loop_index[i+1]]
+                local_loop = {'id': i, 'halfedges': tmp}
+                self.loops.append(Loop(local_loop))
+
+            shell_index = data.get('shell_index', {})
+            shell_data = data.get('shells', {})
+
+            for i in range(len(shell_index)-1):
+                tmp = shell_data[shell_index[i]:shell_index[i+1]]
+                faces = []
+                for j in range(1, len(tmp)-1, 2):
+                    faces.append( (tmp[j], bool(tmp[j+1])) )
+                local_shell = {'id': i, 'orientation_wrt_solid': tmp[0], 'faces': faces}
+                self.shells.append(Shell(local_shell))
+
+            solid_index = data.get('solid_index', {})
+            solid_data = data.get('solids', {})
+
+            for i in range(len(solid_index)-1):
+                tmp = solid_data[solid_index[i]:solid_index[i+1]]
+                local_solid = {'id': i, 'shells': tmp}
+                self.solids.append(TopoSolid(local_solid))
+
+            face_index = data.get('face_index', {})
+            face_data = data.get('faces', {})
+
+            for i in range(len(face_index)-1):
+                tmp = face_data[face_index[i]:face_index[i+1]]
+
+                exact_domain = tmp[:4]
+                has_singularities = bool(tmp[4])
+                nr_singularities = tmp[5]
+                # singularities = tmp[6:6+nr_singularities]
+                outer_loop = tmp[6]
+                surface = tmp[7]
+                surface_orientation = bool(tmp[8])
+                loops = np.array(tmp[9:]).astype(np.int64)
+
+
+                local_face = {'id': i,
+                                'exact_domain': exact_domain,
+                                'has_singularities': has_singularities,
+                                'nr_singularities': nr_singularities,
+                                'outer_loop': outer_loop,
+                              'surface': surface,
+                              'singularities': [],
+                              'surface_orientation': surface_orientation,
+                              'loops': loops}
+                self.faces.append(Face(local_face))
+
+            # entity_map = {
+            #     'edges': (self.edges, _get_edges),
+            #     'faces': (self.faces, _get_faces),
+            #     'halfedges': (self.halfedges, _get_halfedges),
+            #     'loops': (self.loops, _get_loops),
+            #     'shells': (self.shells, Shell),
+            #     'solids': (self.solids, TopoSolid)
+            # }
+
+            # for entity, (attr_list, constructor) in entity_map.items():
+            #     entity_data = Topology._get_topo_data(data, entity)
+            #     attr_list.extend(constructor(item) for item in entity_data)
 
 
     class Solid:
