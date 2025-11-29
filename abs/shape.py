@@ -8,7 +8,7 @@ from .curve import create_curve
 from .surface import create_surface
 from .winding_number import find_surface_uv_for_curve
 import numpy as np
-from joblib import Parallel, delayed
+# from joblib import Parallel, delayed
 
 
 
@@ -113,7 +113,7 @@ class Shape:
                 curve2d_data = data.get('2dcurves', {})[()]
                 self.curves2d = [None] * (len(curve2d_index)-1)
 
-                def process_curve2d(i):
+                for i in range(len(curve2d_index)-1):
                     tmp = curve2d_data[curve2d_index[i]:curve2d_index[i+1]]
                     ctype = int(tmp[0])
                     interval = tmp[1:3]
@@ -178,13 +178,13 @@ class Shape:
 
                     self.curves2d[i] = create_curve(curve_data, False)[1]
                 # Parallel(n_jobs=-1, backend="threading")(delayed(process_curve2d)(i) for i in range(len(curve2d_index)-1))
-                for i in range(len(curve2d_index)-1):
-                    process_curve2d(i)
+                # for i in range(len(curve2d_index)-1):
+                #     process_curve2d(i)
 
                 curve3d_index = data.get('3dcurves_index', {})[()]
                 curve3d_data = data.get('3dcurves', {})[()]
                 self.curves3d = [None] * (len(curve3d_index)-1)
-                def process_curve3d(i):
+                for i in range(len(curve3d_index)-1):
                     tmp = curve3d_data[curve3d_index[i]:curve3d_index[i+1]]
                     ctype = int(tmp[0])
                     interval = tmp[1:3]
@@ -253,8 +253,8 @@ class Shape:
 
                     self.curves3d[i] = create_curve(curve_data, False)[1]
                 # Parallel(n_jobs=-1, backend="threading")(delayed(process_curve3d)(i) for i in range(len(curve3d_index)-1))
-                for i in range(len(curve3d_index)-1):
-                    process_curve3d(i)
+                # for i in range(len(curve3d_index)-1):
+                #     process_curve3d(i)
 
                 # TODO
                 tmp = data.get('surfaces', {}).values()
@@ -298,67 +298,64 @@ class Shape:
                 edge_data = data.get('edges', {})[()]
                 self.edges = [None] * (len(edge_index)-1)
 
-                def process_edge(i):
+                for i in range(len(edge_index)-1):
                     tmp = edge_data[edge_index[i]:edge_index[i+1]]
                     local_edge = {'id': i, '3dcurve': tmp[0], 'start_vertex': tmp[1], 'end_vertex': tmp[2]}
                     self.edges[i] = Edge(local_edge)
-                Parallel(n_jobs=-1, backend="threading")(delayed(process_edge)(i) for i in range(len(edge_index)-1))
-
+                # Parallel(n_jobs=-1, backend="threading")(delayed(process_edge)(i) for i in range(len(edge_index)-1))
 
                 # Halfedges
                 halfedge_index = data.get('halfedge_index', {})[()]
                 halfedge_data = data.get('halfedges', {})[()]
                 self.halfedges = [None]* (len(halfedge_index)-1)
 
-                def process_halfedge(i):
+                for i in range(len(halfedge_index)-1):
                     tmp = halfedge_data[halfedge_index[i]:halfedge_index[i+1]]
                     mates = tmp[3:] if len(tmp) > 3 else []
                     local_halfedge = {'id': i, '2dcurve': tmp[0], 'edge': tmp[1], 'orientation_wrt_edge': bool(tmp[2]), 'mates': mates}
                     self.halfedges[i] = Halfedge(local_halfedge)
-                Parallel(n_jobs=-1, backend="threading")(delayed(process_halfedge)(i) for i in range(len(halfedge_index)-1))
+                # Parallel(n_jobs=-1, backend="threading")(delayed(process_halfedge)(i) for i in range(len(halfedge_index)-1))
 
 
                 # Loops
                 loop_index = data.get('loop_index', {})[()]
                 loop_data = data.get('loops', {})[()]
                 self.loops = [None] * (len(loop_index)-1)
-                def process_loop(i):
+                for i in range(len(loop_index)-1):
                     tmp = loop_data[loop_index[i]:loop_index[i+1]]
                     local_loop = {'id': i, 'halfedges': tmp}
                     self.loops[i] = Loop(local_loop)
-                Parallel(n_jobs=-1, backend="threading")(delayed(process_loop)(i) for i in range(len(loop_index)-1))
-
+                # Parallel(n_jobs=-1, backend="threading")(delayed(process_loop)(i) for i in range(len(loop_index)-1))
 
                 # Shells
                 shell_index = data.get('shell_index', {})[()]
                 shell_data = data.get('shells', {})[()]
                 self.shells = [None] * (len(shell_index)-1)
-                def process_shell(i):
+                for i in range(len(shell_index)-1):
                     tmp = shell_data[shell_index[i]:shell_index[i+1]]
                     faces = []
                     for j in range(1, len(tmp)-1, 2):
                         faces.append( (tmp[j], bool(tmp[j+1])) )
                     local_shell = {'id': i, 'orientation_wrt_solid': tmp[0], 'faces': faces}
                     self.shells[i] = Shell(local_shell)
-                Parallel(n_jobs=-1, backend="threading")(delayed(process_shell)(i) for i in range(len(shell_index)-1))
+                # Parallel(n_jobs=-1, backend="threading")(delayed(process_shell)(i) for i in range(len(shell_index)-1))
 
 
                 # Solids
                 solid_index = data.get('solid_index', {})[()]
                 solid_data = data.get('solids', {})[()]
                 self.solids = [None] * (len(solid_index)-1)
-                def process_solid(i):
+                for i in range(len(solid_index)-1):
                     tmp = solid_data[solid_index[i]:solid_index[i+1]]
                     local_solid = {'id': i, 'shells': tmp}
                     self.solids[i] = TopoSolid(local_solid)
-                Parallel(n_jobs=-1, backend="threading")(delayed(process_solid)(i) for i in range(len(solid_index)-1))
-
+                # Parallel(n_jobs=-1, backend="threading")(delayed(process_solid)(i) for i in range(len(solid_index)-1))
 
                 # Faces
                 face_index = data.get('face_index', {})[()]
                 face_data = data.get('faces', {})[()]
                 self.faces = [None] * (len(face_index)-1)
-                def process_face(i):
+                for i in range(len(face_index)-1):
                     tmp = face_data[face_index[i]:face_index[i+1]]
 
                     exact_domain = tmp[:4]
@@ -381,7 +378,7 @@ class Shape:
                                 'surface_orientation': surface_orientation,
                                 'loops': loops}
                     self.faces[i] = Face(local_face)
-                Parallel(n_jobs=-1, backend="threading")(delayed(process_face)(i) for i in range(len(face_index)-1))
+                # Parallel(n_jobs=-1, backend="threading")(delayed(process_face)(i) for i in range(len(face_index)-1))
             else:
                 entity_map = {
                     'edges': (self.edges, _get_edges),
