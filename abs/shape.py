@@ -8,6 +8,8 @@ from .curve import create_curve
 from .surface import create_surface
 from .winding_number import find_surface_uv_for_curve
 import numpy as np
+from joblib import Parallel, delayed
+
 
 
 
@@ -105,24 +107,179 @@ class Shape:
             self.curves2d, self.curves3d, self.surfaces, self.bbox, self.vertices = [], [], [], [], []
             self.__init_geometry(geometry_data)
 
-        def __init_geometry(self, data):
-            tmp = data.get('2dcurves', {}).values()
-            self.curves2d=len(tmp)*[None]
-            for curve_data in tmp:
-                index, curve = create_curve(curve_data)
-                self.curves2d[index] = curve
+        def __init_geometry(self, data, version="3.0"):
+            if version == "3.0":
+                curve2d_index = data.get('2dcurves_index', {})[()]
+                curve2d_data = data.get('2dcurves', {})[()]
+                self.curves2d = [None] * (len(curve2d_index)-1)
 
-            tmp = data.get('3dcurves', {}).values()
-            self.curves3d=len(tmp)*[None]
-            for curve_data in tmp:
-                index, curve = create_curve(curve_data)
-                self.curves3d[index] = curve
+                def process_curve2d(i):
+                    tmp = curve2d_data[curve2d_index[i]:curve2d_index[i+1]]
+                    ctype = int(tmp[0])
+                    interval = tmp[1:3]
 
-            tmp = data.get('surfaces', {}).values()
-            self.surfaces=len(tmp)*[None]
-            for surface_data in tmp:
-                index, surface = create_surface(surface_data)
-                self.surfaces[index] = surface
+                    if ctype == 0:  # Line
+                        curve_data = {'id': i,
+                                      'type': 'Line',
+                                      'interval': interval,
+                                      'location': tmp[3:5],
+                                      'direction': tmp[5:7]}
+                    elif ctype == 1:  # Circle
+                        curve_data = {'id': i,
+                                        'type': 'Circle',
+                                        'interval': interval,
+                                        'location': tmp[3:5],
+                                        'x_axis': tmp[5:7],
+                                        'y_axis': tmp[7:9],
+                                        'radius': tmp[9]}
+                    elif ctype == 2:  # Ellipse
+                        curve_data = {'id': i,
+                                        'type': 'Ellipse',
+                                        'interval': interval,
+                                        'focus1': tmp[3:5],
+                                        'focus2': tmp[5:7],
+                                        'x_axis': tmp[7:9],
+                                        'y_axis': tmp[9:11],
+                                        'maj_radius': tmp[11],
+                                        'min_radius': tmp[12]}
+                    elif ctype == 3:  # BSplineCurve
+                        degree = int(tmp[3])
+                        continuity = int(tmp[4])
+                        rational = bool(tmp[5])
+                        periodic = bool(tmp[6])
+                        closed = bool(tmp[7])
+                        len_poles = int(tmp[8])
+                        pshape = (int(tmp[9]), int(tmp[10]))
+                        poles = np.array(tmp[11:11+len_poles]).reshape(pshape)
+                        idx = 11 + len_poles
+                        len_knots = int(tmp[idx])
+                        knots = tmp[idx+1:idx+1+len_knots]
+                        idx = idx + 1 + len_knots
+                        len_weights = int(tmp[idx])
+                        weights = tmp[idx+1:idx+1+len_weights]
+
+                        curve_data = {'id': i,
+                                        'type': 'BSpline',
+                                        'interval': interval,
+                                        'degree': degree,
+                                        'continuity': continuity,
+                                        'rational': rational,
+                                        'periodic': periodic,
+                                        'closed': closed,
+                                        'poles': poles,
+                                        'knots': knots,
+                                        'weights': weights}
+                    elif ctype == 4:  # Other
+                        curve_data = {'id': i,
+                                        'type': 'Other',
+                                        'interval': interval}
+                    else:
+                        raise ValueError(f"Unknown curve type: {ctype}")
+
+                    self.curves2d[i] = create_curve(curve_data, False)[1]
+                # Parallel(n_jobs=-1, backend="threading")(delayed(process_curve2d)(i) for i in range(len(curve2d_index)-1))
+                for i in range(len(curve2d_index)-1):
+                    process_curve2d(i)
+
+                curve3d_index = data.get('3dcurves_index', {})[()]
+                curve3d_data = data.get('3dcurves', {})[()]
+                self.curves3d = [None] * (len(curve3d_index)-1)
+                def process_curve3d(i):
+                    tmp = curve3d_data[curve3d_index[i]:curve3d_index[i+1]]
+                    ctype = int(tmp[0])
+                    interval = tmp[1:3]
+                    transform = tmp[len(tmp)-12:]  # last 16 values are the transformation matrix
+                    transform = np.array(transform).reshape((3,4))
+
+                    if ctype == 0:  # Line
+                        curve_data = {'id': i,
+                                      'type': 'Line',
+                                      'interval': interval,
+                                      'location': tmp[3:6],
+                                      'direction': tmp[6:9]}
+                    elif ctype == 1:  # Circle
+                        curve_data = {'id': i,
+                                        'type': 'Circle',
+                                        'interval': interval,
+                                        'location': tmp[3:6],
+                                        'x_axis': tmp[6:9],
+                                        'y_axis': tmp[9:12],
+                                        'z_axis': tmp[12:15],
+                                        'radius': tmp[15]}
+                    elif ctype == 2:  # Ellipse
+                        curve_data = {'id': i,
+                                        'type': 'Ellipse',
+                                        'interval': interval,
+                                        'focus1': tmp[3:6],
+                                        'focus2': tmp[6:9],
+                                        'x_axis': tmp[9:12],
+                                        'y_axis': tmp[12:15],
+                                        'z_axis': tmp[15:18],
+                                        'maj_radius': tmp[18],
+                                        'min_radius': tmp[19]}
+                    elif ctype == 3:  # BSplineCurve
+                        degree = int(tmp[3])
+                        continuity = int(tmp[4])
+                        rational = bool(tmp[5])
+                        periodic = bool(tmp[6])
+                        closed = bool(tmp[7])
+                        len_poles = int(tmp[8])
+                        pshape = (int(tmp[9]), int(tmp[10]))
+                        poles = np.array(tmp[11:11+len_poles]).reshape(pshape)
+                        idx = 11 + len_poles
+                        len_knots = int(tmp[idx])
+                        knots = tmp[idx+1:idx+1+len_knots]
+                        idx = idx + 1 + len_knots
+                        len_weights = int(tmp[idx])
+                        weights = tmp[idx+1:idx+1+len_weights]
+
+                        curve_data = {'id': i,
+                                        'type': 'BSpline',
+                                        'interval': interval,
+                                        'degree': degree,
+                                        'continuity': continuity,
+                                        'rational': rational,
+                                        'periodic': periodic,
+                                        'closed': closed,
+                                        'poles': poles,
+                                        'knots': knots,
+                                        'weights': weights}
+                    elif ctype == 4:  # Other
+                        curve_data = {'id': i,
+                                        'type': 'Other',
+                                        'interval': interval}
+                    else:
+                        raise ValueError(f"Unknown curve type: {ctype} for curve {i}")
+
+                    self.curves3d[i] = create_curve(curve_data, False)[1]
+                # Parallel(n_jobs=-1, backend="threading")(delayed(process_curve3d)(i) for i in range(len(curve3d_index)-1))
+                for i in range(len(curve3d_index)-1):
+                    process_curve3d(i)
+
+                # TODO
+                tmp = data.get('surfaces', {}).values()
+                self.surfaces=len(tmp)*[None]
+                for surface_data in tmp:
+                    index, surface = create_surface(surface_data)
+                    self.surfaces[index] = surface
+            else:
+                tmp = data.get('2dcurves', {}).values()
+                self.curves2d=len(tmp)*[None]
+                for curve_data in tmp:
+                    index, curve = create_curve(curve_data)
+                    self.curves2d[index] = curve
+
+                tmp = data.get('3dcurves', {}).values()
+                self.curves3d=len(tmp)*[None]
+                for curve_data in tmp:
+                    index, curve = create_curve(curve_data)
+                    self.curves3d[index] = curve
+
+                tmp = data.get('surfaces', {}).values()
+                self.surfaces=len(tmp)*[None]
+                for surface_data in tmp:
+                    index, surface = create_surface(surface_data)
+                    self.surfaces[index] = surface
 
             self.bbox.append(np.array(data.get('bbox')[:]))
 
@@ -134,90 +291,110 @@ class Shape:
             self.edges, self.faces, self.halfedges, self.loops, self.shells, self.solids = [], [], [], [], [], []
             self.__init_topology(topology_data)
 
-        def __init_topology(self, data):
-            edge_index = data.get('edge_index', {})
-            edge_data = data.get('edges', {})
+        def __init_topology(self, data, version="3.0"):
+            if version == "3.0":
+                # Edges
+                edge_index = data.get('edge_index', {})[()]
+                edge_data = data.get('edges', {})[()]
+                self.edges = [None] * (len(edge_index)-1)
 
-            for i in range(len(edge_index)-1):
-                tmp = edge_data[edge_index[i]:edge_index[i+1]]
-                local_edge = {'id': i, '3dcurve': tmp[0], 'start_vertex': tmp[1], 'end_vertex': tmp[2]}
-                self.edges.append(Edge(local_edge))
-
-            halfedge_index = data.get('halfedge_index', {})
-            halfedge_data = data.get('halfedges', {})
-
-            for i in range(len(halfedge_index)-1):
-                tmp = halfedge_data[halfedge_index[i]:halfedge_index[i+1]]
-                mates = tmp[3:] if len(tmp) > 3 else []
-                local_halfedge = {'id': i, '2dcurve': tmp[0], 'edge': tmp[1], 'orientation_wrt_edge': bool(tmp[2]), 'mates': mates}
-                self.halfedges.append(Halfedge(local_halfedge))
-
-            loop_index = data.get('loop_index', {})
-            loop_data = data.get('loops', {})
-
-            for i in range(len(loop_index)-1):
-                tmp = loop_data[loop_index[i]:loop_index[i+1]]
-                local_loop = {'id': i, 'halfedges': tmp}
-                self.loops.append(Loop(local_loop))
-
-            shell_index = data.get('shell_index', {})
-            shell_data = data.get('shells', {})
-
-            for i in range(len(shell_index)-1):
-                tmp = shell_data[shell_index[i]:shell_index[i+1]]
-                faces = []
-                for j in range(1, len(tmp)-1, 2):
-                    faces.append( (tmp[j], bool(tmp[j+1])) )
-                local_shell = {'id': i, 'orientation_wrt_solid': tmp[0], 'faces': faces}
-                self.shells.append(Shell(local_shell))
-
-            solid_index = data.get('solid_index', {})
-            solid_data = data.get('solids', {})
-
-            for i in range(len(solid_index)-1):
-                tmp = solid_data[solid_index[i]:solid_index[i+1]]
-                local_solid = {'id': i, 'shells': tmp}
-                self.solids.append(TopoSolid(local_solid))
-
-            face_index = data.get('face_index', {})
-            face_data = data.get('faces', {})
-
-            for i in range(len(face_index)-1):
-                tmp = face_data[face_index[i]:face_index[i+1]]
-
-                exact_domain = tmp[:4]
-                has_singularities = bool(tmp[4])
-                nr_singularities = tmp[5]
-                # singularities = tmp[6:6+nr_singularities]
-                outer_loop = tmp[6]
-                surface = tmp[7]
-                surface_orientation = bool(tmp[8])
-                loops = np.array(tmp[9:]).astype(np.int64)
+                def process_edge(i):
+                    tmp = edge_data[edge_index[i]:edge_index[i+1]]
+                    local_edge = {'id': i, '3dcurve': tmp[0], 'start_vertex': tmp[1], 'end_vertex': tmp[2]}
+                    self.edges[i] = Edge(local_edge)
+                Parallel(n_jobs=-1, backend="threading")(delayed(process_edge)(i) for i in range(len(edge_index)-1))
 
 
-                local_face = {'id': i,
-                                'exact_domain': exact_domain,
-                                'has_singularities': has_singularities,
-                                'nr_singularities': nr_singularities,
-                                'outer_loop': outer_loop,
-                              'surface': surface,
-                              'singularities': [],
-                              'surface_orientation': surface_orientation,
-                              'loops': loops}
-                self.faces.append(Face(local_face))
+                # Halfedges
+                halfedge_index = data.get('halfedge_index', {})[()]
+                halfedge_data = data.get('halfedges', {})[()]
+                self.halfedges = [None]* (len(halfedge_index)-1)
 
-            # entity_map = {
-            #     'edges': (self.edges, _get_edges),
-            #     'faces': (self.faces, _get_faces),
-            #     'halfedges': (self.halfedges, _get_halfedges),
-            #     'loops': (self.loops, _get_loops),
-            #     'shells': (self.shells, Shell),
-            #     'solids': (self.solids, TopoSolid)
-            # }
+                def process_halfedge(i):
+                    tmp = halfedge_data[halfedge_index[i]:halfedge_index[i+1]]
+                    mates = tmp[3:] if len(tmp) > 3 else []
+                    local_halfedge = {'id': i, '2dcurve': tmp[0], 'edge': tmp[1], 'orientation_wrt_edge': bool(tmp[2]), 'mates': mates}
+                    self.halfedges[i] = Halfedge(local_halfedge)
+                Parallel(n_jobs=-1, backend="threading")(delayed(process_halfedge)(i) for i in range(len(halfedge_index)-1))
 
-            # for entity, (attr_list, constructor) in entity_map.items():
-            #     entity_data = Topology._get_topo_data(data, entity)
-            #     attr_list.extend(constructor(item) for item in entity_data)
+
+                # Loops
+                loop_index = data.get('loop_index', {})[()]
+                loop_data = data.get('loops', {})[()]
+                self.loops = [None] * (len(loop_index)-1)
+                def process_loop(i):
+                    tmp = loop_data[loop_index[i]:loop_index[i+1]]
+                    local_loop = {'id': i, 'halfedges': tmp}
+                    self.loops[i] = Loop(local_loop)
+                Parallel(n_jobs=-1, backend="threading")(delayed(process_loop)(i) for i in range(len(loop_index)-1))
+
+
+                # Shells
+                shell_index = data.get('shell_index', {})[()]
+                shell_data = data.get('shells', {})[()]
+                self.shells = [None] * (len(shell_index)-1)
+                def process_shell(i):
+                    tmp = shell_data[shell_index[i]:shell_index[i+1]]
+                    faces = []
+                    for j in range(1, len(tmp)-1, 2):
+                        faces.append( (tmp[j], bool(tmp[j+1])) )
+                    local_shell = {'id': i, 'orientation_wrt_solid': tmp[0], 'faces': faces}
+                    self.shells[i] = Shell(local_shell)
+                Parallel(n_jobs=-1, backend="threading")(delayed(process_shell)(i) for i in range(len(shell_index)-1))
+
+
+                # Solids
+                solid_index = data.get('solid_index', {})[()]
+                solid_data = data.get('solids', {})[()]
+                self.solids = [None] * (len(solid_index)-1)
+                def process_solid(i):
+                    tmp = solid_data[solid_index[i]:solid_index[i+1]]
+                    local_solid = {'id': i, 'shells': tmp}
+                    self.solids[i] = TopoSolid(local_solid)
+                Parallel(n_jobs=-1, backend="threading")(delayed(process_solid)(i) for i in range(len(solid_index)-1))
+
+
+                # Faces
+                face_index = data.get('face_index', {})[()]
+                face_data = data.get('faces', {})[()]
+                self.faces = [None] * (len(face_index)-1)
+                def process_face(i):
+                    tmp = face_data[face_index[i]:face_index[i+1]]
+
+                    exact_domain = tmp[:4]
+                    has_singularities = bool(tmp[4])
+                    nr_singularities = tmp[5]
+                    # singularities = tmp[6:6+nr_singularities]
+                    outer_loop = tmp[6]
+                    surface = tmp[7]
+                    surface_orientation = bool(tmp[8])
+                    loops = np.array(tmp[9:]).astype(np.int64)
+
+
+                    local_face = {'id': i,
+                                    'exact_domain': exact_domain,
+                                    'has_singularities': has_singularities,
+                                    'nr_singularities': nr_singularities,
+                                    'outer_loop': outer_loop,
+                                'surface': surface,
+                                'singularities': [],
+                                'surface_orientation': surface_orientation,
+                                'loops': loops}
+                    self.faces[i] = Face(local_face)
+                Parallel(n_jobs=-1, backend="threading")(delayed(process_face)(i) for i in range(len(face_index)-1))
+            else:
+                entity_map = {
+                    'edges': (self.edges, _get_edges),
+                    'faces': (self.faces, _get_faces),
+                    'halfedges': (self.halfedges, _get_halfedges),
+                    'loops': (self.loops, _get_loops),
+                    'shells': (self.shells, Shell),
+                    'solids': (self.solids, TopoSolid)
+                }
+
+                for entity, (attr_list, constructor) in entity_map.items():
+                    entity_data = Topology._get_topo_data(data, entity)
+                    attr_list.extend(constructor(item) for item in entity_data)
 
 
     class Solid:
