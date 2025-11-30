@@ -119,7 +119,7 @@ def process_faces(part):
         lps = f["loops"][()].tolist()
         ns = int(f["nr_singularities"][()])
         os = int(f["outer_loop"][()])
-        # sgs = f["singularities"].values() #TODO
+        # sgs = f["singularities"].values() #TODO new format for singularities
         srf = int(f["surface"][()])
         so = int(f["surface_orientation"][()])
         faces[index] = ed + [hs, ns, os, srf, so] + lps

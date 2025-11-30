@@ -511,7 +511,7 @@ class Shape:
                     exact_domain = tmp[:4]
                     has_singularities = bool(tmp[4])
                     nr_singularities = tmp[5]
-                    # singularities = tmp[6:6+nr_singularities]
+                    # singularities = tmp[6:6+nr_singularities] #TODO new format for singularities
                     outer_loop = tmp[6]
                     surface = tmp[7]
                     surface_orientation = bool(tmp[8])
