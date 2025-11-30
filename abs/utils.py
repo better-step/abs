@@ -12,10 +12,11 @@ def read_parts(file_path):
     """Read all parts from an HDF5 file and construct Shape objects for each."""
     f = h5py.File(file_path, 'r')
     part = f['parts'].values()
+    version = f['parts'].attrs.get('version')
 
     parts = []
     for i, p in enumerate(part):
-        s = Shape(p['geometry'], p['topology'])
+        s = Shape(p['geometry'], p['topology'], version)
         parts.append(s)
 
     return parts

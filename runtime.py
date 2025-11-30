@@ -338,11 +338,11 @@ def process_surfaces(part):
 
 
 if __name__ == "__main__":
-    path = '/Users/teseo/Downloads/abs/assembly 3.hdf5' # Loaded in 167.06935691833496 seconds
+    # path = '/Users/teseo/Downloads/abs/assembly 3.hdf5' # Loaded in 167.06935691833496 seconds
     # path = '/Users/teseo/data/abc/Hdf5MeshSampler/data/sample_hdf5/Box.hdf5' # Loaded in 0.028881072998046875 seconds
     # Loaded in 105.97194314002991 seconds
     # path = '/Users/teseo/data/abc/Hdf5MeshSampler/data/sample_hdf5/Cone.hdf5'
-    # path = '/Users/teseo/data/abc/Hdf5MeshSampler/data/sample_hdf5/Sphere.hdf5'
+    path = '/Users/teseo/data/abc/Hdf5MeshSampler/data/sample_hdf5/Sphere.hdf5'
     # path = '/Users/teseo/data/abc/Hdf5MeshSampler/data/sample_hdf5/Circle.hdf5'
     # path = '/Users/teseo/data/abc/Hdf5MeshSampler/data/sample_hdf5/Cylinder_Hole_Fillet_Chamfer.hdf5'
 

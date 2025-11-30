@@ -18,10 +18,10 @@ import numpy as np
 
 class Shape:
     """Represents a geometric part (one part from the CAD model) with geometry and topology assembled."""
-    def __init__(self, geometry_data, topology_data, spacing=0.02):
+    def __init__(self, geometry_data, topology_data, version, spacing=0.02):
 
-        self._geometry_data = self._geometry_data(geometry_data)
-        self._topology_data = self._topology_data(topology_data)
+        self._geometry_data = self._geometry_data(geometry_data, version)
+        self._topology_data = self._topology_data(topology_data, version)
         spacing *= np.linalg.norm(self._geometry_data.bbox[0][1] - self._geometry_data.bbox[0][0])
         self.bbox = self._geometry_data.bbox
         self.vertices = self._geometry_data.vertices
@@ -103,11 +103,11 @@ class Shape:
 
 
     class _geometry_data:
-        def __init__(self, geometry_data):
+        def __init__(self, geometry_data, version):
             self.curves2d, self.curves3d, self.surfaces, self.bbox, self.vertices = [], [], [], [], []
-            self.__init_geometry(geometry_data)
+            self.__init_geometry(geometry_data, version)
 
-        def __init_geometry(self, data, version="3.0"):
+        def __init_geometry(self, data, version):
             if version == "3.0":
                 curve2d_index = data.get('2dcurves_index', {})[()]
                 curve2d_data = data.get('2dcurves', {})[()]
@@ -429,11 +429,11 @@ class Shape:
 
 
     class _topology_data:
-        def __init__(self, topology_data):
+        def __init__(self, topology_data, version="3.0"):
             self.edges, self.faces, self.halfedges, self.loops, self.shells, self.solids = [], [], [], [], [], []
-            self.__init_topology(topology_data)
+            self.__init_topology(topology_data, version)
 
-        def __init_topology(self, data, version="3.0"):
+        def __init_topology(self, data, version):
             if version == "3.0":
                 # Edges
                 edge_index = data.get('edge_index', {})[()]
