@@ -180,6 +180,8 @@ class Shape:
                 # Parallel(n_jobs=-1, backend="threading")(delayed(process_curve2d)(i) for i in range(len(curve2d_index)-1))
                 # for i in range(len(curve2d_index)-1):
                 #     process_curve2d(i)
+                del curve2d_index
+                del curve2d_data
 
                 curve3d_index = data.get('3dcurves_index', {})[()]
                 curve3d_data = data.get('3dcurves', {})[()]
@@ -255,6 +257,8 @@ class Shape:
                 # Parallel(n_jobs=-1, backend="threading")(delayed(process_curve3d)(i) for i in range(len(curve3d_index)-1))
                 # for i in range(len(curve3d_index)-1):
                 #     process_curve3d(i)
+                del curve3d_index
+                del curve3d_data
 
                 surface_index = data.get('surfaces_index', {})[()]
                 surface_data = data.get('surfaces', {})[()]
@@ -397,6 +401,9 @@ class Shape:
                         pass
 
                     self.surfaces[i] = create_surface(surface, False)[1]
+                # Parallel(n_jobs=-1, backend="threading")(delayed(process_surface)(i) for i in range(len(surface_index)-1))
+                del surface_index
+                del surface_data
             else:
                 tmp = data.get('2dcurves', {}).values()
                 self.curves2d=len(tmp)*[None]
@@ -438,6 +445,8 @@ class Shape:
                     local_edge = {'id': i, '3dcurve': tmp[0], 'start_vertex': tmp[1], 'end_vertex': tmp[2]}
                     self.edges[i] = Edge(local_edge)
                 # Parallel(n_jobs=-1, backend="threading")(delayed(process_edge)(i) for i in range(len(edge_index)-1))
+                del edge_index
+                del edge_data
 
                 # Halfedges
                 halfedge_index = data.get('halfedge_index', {})[()]
@@ -450,7 +459,8 @@ class Shape:
                     local_halfedge = {'id': i, '2dcurve': tmp[0], 'edge': tmp[1], 'orientation_wrt_edge': bool(tmp[2]), 'mates': mates}
                     self.halfedges[i] = Halfedge(local_halfedge)
                 # Parallel(n_jobs=-1, backend="threading")(delayed(process_halfedge)(i) for i in range(len(halfedge_index)-1))
-
+                del halfedge_index
+                del halfedge_data
 
                 # Loops
                 loop_index = data.get('loop_index', {})[()]
@@ -461,6 +471,8 @@ class Shape:
                     local_loop = {'id': i, 'halfedges': tmp}
                     self.loops[i] = Loop(local_loop)
                 # Parallel(n_jobs=-1, backend="threading")(delayed(process_loop)(i) for i in range(len(loop_index)-1))
+                del loop_index
+                del loop_data
 
                 # Shells
                 shell_index = data.get('shell_index', {})[()]
@@ -474,7 +486,8 @@ class Shape:
                     local_shell = {'id': i, 'orientation_wrt_solid': tmp[0], 'faces': faces}
                     self.shells[i] = Shell(local_shell)
                 # Parallel(n_jobs=-1, backend="threading")(delayed(process_shell)(i) for i in range(len(shell_index)-1))
-
+                del shell_index
+                del shell_data
 
                 # Solids
                 solid_index = data.get('solid_index', {})[()]
@@ -485,6 +498,8 @@ class Shape:
                     local_solid = {'id': i, 'shells': tmp}
                     self.solids[i] = TopoSolid(local_solid)
                 # Parallel(n_jobs=-1, backend="threading")(delayed(process_solid)(i) for i in range(len(solid_index)-1))
+                del solid_index
+                del solid_data
 
                 # Faces
                 face_index = data.get('face_index', {})[()]
@@ -514,6 +529,8 @@ class Shape:
                                 'loops': loops}
                     self.faces[i] = Face(local_face)
                 # Parallel(n_jobs=-1, backend="threading")(delayed(process_face)(i) for i in range(len(face_index)-1))
+                del face_index
+                del face_data
             else:
                 entity_map = {
                     'edges': (self.edges, _get_edges),
