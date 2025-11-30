@@ -256,12 +256,147 @@ class Shape:
                 # for i in range(len(curve3d_index)-1):
                 #     process_curve3d(i)
 
-                # TODO
-                tmp = data.get('surfaces', {}).values()
-                self.surfaces=len(tmp)*[None]
-                for surface_data in tmp:
-                    index, surface = create_surface(surface_data)
-                    self.surfaces[index] = surface
+                surface_index = data.get('surfaces_index', {})[()]
+                surface_data = data.get('surfaces', {})[()]
+                self.surfaces = [None] * (len(surface_index) - 1)
+                surface_type_map = {
+                    0: 'Plane',
+                    1: 'Cylinder',
+                    2: 'Cone',
+                    3: 'Sphere',
+                    4: 'Torus',
+                    5: 'BSpline',
+                    6: 'Extrusion',
+                    7: 'Revolution',
+                    8: 'Offset',
+                    9: 'Other'
+                }
+
+                for i in range(len(surface_index) - 1):
+                    tmp = surface_data[surface_index[i]:surface_index[i + 1]]
+                    transform = np.array(tmp[-12:]).reshape((3, 4))
+                    payload = tmp[:-12]
+                    stype = int(payload[0])
+                    surface_type = surface_type_map.get(stype)
+                    if surface_type is None:
+                        raise ValueError(f"Unknown surface type: {stype} for surface {i}")
+
+                    trim_domain = np.array(payload[1:5]).reshape((2, 2))
+                    idx = 5
+                    surface = {'id': i, 'type': surface_type, 'trim_domain': trim_domain, 'transform': transform}
+
+                    if stype == 0:  # Plane
+                        surface.update({
+                            'location': np.array(payload[idx:idx + 3]),
+                            'coefficients': np.array(payload[idx + 3:idx + 7]),
+                            'x_axis': np.array(payload[idx + 7:idx + 10]),
+                            'y_axis': np.array(payload[idx + 10:idx + 13]),
+                            'z_axis': np.array(payload[idx + 13:idx + 16])
+                        })
+                    elif stype == 1:  # Cylinder
+                        surface.update({
+                            'location': np.array(payload[idx:idx + 3]),
+                            'radius': np.array(payload[idx + 3]),
+                            'coefficients': np.array(payload[idx + 4:idx + 8]),
+                            'x_axis': np.array(payload[idx + 8:idx + 11]),
+                            'y_axis': np.array(payload[idx + 11:idx + 14]),
+                            'z_axis': np.array(payload[idx + 14:idx + 17])
+                        })
+                    elif stype == 2:  # Cone
+                        surface.update({
+                            'location': np.array(payload[idx:idx + 3]),
+                            'radius': np.array(payload[idx + 3]),
+                            'coefficients': np.array(payload[idx + 4:idx + 8]),
+                            'apex': np.array(payload[idx + 8:idx + 11]),
+                            'angle': np.array(payload[idx + 11]),
+                            'x_axis': np.array(payload[idx + 12:idx + 15]),
+                            'y_axis': np.array(payload[idx + 15:idx + 18]),
+                            'z_axis': np.array(payload[idx + 18:idx + 21])
+                        })
+                    elif stype == 3:  # Sphere
+                        surface.update({
+                            'location': np.array(payload[idx:idx + 3]),
+                            'radius': np.array(payload[idx + 3]),
+                            'coefficients': np.array(payload[idx + 4:idx + 8]),
+                            'x_axis': np.array(payload[idx + 8:idx + 11]),
+                            'y_axis': np.array(payload[idx + 11:idx + 14]),
+                            'z_axis': np.array(payload[idx + 14:idx + 17])
+                        })
+                    elif stype == 4:  # Torus
+                        surface.update({
+                            'location': np.array(payload[idx:idx + 3]),
+                            'max_radius': np.array(payload[idx + 3]),
+                            'min_radius': np.array(payload[idx + 4]),
+                            'x_axis': np.array(payload[idx + 5:idx + 8]),
+                            'y_axis': np.array(payload[idx + 8:idx + 11]),
+                            'z_axis': np.array(payload[idx + 11:idx + 14])
+                        })
+                    elif stype == 5:  # BSplineSurface
+                        u_degree, v_degree, continuity, u_rational, v_rational, u_periodic, v_periodic, u_closed, v_closed, is_trimmed, face_domain_len = payload[idx:idx + 11]
+                        idx += 11
+                        face_domain_len = int(face_domain_len)
+                        face_domain = np.array(payload[idx:idx + face_domain_len])
+                        idx += face_domain_len
+
+                        len_poles = int(payload[idx])
+                        pshape = [int(val) for val in payload[idx + 1:idx + 4]]
+                        idx += 4
+                        poles = np.array(payload[idx:idx + len_poles]).reshape(pshape)
+                        idx += len_poles
+
+                        len_uknots = int(payload[idx])
+                        idx += 1
+                        u_knots = np.array(payload[idx:idx + len_uknots])
+                        idx += len_uknots
+
+                        len_vknots = int(payload[idx])
+                        idx += 1
+                        v_knots = np.array(payload[idx:idx + len_vknots])
+                        idx += len_vknots
+
+                        len_weights = int(payload[idx])
+                        wshape = [int(val) for val in payload[idx + 1:idx + 3]]
+                        idx += 3
+                        weights = np.array(payload[idx:idx + len_weights]).reshape(wshape)
+                        weights_dict = {str(j): weights[j] for j in range(weights.shape[0])}
+
+                        surface.update({
+                            'u_degree': np.array(u_degree),
+                            'v_degree': np.array(v_degree),
+                            'continuity': np.array(continuity),
+                            'u_rational': np.array(u_rational),
+                            'v_rational': np.array(v_rational),
+                            'u_periodic': np.array(u_periodic),
+                            'v_periodic': np.array(v_periodic),
+                            'u_closed': np.array(u_closed),
+                            'v_closed': np.array(v_closed),
+                            'is_trimmed': np.array(is_trimmed),
+                            'face_domain': face_domain,
+                            'poles': poles,
+                            'u_knots': u_knots,
+                            'v_knots': v_knots,
+                            'weights': weights_dict
+                        })
+                    elif stype == 6:  # Extrusion
+                        surface.update({
+                            'direction': np.array(payload[idx:idx + 3]),
+                            'curve': self.curves3d_data[int(payload[idx + 3])]
+                        })
+                    elif stype == 7:  # Revolution
+                        surface.update({
+                            'location': np.array(payload[idx:idx + 3]),
+                            'z_axis': np.array(payload[idx + 3:idx + 6]),
+                            'curve': self.curves3d_data[int(payload[idx + 6])]
+                        })
+                    elif stype == 8:  # Offset
+                        surface.update({
+                            'value': np.array(payload[idx]),
+                            'surface': int(payload[idx + 1])
+                        })
+                    elif stype == 9:  # Other
+                        pass
+
+                    self.surfaces[i] = create_surface(surface, False)[1]
             else:
                 tmp = data.get('2dcurves', {}).values()
                 self.curves2d=len(tmp)*[None]

@@ -2,6 +2,7 @@ from abs import read_parts
 import time
 import h5py
 import shutil
+import numpy as np
 
 
 def process_edges(part):
@@ -209,16 +210,143 @@ def process_curves(part, curve_type, has_trafo):
     part['geometry'].create_dataset(curve_type, data=compressed)
     part['geometry'].create_dataset(curve_type + '_index', data=curve_index)
 
+def process_surfaces(part):
+    ss = part['geometry']['surfaces'].values()
+    surfaces = [None]*len(ss)
+    for s in ss:
+        index = int(s.name.split("/")[-1])
+        tt = s["type"][()].decode('utf8')
+        td = s["trim_domain"][()].flatten().tolist()
+        if tt == "Plane":  # plane
+            tt = 0
+            surfaces[index] = [tt] + td + \
+            s["location"][()].tolist() + \
+            s["coefficients"][()].tolist() + \
+            s["x_axis"][()].tolist() + \
+            s["y_axis"][()].tolist() + \
+            s["z_axis"][()].tolist()
+        elif tt == "Cylinder":  # cylinder
+            tt = 1
+            surfaces[index] = [tt] + td + \
+            s["location"][()].tolist() + \
+            [s["radius"][()]] + \
+            s["coefficients"][()].tolist() + \
+            s["x_axis"][()].tolist() + \
+            s["y_axis"][()].tolist() + \
+            s["z_axis"][()].tolist()
+        elif tt == "Cone":  # cone
+            tt = 2
+            surfaces[index] = [tt] + td + \
+            s["location"][()].tolist() + \
+            [s["radius"][()]] + \
+            s["coefficients"][()].tolist() + \
+            s["apex"][()].tolist() + \
+            [s["angle"][()]] + \
+            s["x_axis"][()].tolist() + \
+            s["y_axis"][()].tolist() + \
+            s["z_axis"][()].tolist()
+        elif tt == "Sphere":  # sphere
+            tt = 3
+            xaxis = np.array(s.get('x_axis')[()]).reshape(-1, 1).T
+            yaxis = np.array(s.get('y_axis')[()]).reshape(-1, 1).T
+            if 'z_axis' in s:
+                zaxis = np.array(s.get('z_axis')[()]).reshape(-1, 1).T
+            else:
+                zaxis = np.cross(xaxis, yaxis)
+
+            surfaces[index] = [tt] + td + \
+            s["location"][()].tolist() + \
+            [s["radius"][()]] + \
+            s["coefficients"][()].tolist() + \
+            xaxis.ravel().tolist() + \
+            yaxis.ravel().tolist() + \
+            zaxis.ravel().tolist()
+        elif tt == "Torus":  # torus
+            tt = 4
+            surfaces[index] = [tt] + td + \
+            s["location"][()].tolist() + \
+            [s["max_radius"][()], s["min_radius"][()]] + \
+            s["x_axis"][()].tolist() + \
+            s["y_axis"][()].tolist() + \
+            s["z_axis"][()].tolist()
+        elif tt == "BSpline":  # BSplineSurface
+            tt = 5
+            surfaces[index] = [tt] + td
+            face_domain = s["face_domain"][()].ravel().tolist()
+            pshape = s["poles"][()].shape
+            poles = s["poles"][()].ravel().tolist()
+            uknots = s["u_knots"][()].ravel().tolist()
+            vknots = s["v_knots"][()].ravel().tolist()
+            weights_obj = s["weights"]
+            if isinstance(weights_obj, h5py.Group):
+                weights = np.column_stack([weights_obj[str(i)][()] for i in range(len(weights_obj))])
+            else:
+                weights = weights_obj[()]
+
+            wshape = weights.shape
+
+            surfaces[index] += [
+                s["u_degree"][()],
+                s["v_degree"][()],
+                s["continuity"][()],
+                s["u_rational"][()],
+                s["v_rational"][()],
+                s["u_periodic"][()],
+                s["v_periodic"][()],
+                s["u_closed"][()],
+                s["v_closed"][()],
+                s["is_trimmed"][()],
+                len(face_domain)] + \
+                face_domain + \
+                [len(poles)] + list(pshape) + poles + \
+                [len(uknots)] + uknots + \
+                [len(vknots)] + vknots + \
+                [weights.size] + list(wshape) + weights.ravel().tolist()
+        elif tt == "Extrusion":  # Extrusion
+            tt = 6
+            surfaces[index] = [tt] + td + \
+            s["direction"][()].tolist() + [s["curve"][()]]
+        elif tt == "Revolution":  # Revolution
+            tt = 7
+            surfaces[index] = [tt] + td + \
+            s["location"][()].tolist() + \
+            s["z_axis"][()].tolist() + [s["curve"][()]]
+        elif tt == "Offset": # Other
+            tt = 8
+            surfaces[index] = [tt] + td + [s["value"][()], s["surface"][()]]
+        elif tt == "Other": # Other
+            tt = 9
+            surfaces[index] = [tt] + td
+        else:
+            raise ValueError(f"Unknown surface type: {tt}")
+
+        surfaces[index] += s["transform"][()].flatten().tolist()
+
+    del part['geometry']['surfaces']
+
+    start = 0
+    compressed = []
+    surface_index = []
+    for s in surfaces:
+        surface_index.append(start)
+        compressed.extend(s)
+        start += len(s)
+    surface_index.append(start)  # add end index
+
+    part['geometry'].create_dataset('surfaces', data=compressed)
+    part['geometry'].create_dataset('surfaces_index', data=surface_index)
+
 
 if __name__ == "__main__":
     path = '/Users/teseo/Downloads/abs/assembly 3.hdf5' # Loaded in 167.06935691833496 seconds
     # path = '/Users/teseo/data/abc/Hdf5MeshSampler/data/sample_hdf5/Box.hdf5' # Loaded in 0.028881072998046875 seconds
     # Loaded in 105.97194314002991 seconds
-    path = '/Users/teseo/data/abc/Hdf5MeshSampler/data/sample_hdf5/Cone.hdf5'
+    # path = '/Users/teseo/data/abc/Hdf5MeshSampler/data/sample_hdf5/Cone.hdf5'
+    # path = '/Users/teseo/data/abc/Hdf5MeshSampler/data/sample_hdf5/Sphere.hdf5'
     # path = '/Users/teseo/data/abc/Hdf5MeshSampler/data/sample_hdf5/Circle.hdf5'
     # path = '/Users/teseo/data/abc/Hdf5MeshSampler/data/sample_hdf5/Cylinder_Hole_Fillet_Chamfer.hdf5'
 
-    create = True
+    create = False
 
     if not create:
         path = path + '_new.hdf5'
@@ -242,3 +370,4 @@ if __name__ == "__main__":
                 for has_trafo, curve_type in data:
                     process_curves(part, curve_type, has_trafo)
 
+                process_surfaces(part)

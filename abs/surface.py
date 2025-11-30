@@ -16,7 +16,10 @@ def create_surface(surface_data, compute_index=True):
     else:
         index = None
 
-    surface_type = surface_data.get('type')[()].decode('utf-8')
+    if isinstance(surface_data, dict):
+        surface_type = surface_data.get('type')
+    else:
+        surface_type = surface_data.get('type')[()].decode('utf-8')
     surface_map = {
         'Plane': Plane,
         'Cylinder': Cylinder,
@@ -79,7 +82,10 @@ class Plane(Surface):
         self.z_axis = np.array(plane.get('z_axis')[()]).reshape(-1, 1).T
         self.transform = np.array(plane.get('transform')[()])
         self.area = -1
-        self.shape_name = plane.get('type')[()].decode('utf8')
+        if isinstance(plane, dict):
+            self.shape_name = plane.get('type')
+        else:
+            self.shape_name = plane.get('type')[()].decode('utf8')
 
     def sample(self, sample_points):
         if sample_points.size == 0:
@@ -122,7 +128,10 @@ class Cylinder(Surface):
         self.z_axis = np.array(cylinder.get('z_axis')[()]).reshape(-1, 1).T
         self.transform = np.array(cylinder.get('transform')[()])
         self.area = -1
-        self.shape_name = cylinder.get('type')[()].decode('utf8')
+        if isinstance(cylinder, dict):
+            self.shape_name = cylinder.get('type')
+        else:
+            self.shape_name = cylinder.get('type')[()].decode('utf8')
 
     def sample(self, sample_points):
 
@@ -167,7 +176,10 @@ class Cone(Surface):
         self.z_axis = np.array(cone.get('z_axis')[()]).reshape(-1, 1).T
         self.transform = np.array(cone.get('transform')[()])
         self.area = -1
-        self.shape_name = cone.get('type')[()].decode('utf8')
+        if isinstance(cone, dict):
+            self.shape_name = cone.get('type')
+        else:
+            self.shape_name = cone.get('type')[()].decode('utf8')
 
     def sample(self, sample_points):
 
@@ -220,7 +232,10 @@ class Sphere(Surface):
             self.z_axis = np.cross(self.x_axis, self.y_axis)
         self.transform = np.array(sphere.get('transform')[()])
         self.area = -1
-        self.shape_name = sphere.get('type')[()].decode('utf8')
+        if isinstance(sphere, dict):
+            self.shape_name = sphere.get('type')
+        else:
+            self.shape_name = sphere.get('type')[()].decode('utf8')
 
     def sample(self, sample_points):
         if sample_points.size == 0:
@@ -284,7 +299,10 @@ class Torus(Surface):
         self.z_axis = np.array(torus.get('z_axis')[()]).reshape(-1, 1).T
         self.transform = np.array(torus.get('transform')[()])
         self.area = -1
-        self.shape_name = torus.get('type')[()].decode('utf8')
+        if isinstance(torus, dict):
+            self.shape_name = torus.get('type')
+        else:
+            self.shape_name = torus.get('type')[()].decode('utf8')
 
     def sample(self, sample_points):
         if sample_points.size == 0:
@@ -358,7 +376,10 @@ class BSplineSurface(Surface):
         self.v_periodic = bool(bspline_surface.get('v_periodic')[()])
         self.transform = np.array(bspline_surface.get('transform')[()])
         self.area = -1
-        self.shape_name = bspline_surface.get('type')[()].decode('utf8')
+        if isinstance(bspline_surface, dict):
+            self.shape_name = bspline_surface.get('type')
+        else:
+            self.shape_name = bspline_surface.get('type')[()].decode('utf8')
 
         if self.u_rational or self.v_rational:
             self.surface_obj = NURBS.Surface(normalize_kv=False)
@@ -423,7 +444,10 @@ class Extrusion(Surface):
         self.trim_domain = np.array(extrusion.get('trim_domain')[()])
         self.transform = np.array(extrusion.get('transform')[()])
         self.area = -1
-        self.shape_name = extrusion.get('type')[()].decode('utf8')
+        if isinstance(extrusion, dict):
+            self.shape_name = extrusion.get('type')
+        else:
+            self.shape_name = extrusion.get('type')[()].decode('utf8')
         _, self.curve = create_curve(extrusion['curve'], False)
 
     def sample(self, points):
@@ -450,7 +474,10 @@ class Revolution(Surface):
         self.trim_domain = np.array(revolution.get('trim_domain')[()])
         self.transform = np.array(revolution.get('transform')[()])
         self.area = -1
-        self.shape_name = revolution.get('type')[()].decode('utf8')
+        if isinstance(revolution, dict):
+            self.shape_name = revolution.get('type')
+        else:
+            self.shape_name = revolution.get('type')[()].decode('utf8')
         self.z_axis = np.array(revolution.get('z_axis')[()]).reshape(-1, 1).T
         _, self.curve = create_curve(revolution['curve'], False)
 
@@ -587,7 +614,10 @@ class Offset(Surface):
         self.transform = np.array(offset.get('transform')[()])
         self.area = -1
         self.value = np.float64(offset.get('value')[()])
-        self.shape_name = offset.get('type')[()].decode('utf8')
+        if isinstance(offset, dict):
+            self.shape_name = offset.get('type')
+        else:
+            self.shape_name = offset.get('type')[()].decode('utf8')
         _, self.surface = create_surface(offset['surface'], False)
 
     def sample(self, points):
