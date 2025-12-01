@@ -389,12 +389,11 @@ class BSplineSurface(Surface):
             return res
         elif order == 2:
             res = np.zeros((sample_points.shape[0], 3, 2, 2))
-            for i in range(sample_points.shape[0]):
-                d = self.surface_obj.derivatives(sample_points[i, 0], sample_points[i, 1], order)
-                res[i, :, 0, 0] = d[2][0]
-                res[i, :, 1, 0] = d[1][1]
-                res[i, :, 0, 1] = d[1][1]
-                res[i, :, 1, 1] = d[0][2]
+            duu, dvv, duv = self.surface_obj.second_derivative(sample_points)
+            res[:, :, 0, 0] = duu
+            res[:, :, 1, 0] = duv
+            res[:, :, 0, 1] = duv
+            res[:, :, 1, 1] = dvv
 
             return res
         else:
