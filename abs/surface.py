@@ -4,7 +4,6 @@ Provide methods to sample points on surfaces and compute derivatives and normals
 """
 
 import numpy as np
-from geomdl import BSpline, NURBS
 from geomdl import operations
 from .curve import create_curve
 from scipy.stats import skew
@@ -360,38 +359,32 @@ class BSplineSurface(Surface):
         self.area = -1
         self.shape_name = bspline_surface.get('type')[()].decode('utf8')
 
-        if self.u_rational or self.v_rational:
-            self.surface_obj = NURBS.Surface(normalize_kv=False)
-        else:
-            self.surface_obj = BSpline.Surface(normalize_kv=False)
-
-        self.surface_obj.degree_u = self.u_degree
-        self.surface_obj.degree_v = self.v_degree
-        self.surface_obj.ctrlpts_size_u = self.poles.shape[0]
-        self.surface_obj.ctrlpts_size_v = self.poles.shape[1]
-        self.surface_obj.knotvector_u = self.u_knots.squeeze().tolist()
-        self.surface_obj.knotvector_v = self.v_knots.squeeze().tolist()
-        self.surface_obj.ctrlpts = self.poles.reshape(-1, 3).tolist()
-        if self.u_rational or self.v_rational:
-            self.surface_obj.weights = self.weights.flatten().tolist()
-
+        from abs import BSpline
+        self.surface_obj = BSpline(
+            degree_u = self.u_degree,
+            degree_v = self.v_degree,
+            u_rational = self.u_rational,
+            v_rational = self.v_rational,
+            u_knots = self.u_knots.T,
+            v_knots = self.v_knots.T,
+            grid = np.array(self.poles).reshape(-1, 3),
+            weights = (self.weights).reshape(-1, 1),
+            u_periodic = self.u_periodic,
+            v_periodic = self.v_periodic
+        )
 
 
     def sample(self, sample_points):
         if sample_points.size == 0:
             return self.poles[0, 0]
-        uv_pairs = [(sample_points[i, 0], sample_points[i, 1]) for i in range(len(sample_points[:, 0]))]
-        return np.array(self.surface_obj.evaluate_list(uv_pairs))
+        return np.array(self.surface_obj.sample(sample_points))
 
     def derivative(self, sample_points, order=1):
         if order == 0:
             return self.sample(sample_points)
         elif order == 1:
             res = np.zeros((sample_points.shape[0], 3, 2))
-            for i in range(sample_points.shape[0]):
-                d = self.surface_obj.derivatives(sample_points[i, 0], sample_points[i, 1], order)
-                res[i, :, 0] = d[1][0]
-                res[i, :, 1] = d[0][1]
+            res[:, :, 0], res[:, :, 1] = self.surface_obj.first_derivative(sample_points)
 
             return res
         elif order == 2:
@@ -410,8 +403,11 @@ class BSplineSurface(Surface):
     def normal(self, sample_points):
         if sample_points.size == 0:
             return np.array([])
-        normals = operations.normal(self.surface_obj, sample_points)
-        normal_vectors = np.array([n[-1] for n in normals])
+
+        du, dv = self.surface_obj.first_derivative(sample_points)
+        normals = np.cross(du, dv)
+        norms = np.linalg.norm(normals, axis=1, keepdims=True)
+        normal_vectors = normals / norms
 
         return normal_vectors
 

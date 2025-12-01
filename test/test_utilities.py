@@ -333,7 +333,7 @@ def bspline_surface():
 
     u_knots = np.array([data["u_knots"]]).T
     v_knots = np.array([data["v_knots"]]).T
-    weights = np.array([data["weights"]]).T
+    weights = np.array([data["weights"]])
     weights = weights.reshape(-1, 1)
     grid = np.array(data["poles"]).reshape(-1, 3)
 

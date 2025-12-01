@@ -471,7 +471,7 @@ public:
 	{
 		if (u_rational || v_rational)
 		{
-			if (degree_u == 3 || degree_v == 3)
+			if (degree_u == 3 && degree_v == 3)
 			{
 				auto patch = std::make_unique<nanospline::NURBSPatch<double, 3, 3, 3>>();
 				patch->set_knots_u(u_knots);
@@ -504,7 +504,7 @@ public:
 		}
 		else
 		{
-			if (degree_u == 3 || degree_v == 3)
+			if (degree_u == 3 && degree_v == 3)
 			{
 				auto patch = std::make_unique<nanospline::BSplinePatch<double, 3, 3, 3>>();
 				patch->set_degree_u(degree_u);
