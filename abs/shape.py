@@ -5,7 +5,7 @@ Provides the Shape class that assembles curves, surfaces, and topology into a st
 from . import sampler
 from .topology import Edge, Face, Halfedge, Loop, Shell, Solid as TopoSolid, Topology
 from .curve import create_curve
-from .surface import create_surface
+from .surface import *
 from .winding_number import find_surface_uv_for_curve
 import numpy as np
 # from joblib import Parallel, delayed
@@ -26,8 +26,8 @@ class Shape:
         self.bbox = self._geometry_data.bbox
         self.vertices = self._geometry_data.vertices
 
-        self._create_2d_trimming_curves(self._geometry_data.curves2d, self._geometry_data.curves3d, spacing)
-        self.Solid = self.Solid(self._topology_data, self._geometry_data, self.trimming_curves_2d)
+        # self._create_2d_trimming_curves(self._geometry_data.curves2d, self._geometry_data.curves3d, spacing)
+        # self.Solid = self.Solid(self._topology_data, self._geometry_data, self.trimming_curves_2d)
 
 
     def _create_2d_trimming_curves(self, curves_2d, curves_3d, spacing):
@@ -290,51 +290,97 @@ class Shape:
                     surface = {'id': i, 'type': surface_type, 'trim_domain': trim_domain, 'transform': transform}
 
                     if stype == 0:  # Plane
-                        surface.update({
-                            'location': np.array(payload[idx:idx + 3]),
-                            'coefficients': np.array(payload[idx + 3:idx + 7]),
-                            'x_axis': np.array(payload[idx + 7:idx + 10]),
-                            'y_axis': np.array(payload[idx + 10:idx + 13]),
-                            'z_axis': np.array(payload[idx + 13:idx + 16])
-                        })
+                        self.surfaces[i] = Plane(None,
+                                                trim_domain=trim_domain,
+                                                transform=transform,
+                                                location=np.array(payload[idx:idx + 3]),
+                                                coefficients=np.array(payload[idx + 3:idx + 7]),
+                                                x_axis=np.array(payload[idx + 7:idx + 10]),
+                                                y_axis=np.array(payload[idx + 10:idx + 13]),
+                                                z_axis=np.array(payload[idx + 13:idx + 16]))
+                        # surface.update({
+                        #     'location': np.array(payload[idx:idx + 3]),
+                        #     'coefficients': np.array(payload[idx + 3:idx + 7]),
+                        #     'x_axis': np.array(payload[idx + 7:idx + 10]),
+                        #     'y_axis': np.array(payload[idx + 10:idx + 13]),
+                        #     'z_axis': np.array(payload[idx + 13:idx + 16])
+                        # })
                     elif stype == 1:  # Cylinder
-                        surface.update({
-                            'location': np.array(payload[idx:idx + 3]),
-                            'radius': np.array(payload[idx + 3]),
-                            'coefficients': np.array(payload[idx + 4:idx + 8]),
-                            'x_axis': np.array(payload[idx + 8:idx + 11]),
-                            'y_axis': np.array(payload[idx + 11:idx + 14]),
-                            'z_axis': np.array(payload[idx + 14:idx + 17])
-                        })
+                        self.surfaces[i] = Cylinder(None,
+                                                   trim_domain=trim_domain,
+                                                   transform=transform,
+                                                   location=np.array(payload[idx:idx + 3]),
+                                                   radius=payload[idx + 3],
+                                                   coefficients=np.array(payload[idx + 4:idx + 8]),
+                                                   x_axis=np.array(payload[idx + 8:idx + 11]),
+                                                   y_axis=np.array(payload[idx + 11:idx + 14]),
+                                                   z_axis=np.array(payload[idx + 14:idx + 17]))
+                        # surface.update({
+                        #     'location': np.array(payload[idx:idx + 3]),
+                        #     'radius': np.array(payload[idx + 3]),
+                        #     'coefficients': np.array(payload[idx + 4:idx + 8]),
+                        #     'x_axis': np.array(payload[idx + 8:idx + 11]),
+                        #     'y_axis': np.array(payload[idx + 11:idx + 14]),
+                        #     'z_axis': np.array(payload[idx + 14:idx + 17])
+                        # })
                     elif stype == 2:  # Cone
-                        surface.update({
-                            'location': np.array(payload[idx:idx + 3]),
-                            'radius': np.array(payload[idx + 3]),
-                            'coefficients': np.array(payload[idx + 4:idx + 8]),
-                            'apex': np.array(payload[idx + 8:idx + 11]),
-                            'angle': np.array(payload[idx + 11]),
-                            'x_axis': np.array(payload[idx + 12:idx + 15]),
-                            'y_axis': np.array(payload[idx + 15:idx + 18]),
-                            'z_axis': np.array(payload[idx + 18:idx + 21])
-                        })
+                        self.surfaces[i] = Cone(None,
+                                                trim_domain=trim_domain,
+                                                transform=transform,
+                                                location=np.array(payload[idx:idx + 3]),
+                                                radius=payload[idx + 3],
+                                                coefficients=np.array(payload[idx + 4:idx + 8]),
+                                                apex=np.array(payload[idx + 8:idx + 11]),
+                                                angle=payload[idx + 11],
+                                                x_axis=np.array(payload[idx + 12:idx + 15]),
+                                                y_axis=np.array(payload[idx + 15:idx + 18]),
+                                                z_axis=np.array(payload[idx + 18:idx + 21]))
+                        # surface.update({
+                        #     'location': np.array(payload[idx:idx + 3]),
+                        #     'radius': np.array(payload[idx + 3]),
+                        #     'coefficients': np.array(payload[idx + 4:idx + 8]),
+                        #     'apex': np.array(payload[idx + 8:idx + 11]),
+                        #     'angle': np.array(payload[idx + 11]),
+                        #     'x_axis': np.array(payload[idx + 12:idx + 15]),
+                        #     'y_axis': np.array(payload[idx + 15:idx + 18]),
+                        #     'z_axis': np.array(payload[idx + 18:idx + 21])
+                        # })
                     elif stype == 3:  # Sphere
-                        surface.update({
-                            'location': np.array(payload[idx:idx + 3]),
-                            'radius': np.array(payload[idx + 3]),
-                            'coefficients': np.array(payload[idx + 4:idx + 8]),
-                            'x_axis': np.array(payload[idx + 8:idx + 11]),
-                            'y_axis': np.array(payload[idx + 11:idx + 14]),
-                            'z_axis': np.array(payload[idx + 14:idx + 17])
-                        })
+                        self.surfaces[i] = Sphere(None,
+                                                 trim_domain=trim_domain,
+                                                 transform=transform,
+                                                 location=np.array(payload[idx:idx + 3]),
+                                                 radius=payload[idx + 3],
+                                                 coefficients=np.array(payload[idx + 4:idx + 8]),
+                                                 x_axis=np.array(payload[idx + 8:idx + 11]),
+                                                 y_axis=np.array(payload[idx + 11:idx + 14]),
+                                                 z_axis=np.array(payload[idx + 14:idx + 17]))
+                        # surface.update({
+                        #     'location': np.array(payload[idx:idx + 3]),
+                        #     'radius': np.array(payload[idx + 3]),
+                        #     'coefficients': np.array(payload[idx + 4:idx + 8]),
+                        #     'x_axis': np.array(payload[idx + 8:idx + 11]),
+                        #     'y_axis': np.array(payload[idx + 11:idx + 14]),
+                        #     'z_axis': np.array(payload[idx + 14:idx + 17])
+                        # })
                     elif stype == 4:  # Torus
-                        surface.update({
-                            'location': np.array(payload[idx:idx + 3]),
-                            'max_radius': np.array(payload[idx + 3]),
-                            'min_radius': np.array(payload[idx + 4]),
-                            'x_axis': np.array(payload[idx + 5:idx + 8]),
-                            'y_axis': np.array(payload[idx + 8:idx + 11]),
-                            'z_axis': np.array(payload[idx + 11:idx + 14])
-                        })
+                        self.surfaces[i] = Torus(None,
+                                                trim_domain=trim_domain,
+                                                transform=transform,
+                                                location=np.array(payload[idx:idx + 3]),
+                                                max_radius=payload[idx + 3],
+                                                min_radius=payload[idx + 4],
+                                                x_axis=np.array(payload[idx + 5:idx + 8]),
+                                                y_axis=np.array(payload[idx + 8:idx + 11]),
+                                                z_axis=np.array(payload[idx + 11:idx + 14]))
+                        # surface.update({
+                        #     'location': np.array(payload[idx:idx + 3]),
+                        #     'max_radius': np.array(payload[idx + 3]),
+                        #     'min_radius': np.array(payload[idx + 4]),
+                        #     'x_axis': np.array(payload[idx + 5:idx + 8]),
+                        #     'y_axis': np.array(payload[idx + 8:idx + 11]),
+                        #     'z_axis': np.array(payload[idx + 11:idx + 14])
+                        # })
                     elif stype == 5:  # BSplineSurface
                         u_degree, v_degree, continuity, u_rational, v_rational, u_periodic, v_periodic, u_closed, v_closed, is_trimmed, face_domain_len = payload[idx:idx + 11]
                         idx += 11
@@ -362,45 +408,80 @@ class Shape:
                         wshape = [int(val) for val in payload[idx + 1:idx + 3]]
                         idx += 3
                         weights = np.array(payload[idx:idx + len_weights]).reshape(wshape)
-                        weights_dict = {str(j): weights[j] for j in range(weights.shape[0])}
+                        # weights_dict = {str(j): weights[j] for j in range(weights.shape[0])}
 
-                        surface.update({
-                            'u_degree': np.array(u_degree),
-                            'v_degree': np.array(v_degree),
-                            'continuity': np.array(continuity),
-                            'u_rational': np.array(u_rational),
-                            'v_rational': np.array(v_rational),
-                            'u_periodic': np.array(u_periodic),
-                            'v_periodic': np.array(v_periodic),
-                            'u_closed': np.array(u_closed),
-                            'v_closed': np.array(v_closed),
-                            'is_trimmed': np.array(is_trimmed),
-                            'face_domain': face_domain,
-                            'poles': poles,
-                            'u_knots': u_knots,
-                            'v_knots': v_knots,
-                            'weights': weights_dict
-                        })
+                        self.surfaces[i] = BSplineSurface(None,
+                                                         trim_domain=trim_domain,
+                                                         transform=transform,
+                                                         u_degree=int(u_degree),
+                                                         v_degree=int(v_degree),
+                                                         continuity=int(continuity),
+                                                         u_rational=bool(u_rational),
+                                                         v_rational=bool(v_rational),
+                                                         u_periodic=bool(u_periodic),
+                                                         v_periodic=bool(v_periodic),
+                                                         u_closed=bool(u_closed),
+                                                         v_closed=bool(v_closed),
+                                                         is_trimmed=bool(is_trimmed),
+                                                         face_domain=face_domain,
+                                                         poles=poles,
+                                                         u_knots=u_knots,
+                                                         v_knots=v_knots,
+                                                         weights=weights)
+                        # surface.update({
+                        #     'u_degree': np.array(u_degree),
+                        #     'v_degree': np.array(v_degree),
+                        #     'continuity': np.array(continuity),
+                        #     'u_rational': np.array(u_rational),
+                        #     'v_rational': np.array(v_rational),
+                        #     'u_periodic': np.array(u_periodic),
+                        #     'v_periodic': np.array(v_periodic),
+                        #     'u_closed': np.array(u_closed),
+                        #     'v_closed': np.array(v_closed),
+                        #     'is_trimmed': np.array(is_trimmed),
+                        #     'face_domain': face_domain,
+                        #     'poles': poles,
+                        #     'u_knots': u_knots,
+                        #     'v_knots': v_knots,
+                        #     'weights': weights_dict
+                        # })
                     elif stype == 6:  # Extrusion
-                        surface.update({
-                            'direction': np.array(payload[idx:idx + 3]),
-                            'curve': self.curves3d_data[int(payload[idx + 3])]
-                        })
+                        self.surfaces[i] = Extrusion(None,
+                                                     trim_domain=trim_domain,
+                                                     transform=transform,
+                                                     direction=np.array(payload[idx:idx + 3]),
+                                                     curve=self.curves3d_data[int(payload[idx + 3])])
+                        # surface.update({
+                        #     'direction': np.array(payload[idx:idx + 3]),
+                        #     'curve': self.curves3d_data[int(payload[idx + 3])]
+                        # })
                     elif stype == 7:  # Revolution
-                        surface.update({
-                            'location': np.array(payload[idx:idx + 3]),
-                            'z_axis': np.array(payload[idx + 3:idx + 6]),
-                            'curve': self.curves3d_data[int(payload[idx + 6])]
-                        })
+                        self.surfaces[i] = Revolution(None,
+                                                     trim_domain=trim_domain,
+                                                     transform=transform,
+                                                     location=np.array(payload[idx:idx + 3]),
+                                                     z_axis=np.array(payload[idx + 3:idx + 6]),
+                                                     curve=self.curves3d_data[int(payload[idx + 6])])
+                        # surface.update({
+                        #     'location': np.array(payload[idx:idx + 3]),
+                        #     'z_axis': np.array(payload[idx + 3:idx + 6]),
+                        #     'curve': self.curves3d_data[int(payload[idx + 6])]
+                        # })
                     elif stype == 8:  # Offset
-                        surface.update({
-                            'value': np.array(payload[idx]),
-                            'surface': int(payload[idx + 1])
-                        })
+                        self.surfaces[i] = Offset(None,
+                                                 trim_domain=trim_domain,
+                                                 transform=transform,
+                                                 value=np.array(payload[idx]),
+                                                 surface=self.surfaces[int(payload[idx + 1])])
+
+                        # surface.update({
+                        #     'value': np.array(payload[idx]),
+                        #     'surface': int(payload[idx + 1])
+                        # })
                     elif stype == 9:  # Other
                         pass
 
-                    self.surfaces[i] = create_surface(surface, False)[1]
+                    # self.surfaces[i] = create_surface(surface, False)[1]
                 # Parallel(n_jobs=-1, backend="threading")(delayed(process_surface)(i) for i in range(len(surface_index)-1))
                 del surface_index
                 del surface_data
