@@ -23,9 +23,11 @@ from abs.part_processor import sample_parts
 try:
     _abspy = import_module("abspy")
     poisson_disk_downsample = _abspy.poisson_disk_downsample
+    BSpline = _abspy.BSpline
     __version__ = version("abs-hdf5")
 except ModuleNotFoundError as exc:
     poisson_disk_downsample = None
+    BSpline = None
     warn(
         "C++ extension 'abspy' not found; blue-noise down-sampling disabled. "
         f"(Original error: {exc})",

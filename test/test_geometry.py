@@ -7,7 +7,6 @@ from scipy.interpolate import BSpline
 def surface_derivative(surface, sample_points, epsilon=1e-6):
     # testing ds/du order 1
     sample_points_plus = sample_points.copy()
-    sample_points_plus = sample_points.copy()
     sample_points_plus[:, 0] += epsilon
     deriv = (surface.sample(sample_points_plus) - surface.sample(sample_points)) / epsilon
     deriv1 = surface.derivative(sample_points, 1)
@@ -495,7 +494,7 @@ class TestGeometry(unittest.TestCase):
         self.assertTrue(d2v < 1e-6)
 
     def test_bspline_surface(self):
-        shape = bspline_surface()
+        shape, fast = bspline_surface()
 
         self.assertEqual(type(shape.continuity), int)
         self.assertEqual(shape.face_domain.shape, (1, 4))
@@ -514,18 +513,38 @@ class TestGeometry(unittest.TestCase):
 
         # sample points
         umin_value, umax_value, vmin_value, vmax_value = shape.trim_domain.reshape(-1, 1)
-        gridX = np.linspace(umin_value, umax_value)
-        gridY = np.linspace(vmin_value, vmax_value)
+        gridX = np.linspace(umin_value, umax_value, 100)
+        gridY = np.linspace(vmin_value, vmax_value, 100)
         gridX, gridY = np.meshgrid(gridX, gridY)
         sample_points = np.column_stack((gridX, gridY)).reshape(-1, 2)
         self.assertEqual(shape.sample(sample_points).shape, (gridX.shape[0] * gridX.shape[1], 3))
 
+        # print(shape.sample(sample_points) - fast.sample(sample_points))
+        self.assertTrue(np.allclose(shape.sample(sample_points), fast.sample(sample_points)))
+
         # derivative
+
         du, dv, d2u, d2v = surface_derivative(shape, sample_points)
         self.assertTrue(du < 1e-6)
         self.assertTrue(dv < 1e-6)
         self.assertTrue(d2u < 1e-6)
         self.assertTrue(d2v < 1e-6)
+
+        fdu, fdv = fast.first_derivative(sample_points)
+        fduu, fdvv, fduv = fast.second_derivative(sample_points)
+
+        # test second deriv
+        deriv1 = shape.derivative(sample_points, 1)
+        self.assertTrue(np.allclose(deriv1[:,:,0], fdu))
+        self.assertTrue(np.allclose(deriv1[:,:,1], fdv))
+
+
+        deriv2 = shape.derivative(sample_points, 2)
+        self.assertTrue(np.allclose(deriv2[:,:,0,0], fduu))
+        self.assertTrue(np.allclose(deriv2[:,:,0,1], fduv))
+        self.assertTrue(np.allclose(deriv2[:,:,1,0], fduv))
+        self.assertTrue(np.allclose(deriv2[:,:,1,1], fdvv))
+
 
 
 
