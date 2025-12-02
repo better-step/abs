@@ -23,7 +23,7 @@ def estimate_total_curve_length(part):
     return total_length
 
 
-def process_part(part, num_samples, lambda_func, points_ratio=5):
+def process_part(part, num_samples, lambda_func, points_ratio):
     """
     Sample points on all surfaces and curves of a shape part according to specified number.
     Uses an iterative strategy with oversampling (points_ratio) and Poisson disk downsampling to refine points.

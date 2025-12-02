@@ -4,6 +4,10 @@ import h5py
 import shutil
 import numpy as np
 
+from abs.part_processor import sample_parts
+from abs.topology import Face
+from abs.utils import save_ply
+
 
 def process_edges(part):
     es = part['topology']['edges'].values()
@@ -338,15 +342,19 @@ def process_surfaces(part):
 
 
 if __name__ == "__main__":
-    # path = '/Users/teseo/Downloads/abs/assembly 3.hdf5' # Loaded in 167.06935691833496 seconds
+    path = '/Users/teseo/Downloads/abs/assembly 3.hdf5' # Loaded in 167.06935691833496 seconds
     # path = '/Users/teseo/data/abc/Hdf5MeshSampler/data/sample_hdf5/Box.hdf5' # Loaded in 0.028881072998046875 seconds
     # Loaded in 105.97194314002991 seconds
     # path = '/Users/teseo/data/abc/Hdf5MeshSampler/data/sample_hdf5/Cone.hdf5'
-    path = '/Users/teseo/data/abc/Hdf5MeshSampler/data/sample_hdf5/Sphere.hdf5'
+    # path = '/Users/teseo/data/abc/Hdf5MeshSampler/data/sample_hdf5/Sphere.hdf5'
     # path = '/Users/teseo/data/abc/Hdf5MeshSampler/data/sample_hdf5/Circle.hdf5'
     # path = '/Users/teseo/data/abc/Hdf5MeshSampler/data/sample_hdf5/Cylinder_Hole_Fillet_Chamfer.hdf5'
 
     create = False
+
+    def compute_labels(part, topo, points ):
+        if isinstance(topo, Face): return np.ones((points.shape[0], 1), dtype=np.float32)
+        else : return None
 
     if not create:
         path = path + '_new.hdf5'
@@ -354,6 +362,12 @@ if __name__ == "__main__":
         p = read_parts(path)
         end_time = time.time()
         print(f"Loaded in {end_time - start_time} seconds")
+
+        start_time = time.time()
+        P, S = sample_parts(p, 10000, compute_labels)
+        end_time = time.time()
+        print(f"samples in {end_time - start_time} seconds")
+        save_ply('test.ply', P)
     else:
         shutil.copyfile(path, path + '_new.hdf5')
         with h5py.File(path + '_new.hdf5', 'r+') as f:
