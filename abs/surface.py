@@ -473,8 +473,8 @@ class BSplineSurface(Surface):
             v_rational = self.v_rational,
             u_knots = self.u_knots.T,
             v_knots = self.v_knots.T,
-            grid = np.array(self.poles).reshape(-1, 3),
-            weights = (self.weights).reshape(-1, 1),
+            grid = self.poles.reshape(-1, 3),
+            weights = self.weights.reshape(-1, 1),
             u_periodic = self.u_periodic,
             v_periodic = self.v_periodic
         )

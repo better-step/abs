@@ -26,8 +26,8 @@ class Shape:
         self.bbox = self._geometry_data.bbox
         self.vertices = self._geometry_data.vertices
 
-        # self._create_2d_trimming_curves(self._geometry_data.curves2d, self._geometry_data.curves3d, spacing)
-        # self.Solid = self.Solid(self._topology_data, self._geometry_data, self.trimming_curves_2d)
+        self._create_2d_trimming_curves(self._geometry_data.curves2d, self._geometry_data.curves3d, spacing)
+        self.Solid = self.Solid(self._topology_data, self._geometry_data, self.trimming_curves_2d)
 
 
     def _create_2d_trimming_curves(self, curves_2d, curves_3d, spacing):
