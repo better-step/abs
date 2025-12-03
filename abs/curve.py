@@ -59,17 +59,23 @@ class Curve:
 
 class Line(Curve):
     """Straight line curve defined by a start location and direction vector."""
-    def __init__(self, line):
-        self.location = np.array(line.get('location')).reshape(-1, 1).T
-        self.interval = np.array(line.get('interval')).reshape(-1, 1).T
-        self.direction = np.array(line.get('direction')).reshape(-1, 1).T
-        if self.direction.shape[1] == 3:
-            self.transform = np.array(line.get('transform'))  # transformation matrix if present
+    def __init__(self, line, location=None, interval=None, direction=None, transform=None):
         self.length = -1
-        if isinstance(line, dict):
-            self.shape_name = line.get('type')
+
+        if line is None:
+            self.location = np.array(location).reshape(-1, 1).T
+            self.interval = np.array(interval).reshape(-1, 1).T
+            self.direction = np.array(direction).reshape(-1, 1).T
+            if transform:
+                self.transform = transform
+            self.shape_name = 'Line'
         else:
-            self.shape_name = line.get('type').decode('utf8')
+            self.location = np.array(line.get('location')[()]).reshape(-1, 1).T
+            self.interval = np.array(line.get('interval')[()]).reshape(-1, 1).T
+            self.direction = np.array(line.get('direction')[()]).reshape(-1, 1).T
+            if self.direction.shape[1] == 3:
+                self.transform = np.array(line.get('transform')[()])  # transformation matrix if present
+            self.shape_name = line.get('type')[()].decode('utf8')
 
     def sample(self, sample_points):
         if sample_points.size == 0:
@@ -92,26 +98,38 @@ class Line(Curve):
 
 class Circle(Curve):
     """Circular arc or full circle curve."""
-    def __init__(self, circle):
-        self.location = np.array(circle.get('location')).reshape(-1, 1).T
-        self.radius = float(circle.get('radius'))
-        self.interval = np.array(circle.get('interval')).reshape(-1, 1).T
-        self.x_axis = np.array(circle.get('x_axis')).reshape(-1, 1).T
-        self.y_axis = np.array(circle.get('y_axis')).reshape(-1, 1).T
-        if 'z_axis' in circle:
-            self.z_axis = np.array(circle.get('z_axis')).reshape(-1, 1).T
-            self.transform = np.array(circle.get('transform'))
+    def __init__(self, circle, location=None, radius=None, interval=None, x_axis=None, y_axis=None, z_axis=None, transform=None):
         self.length = -1
-        if isinstance(circle, dict):
-            self.shape_name = circle.get('type')
+
+        if circle is None:
+            self.location = np.array(location).reshape(-1, 1).T
+            self.radius = radius
+            self.interval = np.array(interval).reshape(-1, 1).T
+            self.x_axis = np.array(x_axis).reshape(-1, 1).T
+            self.y_axis = np.array(y_axis).reshape(-1, 1).T
+            if z_axis is not None:
+                self.z_axis = np.array(z_axis).reshape(-1, 1).T
+            if transform is not None:
+                self.transform = transform
+            self.shape_name = 'Circle'
         else:
-            self.shape_name = circle.get('type').decode('utf8')
+            self.location = np.array(circle.get('location')[()]).reshape(-1, 1).T
+            self.radius = float(circle.get('radius')[()])
+            self.interval = np.array(circle.get('interval')[()]).reshape(-1, 1).T
+            self.x_axis = np.array(circle.get('x_axis')[()]).reshape(-1, 1).T
+            self.y_axis = np.array(circle.get('y_axis')[()]).reshape(-1, 1).T
+            if 'z_axis' in circle:
+                self.z_axis = np.array(circle.get('z_axis')[()]).reshape(-1, 1).T
+                self.transform = np.array(circle.get('transform')[()])
+            self.shape_name = circle.get('type')[()].decode('utf8')
+
     def sample(self, sample_points):
         if sample_points.size == 0:
             return self.location
         # parametric angle values in sample_points
         circle_points = self.location + self.radius * (np.cos(sample_points) * self.x_axis + np.sin(sample_points) * self.y_axis)
         return circle_points
+
     def derivative(self, sample_points, order=1):
         if order == 0:
             return self.sample(sample_points)
@@ -129,28 +147,44 @@ class Circle(Curve):
 
 class Ellipse(Curve):
     """Elliptical curve (full ellipse or arc)."""
-    def __init__(self, ellipse):
-        self.focus1 = np.array(ellipse.get('focus1')).reshape(-1, 1).T
-        self.focus2 = np.array(ellipse.get('focus2')).reshape(-1, 1).T
-        self.interval = np.array(ellipse.get('interval')).reshape(-1, 1).T
-        self.maj_radius = float(ellipse.get('maj_radius'))
-        self.min_radius = float(ellipse.get('min_radius'))
-        self.x_axis = np.array(ellipse.get('x_axis')).reshape(-1, 1).T
-        self.y_axis = np.array(ellipse.get('y_axis')).reshape(-1, 1).T
+    def __init__(self, ellipse, focus1=None, focus2=None, interval=None, maj_radius=None, min_radius=None, x_axis=None, y_axis=None, z_axis=None, transform=None):
         self.length = -1
-        if isinstance(ellipse, dict):
-            self.shape_name = ellipse.get('type')
+
+        if ellipse is None:
+            self.focus1 = np.array(focus1).reshape(-1, 1).T
+            self.focus2 = np.array(focus2).reshape(-1, 1).T
+            self.interval = np.array(interval).reshape(-1, 1).T
+            self.maj_radius = maj_radius
+            self.min_radius = min_radius
+            self.x_axis = np.array(x_axis).reshape(-1, 1).T
+            self.y_axis = np.array(y_axis).reshape(-1, 1).T
+            if z_axis is not None:
+                self.z_axis = np.array(z_axis).reshape(-1, 1).T
+            if transform is not None:
+                self.transform = transform
+            self.shape_name = 'Ellipse'
         else:
+            self.focus1 = np.array(ellipse.get('focus1')[()]).reshape(-1, 1).T
+            self.focus2 = np.array(ellipse.get('focus2')[()]).reshape(-1, 1).T
+            self.interval = np.array(ellipse.get('interval')[()]).reshape(-1, 1).T
+            self.maj_radius = float(ellipse.get('maj_radius')[()])
+            self.min_radius = float(ellipse.get('min_radius')[()])
+            self.x_axis = np.array(ellipse.get('x_axis')[()]).reshape(-1, 1).T
+            self.y_axis = np.array(ellipse.get('y_axis')[()]).reshape(-1, 1).T
+
             self.shape_name = ellipse.get('type')[()].decode('utf8')
-        if 'z_axis' in ellipse:
-            self.z_axis = np.array(ellipse.get('z_axis')).reshape(-1, 1).T
-            self.transform = np.array(ellipse.get('transform'))  # 4x4 transform matrix if present
+            if 'z_axis' in ellipse:
+                self.z_axis = np.array(ellipse.get('z_axis')[()]).reshape(-1, 1).T
+                self.transform = np.array(ellipse.get('transform')[()])  # 4x4 transform matrix if present
+
         # Center of ellipse
         self.center = (self.focus1 + self.focus2) / 2
+
     def sample(self, sample_points):
         # Parametric angle values in sample_points
         ellipse_points = self.center + self.maj_radius * np.cos(sample_points) * self.x_axis + self.min_radius * np.sin(sample_points) * self.y_axis
         return ellipse_points
+
     def derivative(self, sample_points, order=1):
         if order % 4 == 0:
             if order == 0:
@@ -163,82 +197,38 @@ class Ellipse(Curve):
         else:
             return self.maj_radius * np.sin(sample_points) * self.x_axis - self.min_radius * np.cos(sample_points) * self.y_axis
 
-
-# class BSplineCurve(Curve):
-#     """B-spline or NURBS curve."""
-#     def __init__(self, bspline):
-#         self.length = -1
-#         self.closed = bool(bspline.get('closed')[()])
-#         self.degree = int(bspline.get('degree')[()])
-#         self.continuity = int(bspline.get('continuity')[()])
-#         self.poles = np.array(bspline.get('poles')[()])  # control points array
-#         self.knots = np.array(bspline.get('knots')[()]).reshape(-1, 1).T
-#         self.weights = np.array(bspline.get('weights')[()]).reshape(-1, 1)
-#         self.interval = np.array(bspline.get('interval')[()]).reshape(-1, 1).T
-#         self.rational = bool(bspline.get('rational')[()])
-#         self.periodic = bool(bspline.get('periodic')[()])
-#         self.shape_name = bspline.get('type')[()].decode('utf8')
-#         if self.poles.shape[1] == 3:
-#             self.transform = np.array(bspline.get('transform')[()])  # apply if present
-#         # Create underlying BSpline or NURBS curve object
-#         if self.rational:
-#             # Use NURBS-Python for rational B-spline
-#             self.bspline = NURBS.Curve()  # no normalization of knots to allow exact usage
-#             self.bspline.degree = self.degree
-#             self.bspline.ctrlpts = self.poles.tolist()
-#             self.bspline.knotvector = self.knots.flatten().tolist()
-#             self.bspline.weights = self.weights.flatten().tolist()
-#         else:
-#             # Use SciPy BSpline for non-rational
-#             self.bspline = BSpline(self.knots.T[0], self.poles, self.degree)
-#     def sample(self, sample_points):
-#         if sample_points.size == 0:
-#             return np.array([]).reshape(0, self.poles.shape[1])
-#         if self.rational:
-#             # Evaluate rational B-spline (list of points)
-#             return np.array(self.bspline.evaluate_list(sample_points.flatten().tolist()))
-#         # Evaluate SciPy BSpline (returns (n_points, dim) array)
-#         return np.squeeze(self.bspline(sample_points))
-#     def derivative(self, sample_points, order=1):
-#         if order == 0:
-#             return self.sample(sample_points)
-#         # If requested derivative order is higher than degree, derivative is zero vector
-#         if self.degree < order:
-#             return np.zeros((sample_points.shape[0], self.poles.shape[1]))
-#         if self.rational:
-#             # Use geomdl to compute derivatives for rational curves
-#             res = np.zeros((sample_points.shape[0], self.poles.shape[1]))
-#             for i in range(sample_points.shape[0]):
-#                 d = self.bspline.derivatives(sample_points[i, 0], order)
-#                 res[i, :] = d[-1]  # d[-1] is highest derivative (order-th)
-#             return res
-#         # For non-rational, SciPy's BSpline object can provide derivative by constructing a new BSpline
-#         b_spline_deriv = self.bspline.derivative(nu=order)
-#         return np.squeeze(b_spline_deriv(sample_points))
 class BSplineCurve(Curve):
-    def __init__(self, bspline):
-
+    def __init__(self, bspline, closed=None, degree=None, continuity=None, poles=None, knots=None, weights=None, interval=None, rational=None, periodic=None, transform=None):
         self.length = -1
 
-        self.closed = bool(bspline.get('closed'))
-        self.degree = int(bspline.get('degree'))
-        self.continuity = int(bspline.get('continuity'))
-        self.poles = np.array(bspline.get('poles'))
-        self.knots = np.array(bspline.get('knots')).reshape(-1, 1).T
-        self.weights = np.array(bspline.get('weights')).reshape(-1, 1)
-        self.interval = np.array(bspline.get('interval')).reshape(-1, 1).T
-        self.rational = bool(bspline.get('rational'))
-        self.periodic = bool(bspline.get('periodic'))
-        if isinstance(bspline, dict):
-            self.shape_name = bspline.get('type')
+        if bspline is None:
+            self.closed = bool(closed)
+            self.degree = int(degree)
+            self.continuity = int(continuity)
+            self.poles = np.array(poles)
+            self.knots = np.array(knots).reshape(-1, 1).T
+            self.weights = np.array(weights).reshape(-1, 1)
+            self.interval = np.array(interval).reshape(-1, 1).T
+            self.rational = bool(rational)
+            self.periodic = bool(periodic)
+            if transform is not None:
+                self.transform = transform
+            self.shape_name = 'BSpline'
         else:
-            self.shape_name = bspline.get('type').decode('utf8')
-        if self.poles.shape[1] == 3:
-            self.transform = np.array(bspline.get('transform'))
+            self.closed = bool(bspline.get('closed')[()])
+            self.degree = int(bspline.get('degree')[()])
+            self.continuity = int(bspline.get('continuity')[()])
+            self.poles = np.array(bspline.get('poles')[()])
+            self.knots = np.array(bspline.get('knots')[()]).reshape(-1, 1).T
+            self.weights = np.array(bspline.get('weights')[()]).reshape(-1, 1)
+            self.interval = np.array(bspline.get('interval')[()]).reshape(-1, 1).T
+            self.rational = bool(bspline.get('rational')[()])
+            self.periodic = bool(bspline.get('periodic')[()])
+            self.shape_name = bspline.get('type')[()].decode('utf8')
+            if self.poles.shape[1] == 3:
+                self.transform = np.array(bspline.get('transform')[()])
 
         # Create BSpline or NURBS curve object
-
-
         if self.rational:
             self.bspline = NURBS.Curve(normalize_kv=False)
             self.bspline.degree = self.degree
@@ -247,8 +237,6 @@ class BSplineCurve(Curve):
             self.bspline.weights = self.weights.flatten().tolist()
         else:
             self.bspline = BSpline(self.knots.T[:,0], self.poles, self.degree)
-
-
 
     def sample(self, sample_points):
         if self.rational:
@@ -272,19 +260,24 @@ class BSplineCurve(Curve):
                 return res
             b_spline_derivative = self.bspline.derivative(order)
             return np.squeeze(b_spline_derivative(sample_points))
+
 class Other(Curve):
     """Fallback for unsupported curve types."""
-    def __init__(self, other):
-        if isinstance(other, dict):
-            self.shape_name = other.get('type')
+    def __init__(self, other, interval=None):
+        if other is None:
+            self.shape_name = 'Other'
+            self.interval = np.array(interval).reshape(-1, 1).T
         else:
             self.shape_name = other.get('type')[()].decode('utf8')
-        self.interval = np.array(other.get('interval')).reshape(-1, 1).T
+            self.interval = np.array(other.get('interval')[()]).reshape(-1, 1).T
+
     def sample(self, sample_points):
         # Unsupported: return empty array
         return np.array([]).reshape(0, 3)
+
     def derivative(self, sample_points, order=1):
         return np.array([]).reshape(0, 3)
+
     def get_length(self):
         return 0.0
 

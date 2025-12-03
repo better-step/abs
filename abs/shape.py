@@ -4,7 +4,7 @@ Provides the Shape class that assembles curves, surfaces, and topology into a st
 """
 from . import sampler
 from .topology import Edge, Face, Halfedge, Loop, Shell, Solid as TopoSolid, Topology
-from .curve import create_curve
+from .curve import Circle, Ellipse, Line, BSplineCurve, Other
 from .surface import *
 from .winding_number import find_surface_uv_for_curve
 import numpy as np
@@ -119,29 +119,26 @@ class Shape:
                     interval = tmp[1:3]
 
                     if ctype == 0:  # Line
-                        curve_data = {'id': i,
-                                      'type': 'Line',
-                                      'interval': interval,
-                                      'location': tmp[3:5],
-                                      'direction': tmp[5:7]}
+                        self.curves2d[i] = Line(None, interval=interval,
+                                                location=np.array(tmp[3:5]),
+                                                direction=np.array(tmp[5:7]))
+
                     elif ctype == 1:  # Circle
-                        curve_data = {'id': i,
-                                        'type': 'Circle',
-                                        'interval': interval,
-                                        'location': tmp[3:5],
-                                        'x_axis': tmp[5:7],
-                                        'y_axis': tmp[7:9],
-                                        'radius': tmp[9]}
+                        self.curves2d[i] = Circle(None,
+                                                interval=interval,
+                                                location=np.array(tmp[3:5]),
+                                                x_axis=np.array(tmp[5:7]),
+                                                y_axis=np.array(tmp[7:9]),
+                                                radius=tmp[9])
                     elif ctype == 2:  # Ellipse
-                        curve_data = {'id': i,
-                                        'type': 'Ellipse',
-                                        'interval': interval,
-                                        'focus1': tmp[3:5],
-                                        'focus2': tmp[5:7],
-                                        'x_axis': tmp[7:9],
-                                        'y_axis': tmp[9:11],
-                                        'maj_radius': tmp[11],
-                                        'min_radius': tmp[12]}
+                        self.curves2d[i] = Ellipse(None,
+                                                interval=interval,
+                                                focus1=np.array(tmp[3:5]),
+                                                focus2=np.array(tmp[5:7]),
+                                                x_axis=np.array(tmp[7:9]),
+                                                y_axis=np.array(tmp[9:11]),
+                                                maj_radius=tmp[11],
+                                                min_radius=tmp[12])
                     elif ctype == 3:  # BSplineCurve
                         degree = int(tmp[3])
                         continuity = int(tmp[4])
@@ -158,28 +155,21 @@ class Shape:
                         len_weights = int(tmp[idx])
                         weights = tmp[idx+1:idx+1+len_weights]
 
-                        curve_data = {'id': i,
-                                        'type': 'BSpline',
-                                        'interval': interval,
-                                        'degree': degree,
-                                        'continuity': continuity,
-                                        'rational': rational,
-                                        'periodic': periodic,
-                                        'closed': closed,
-                                        'poles': poles,
-                                        'knots': knots,
-                                        'weights': weights}
+                        self.curves2d[i] = BSplineCurve(None,
+                                                        interval=interval,
+                                                        degree=degree,
+                                                        continuity=continuity,
+                                                        rational=rational,
+                                                        periodic=periodic,
+                                                        closed=closed,
+                                                        poles=poles,
+                                                        knots=knots,
+                                                        weights=weights)
                     elif ctype == 4:  # Other
-                        curve_data = {'id': i,
-                                        'type': 'Other',
-                                        'interval': interval}
+                        self.curves2d[i] = Other(None, interval=interval)
                     else:
                         raise ValueError(f"Unknown curve type: {ctype}")
 
-                    self.curves2d[i] = create_curve(curve_data, False)[1]
-                # Parallel(n_jobs=-1, backend="threading")(delayed(process_curve2d)(i) for i in range(len(curve2d_index)-1))
-                # for i in range(len(curve2d_index)-1):
-                #     process_curve2d(i)
                 del curve2d_index
                 del curve2d_data
 
@@ -194,31 +184,28 @@ class Shape:
                     transform = np.array(transform).reshape((3,4))
 
                     if ctype == 0:  # Line
-                        curve_data = {'id': i,
-                                      'type': 'Line',
-                                      'interval': interval,
-                                      'location': tmp[3:6],
-                                      'direction': tmp[6:9]}
+                        self.curves3d[i] = Line(None,
+                                                interval=interval,
+                                                location=tmp[3:6],
+                                                direction=tmp[6:9])
                     elif ctype == 1:  # Circle
-                        curve_data = {'id': i,
-                                        'type': 'Circle',
-                                        'interval': interval,
-                                        'location': tmp[3:6],
-                                        'x_axis': tmp[6:9],
-                                        'y_axis': tmp[9:12],
-                                        'z_axis': tmp[12:15],
-                                        'radius': tmp[15]}
+                        self.curves3d[i] = Circle(None,
+                                                 interval=interval,
+                                                 location=tmp[3:6],
+                                                 x_axis=tmp[6:9],
+                                                 y_axis=tmp[9:12],
+                                                 z_axis=tmp[12:15],
+                                                 radius=tmp[15])
                     elif ctype == 2:  # Ellipse
-                        curve_data = {'id': i,
-                                        'type': 'Ellipse',
-                                        'interval': interval,
-                                        'focus1': tmp[3:6],
-                                        'focus2': tmp[6:9],
-                                        'x_axis': tmp[9:12],
-                                        'y_axis': tmp[12:15],
-                                        'z_axis': tmp[15:18],
-                                        'maj_radius': tmp[18],
-                                        'min_radius': tmp[19]}
+                        self.curves3d[i] = Ellipse(None,
+                                                  interval=interval,
+                                                  focus1=tmp[3:6],
+                                                  focus2=tmp[6:9],
+                                                  x_axis=tmp[9:12],
+                                                  y_axis=tmp[12:15],
+                                                  z_axis=tmp[15:18],
+                                                  maj_radius=tmp[18],
+                                                  min_radius=tmp[19])
                     elif ctype == 3:  # BSplineCurve
                         degree = int(tmp[3])
                         continuity = int(tmp[4])
@@ -235,28 +222,21 @@ class Shape:
                         len_weights = int(tmp[idx])
                         weights = tmp[idx+1:idx+1+len_weights]
 
-                        curve_data = {'id': i,
-                                        'type': 'BSpline',
-                                        'interval': interval,
-                                        'degree': degree,
-                                        'continuity': continuity,
-                                        'rational': rational,
-                                        'periodic': periodic,
-                                        'closed': closed,
-                                        'poles': poles,
-                                        'knots': knots,
-                                        'weights': weights}
+                        self.curves3d[i] = BSplineCurve(None,
+                                                       interval=interval,
+                                                       degree=degree,
+                                                       continuity=continuity,
+                                                       rational=rational,
+                                                       periodic=periodic,
+                                                       closed=closed,
+                                                       poles=poles,
+                                                       knots=knots,
+                                                       weights=weights)
                     elif ctype == 4:  # Other
-                        curve_data = {'id': i,
-                                        'type': 'Other',
-                                        'interval': interval}
+                        self.curves3d[i] = Other(None, interval=interval)
                     else:
                         raise ValueError(f"Unknown curve type: {ctype} for curve {i}")
 
-                    self.curves3d[i] = create_curve(curve_data, False)[1]
-                # Parallel(n_jobs=-1, backend="threading")(delayed(process_curve3d)(i) for i in range(len(curve3d_index)-1))
-                # for i in range(len(curve3d_index)-1):
-                #     process_curve3d(i)
                 del curve3d_index
                 del curve3d_data
 
