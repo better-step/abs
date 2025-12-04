@@ -187,7 +187,8 @@ class Shape:
                         self.curves3d[i] = Line(None,
                                                 interval=interval,
                                                 location=tmp[3:6],
-                                                direction=tmp[6:9])
+                                                direction=tmp[6:9],
+                                                transform=transform)
                     elif ctype == 1:  # Circle
                         self.curves3d[i] = Circle(None,
                                                  interval=interval,
@@ -195,7 +196,8 @@ class Shape:
                                                  x_axis=tmp[6:9],
                                                  y_axis=tmp[9:12],
                                                  z_axis=tmp[12:15],
-                                                 radius=tmp[15])
+                                                 radius=tmp[15],
+                                                 transform=transform)
                     elif ctype == 2:  # Ellipse
                         self.curves3d[i] = Ellipse(None,
                                                   interval=interval,
@@ -205,7 +207,8 @@ class Shape:
                                                   y_axis=tmp[12:15],
                                                   z_axis=tmp[15:18],
                                                   maj_radius=tmp[18],
-                                                  min_radius=tmp[19])
+                                                  min_radius=tmp[19],
+                                                  transform=transform)
                     elif ctype == 3:  # BSplineCurve
                         degree = int(tmp[3])
                         continuity = int(tmp[4])
@@ -231,9 +234,10 @@ class Shape:
                                                        closed=closed,
                                                        poles=poles,
                                                        knots=knots,
-                                                       weights=weights)
+                                                       weights=weights,
+                                                       transform=transform)
                     elif ctype == 4:  # Other
-                        self.curves3d[i] = Other(None, interval=interval)
+                        self.curves3d[i] = Other(None, interval=interval, transform=transform)
                     else:
                         raise ValueError(f"Unknown curve type: {ctype} for curve {i}")
 

@@ -66,7 +66,7 @@ class Line(Curve):
             self.location = np.array(location).reshape(-1, 1).T
             self.interval = np.array(interval).reshape(-1, 1).T
             self.direction = np.array(direction).reshape(-1, 1).T
-            if transform:
+            if transform is not None:
                 self.transform = transform
             self.shape_name = 'Line'
         else:
@@ -263,10 +263,12 @@ class BSplineCurve(Curve):
 
 class Other(Curve):
     """Fallback for unsupported curve types."""
-    def __init__(self, other, interval=None):
+    def __init__(self, other, interval=None, transform=None):
         if other is None:
             self.shape_name = 'Other'
             self.interval = np.array(interval).reshape(-1, 1).T
+            if transform is not None:
+                self.transform = transform
         else:
             self.shape_name = other.get('type')[()].decode('utf8')
             self.interval = np.array(other.get('interval')[()]).reshape(-1, 1).T
