@@ -237,7 +237,7 @@ class Shape:
                                                        weights=weights,
                                                         transform=transform)
                     elif ctype == 4:  # Other
-                        self.curves3d[i] = Other(None, interval=interval)
+                        self.curves3d[i] = Other(None, interval=interval, transform=transform)
                     else:
                         raise ValueError(f"Unknown curve type: {ctype} for curve {i}")
 
