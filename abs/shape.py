@@ -1,19 +1,9 @@
-"""
-Combines geometry and topology to form complete shapes (parts).
-Provides the Shape class that assembles curves, surfaces, and topology into a structured object.
-"""
 from . import sampler
 from .topology import Edge, Face, Halfedge, Loop, Shell, Solid as TopoSolid, Topology
 from .curve import Circle, Ellipse, Line, BSplineCurve, Other
 from .surface import *
 from .winding_number import find_surface_uv_for_curve
 import numpy as np
-# from joblib import Parallel, delayed
-
-
-
-
-
 
 
 class Shape:
@@ -87,7 +77,6 @@ class Shape:
                             closest_surface_uv_values_of_curve = closest_surface_uv_values_of_curve[::-1]
                     else:
                         surface_uv_values, surface_points = sampler.uniform_sample(surface, n_samples*n_samples, 5, 100)
-
 
                         # Sample the curve points to get UV values
                         _, curve_points = sampler.uniform_sample(curve3d, n_samples)
@@ -285,10 +274,10 @@ class Shape:
                                                    transform=transform,
                                                    location=np.array(payload[idx:idx + 3]),
                                                    radius=payload[idx + 3],
-                                                   coefficients=np.array(payload[idx + 4:idx + 8]),
-                                                   x_axis=np.array(payload[idx + 8:idx + 11]),
-                                                   y_axis=np.array(payload[idx + 11:idx + 14]),
-                                                   z_axis=np.array(payload[idx + 14:idx + 17]))
+                                                   coefficients=np.array(payload[idx + 4:-9]),
+                                                   x_axis=np.array(payload[-9:-6]),
+                                                   y_axis=np.array(payload[-6:-3]),
+                                                   z_axis=np.array(payload[-3:]))
 
                     elif stype == 2:  # Cone
                         self.surfaces[i] = Cone(None,
@@ -309,10 +298,10 @@ class Shape:
                                                  transform=transform,
                                                  location=np.array(payload[idx:idx + 3]),
                                                  radius=payload[idx + 3],
-                                                 coefficients=np.array(payload[idx + 4:idx + 8]),
-                                                 x_axis=np.array(payload[idx + 8:idx + 11]),
-                                                 y_axis=np.array(payload[idx + 11:idx + 14]),
-                                                 z_axis=np.array(payload[idx + 14:idx + 17]))
+                                                 coefficients=np.array(payload[idx + 4:-9]),
+                                                x_axis=np.array(payload[-9:-6]),
+                                                y_axis=np.array(payload[-6:-3]),
+                                                z_axis=np.array(payload[-3:]))
 
                     elif stype == 4:  # Torus
                         self.surfaces[i] = Torus(None,

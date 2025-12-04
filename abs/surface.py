@@ -8,6 +8,13 @@ from geomdl import operations
 from .curve import create_curve
 from scipy.stats import skew
 
+_GAUSS_X, _GAUSS_W = np.polynomial.legendre.leggauss(4)
+_GAUSS_REF_PTS = np.stack(
+    np.meshgrid(_GAUSS_X, _GAUSS_X, indexing='ij'),
+    axis=-1
+).reshape(-1, 2)
+_GAUSS_WEIGHTS = np.outer(_GAUSS_W, _GAUSS_W).ravel()
+
 
 def create_surface(surface_data, compute_index=True):
     if compute_index:
@@ -49,24 +56,51 @@ class Surface:
         normals = normals / np.linalg.norm(normals, axis=1)[:, np.newaxis]
         return normals
 
+    # def get_area(self):
+    #     if getattr(self, "area", None) is not None and self.area != -1:
+    #         return self.area
+    #     # Approximate area via 4x4 Gauss-Legendre quadrature
+    #
+    #     x, w = np.polynomial.legendre.leggauss(4)
+    #     pts = np.array(np.meshgrid(x, x, indexing='ij')).reshape(2, -1).T+1
+    #     pts *= 0.5 * (self.trim_domain[:, 1] - self.trim_domain[:, 0])
+    #     pts += self.trim_domain[:, 0]
+    #     weights = (w * w[:, None]).ravel()
+    #
+    #     dd = self.derivative(pts)
+    #     EE = np.sum(dd[:, :, 0] * dd[:, :, 0], axis=1)
+    #     FF = np.sum(dd[:, :, 0] * dd[:, :, 1], axis=1)
+    #     GG = np.sum(dd[:, :, 1] * dd[:, :, 1], axis=1)
+    #
+    #     self.area = np.sum(np.sqrt(EE * GG - FF ** 2)*weights)*np.prod(self.trim_domain[:, 1] - self.trim_domain[:, 0]) / 4
+    #
+    #     return self.area
     def get_area(self):
+
         if getattr(self, "area", None) is not None and self.area != -1:
             return self.area
-        # Approximate area via 4x4 Gauss-Legendre quadrature
 
-        x, w = np.polynomial.legendre.leggauss(4)
-        pts = np.array(np.meshgrid(x, x, indexing='ij')).reshape(2, -1).T+1
-        pts *= 0.5 * (self.trim_domain[:, 1] - self.trim_domain[:, 0])
-        pts += self.trim_domain[:, 0]
-        weights = (w * w[:, None]).ravel()
+        umin, umax = self.trim_domain[0]
+        vmin, vmax = self.trim_domain[1]
 
-        dd = self.derivative(pts)
-        EE = np.sum(dd[:, :, 0] * dd[:, :, 0], axis=1)
-        FF = np.sum(dd[:, :, 0] * dd[:, :, 1], axis=1)
-        GG = np.sum(dd[:, :, 1] * dd[:, :, 1], axis=1)
+        du = 0.5 * (umax - umin)
+        dv = 0.5 * (vmax - vmin)
 
-        self.area = np.sum(np.sqrt(EE * GG - FF ** 2)*weights)*np.prod(self.trim_domain[:, 1] - self.trim_domain[:, 0]) / 4
+        uv = np.empty_like(_GAUSS_REF_PTS)
+        uv[:, 0] = du * _GAUSS_REF_PTS[:, 0] + 0.5 * (umin + umax)
+        uv[:, 1] = dv * _GAUSS_REF_PTS[:, 1] + 0.5 * (vmin + vmax)
 
+        dd = self.derivative(uv)
+
+        Su = dd[:, :, 0]
+        Sv = dd[:, :, 1]
+
+        cross = np.cross(Su, Sv)
+        jac = np.linalg.norm(cross, axis=1)
+
+        area = np.dot(jac, _GAUSS_WEIGHTS) * du * dv
+
+        self.area = float(area)
         return self.area
 
     def __eq__(self, other):

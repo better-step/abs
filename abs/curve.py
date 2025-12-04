@@ -6,6 +6,7 @@ import numpy as np
 from scipy.interpolate import BSpline
 from geomdl import NURBS
 
+_CURVE_X, _CURVE_W = np.polynomial.legendre.leggauss(4)
 
 def create_curve(curve_data, compute_index=True):
     """
@@ -43,16 +44,32 @@ class Curve:
     def derivative(self, points, order=1):
         """Evaluate the curve's derivative of given order at parametric points."""
         raise NotImplementedError("Derivative method must be implemented by subclasses")
+    # def get_length(self):
+    #     """Approximate the curve length via Gaussian quadrature (4-point Legendre)."""
+    #     if getattr(self, "length", None) is not None and self.length != -1:
+    #         return self.length
+    #     # Compute length via integration of first derivative
+    #     pts, weights = np.polynomial.legendre.leggauss(4)
+    #     pts = (pts + 1) * 0.5 * (self.interval[0, 1] - self.interval[0, 0]) + self.interval[0, 0]
+    #     deriv = self.derivative(pts[:, None], order=1)
+    #     lengths = np.linalg.norm(deriv, axis=1)
+    #     self.length = np.sum(lengths * weights) * (self.interval[0, 1] - self.interval[0, 0]) / 2
+    #     return self.length
     def get_length(self):
-        """Approximate the curve length via Gaussian quadrature (4-point Legendre)."""
+
         if getattr(self, "length", None) is not None and self.length != -1:
             return self.length
-        # Compute length via integration of first derivative
-        pts, weights = np.polynomial.legendre.leggauss(4)
-        pts = (pts + 1) * 0.5 * (self.interval[0, 1] - self.interval[0, 0]) + self.interval[0, 0]
-        deriv = self.derivative(pts[:, None], order=1)
-        lengths = np.linalg.norm(deriv, axis=1)
-        self.length = np.sum(lengths * weights) * (self.interval[0, 1] - self.interval[0, 0]) / 2
+
+        t0, t1 = self.interval[0]
+        dt = 0.5 * (t1 - t0)
+        tm = 0.5 * (t0 + t1)
+
+        t = dt * _CURVE_X + tm
+
+        deriv = self.derivative(t[:, None], order=1)
+        speeds = np.linalg.norm(deriv, axis=1)
+
+        self.length = float(np.dot(speeds, _CURVE_W) * dt)
         return self.length
 
     def __eq__(self, other):
