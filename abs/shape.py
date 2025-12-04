@@ -187,7 +187,8 @@ class Shape:
                         self.curves3d[i] = Line(None,
                                                 interval=interval,
                                                 location=tmp[3:6],
-                                                direction=tmp[6:9])
+                                                direction=tmp[6:9],
+                                                transform=transform)
                     elif ctype == 1:  # Circle
                         self.curves3d[i] = Circle(None,
                                                  interval=interval,
@@ -195,7 +196,8 @@ class Shape:
                                                  x_axis=tmp[6:9],
                                                  y_axis=tmp[9:12],
                                                  z_axis=tmp[12:15],
-                                                 radius=tmp[15])
+                                                 radius=tmp[15],
+                                                 transform=transform)
                     elif ctype == 2:  # Ellipse
                         self.curves3d[i] = Ellipse(None,
                                                   interval=interval,
@@ -205,7 +207,8 @@ class Shape:
                                                   y_axis=tmp[12:15],
                                                   z_axis=tmp[15:18],
                                                   maj_radius=tmp[18],
-                                                  min_radius=tmp[19])
+                                                  min_radius=tmp[19],
+                                                   transform=transform)
                     elif ctype == 3:  # BSplineCurve
                         degree = int(tmp[3])
                         continuity = int(tmp[4])
@@ -231,7 +234,8 @@ class Shape:
                                                        closed=closed,
                                                        poles=poles,
                                                        knots=knots,
-                                                       weights=weights)
+                                                       weights=weights,
+                                                        transform=transform)
                     elif ctype == 4:  # Other
                         self.curves3d[i] = Other(None, interval=interval)
                     else:
@@ -261,13 +265,9 @@ class Shape:
                     transform = np.array(tmp[-12:]).reshape((3, 4))
                     payload = tmp[:-12]
                     stype = int(payload[0])
-                    surface_type = surface_type_map.get(stype)
-                    if surface_type is None:
-                        raise ValueError(f"Unknown surface type: {stype} for surface {i}")
 
                     trim_domain = np.array(payload[1:5]).reshape((2, 2))
                     idx = 5
-                    surface = {'id': i, 'type': surface_type, 'trim_domain': trim_domain, 'transform': transform}
 
                     if stype == 0:  # Plane
                         self.surfaces[i] = Plane(None,
@@ -278,13 +278,7 @@ class Shape:
                                                 x_axis=np.array(payload[idx + 7:idx + 10]),
                                                 y_axis=np.array(payload[idx + 10:idx + 13]),
                                                 z_axis=np.array(payload[idx + 13:idx + 16]))
-                        # surface.update({
-                        #     'location': np.array(payload[idx:idx + 3]),
-                        #     'coefficients': np.array(payload[idx + 3:idx + 7]),
-                        #     'x_axis': np.array(payload[idx + 7:idx + 10]),
-                        #     'y_axis': np.array(payload[idx + 10:idx + 13]),
-                        #     'z_axis': np.array(payload[idx + 13:idx + 16])
-                        # })
+
                     elif stype == 1:  # Cylinder
                         self.surfaces[i] = Cylinder(None,
                                                    trim_domain=trim_domain,
@@ -295,36 +289,20 @@ class Shape:
                                                    x_axis=np.array(payload[idx + 8:idx + 11]),
                                                    y_axis=np.array(payload[idx + 11:idx + 14]),
                                                    z_axis=np.array(payload[idx + 14:idx + 17]))
-                        # surface.update({
-                        #     'location': np.array(payload[idx:idx + 3]),
-                        #     'radius': np.array(payload[idx + 3]),
-                        #     'coefficients': np.array(payload[idx + 4:idx + 8]),
-                        #     'x_axis': np.array(payload[idx + 8:idx + 11]),
-                        #     'y_axis': np.array(payload[idx + 11:idx + 14]),
-                        #     'z_axis': np.array(payload[idx + 14:idx + 17])
-                        # })
+
                     elif stype == 2:  # Cone
                         self.surfaces[i] = Cone(None,
                                                 trim_domain=trim_domain,
                                                 transform=transform,
                                                 location=np.array(payload[idx:idx + 3]),
                                                 radius=payload[idx + 3],
-                                                coefficients=np.array(payload[idx + 4:idx + 8]),
-                                                apex=np.array(payload[idx + 8:idx + 11]),
-                                                angle=payload[idx + 11],
-                                                x_axis=np.array(payload[idx + 12:idx + 15]),
-                                                y_axis=np.array(payload[idx + 15:idx + 18]),
-                                                z_axis=np.array(payload[idx + 18:idx + 21]))
-                        # surface.update({
-                        #     'location': np.array(payload[idx:idx + 3]),
-                        #     'radius': np.array(payload[idx + 3]),
-                        #     'coefficients': np.array(payload[idx + 4:idx + 8]),
-                        #     'apex': np.array(payload[idx + 8:idx + 11]),
-                        #     'angle': np.array(payload[idx + 11]),
-                        #     'x_axis': np.array(payload[idx + 12:idx + 15]),
-                        #     'y_axis': np.array(payload[idx + 15:idx + 18]),
-                        #     'z_axis': np.array(payload[idx + 18:idx + 21])
-                        # })
+                                                coefficients=np.array(payload[idx + 4:-13]),
+                                                apex=np.array(payload[-13:-10]),
+                                                angle=payload[-10],
+                                                x_axis=np.array(payload[-9:-6]),
+                                                y_axis=np.array(payload[-6:-3]),
+                                                z_axis=np.array(payload[-3:]))
+
                     elif stype == 3:  # Sphere
                         self.surfaces[i] = Sphere(None,
                                                  trim_domain=trim_domain,
@@ -335,14 +313,7 @@ class Shape:
                                                  x_axis=np.array(payload[idx + 8:idx + 11]),
                                                  y_axis=np.array(payload[idx + 11:idx + 14]),
                                                  z_axis=np.array(payload[idx + 14:idx + 17]))
-                        # surface.update({
-                        #     'location': np.array(payload[idx:idx + 3]),
-                        #     'radius': np.array(payload[idx + 3]),
-                        #     'coefficients': np.array(payload[idx + 4:idx + 8]),
-                        #     'x_axis': np.array(payload[idx + 8:idx + 11]),
-                        #     'y_axis': np.array(payload[idx + 11:idx + 14]),
-                        #     'z_axis': np.array(payload[idx + 14:idx + 17])
-                        # })
+
                     elif stype == 4:  # Torus
                         self.surfaces[i] = Torus(None,
                                                 trim_domain=trim_domain,
@@ -353,14 +324,7 @@ class Shape:
                                                 x_axis=np.array(payload[idx + 5:idx + 8]),
                                                 y_axis=np.array(payload[idx + 8:idx + 11]),
                                                 z_axis=np.array(payload[idx + 11:idx + 14]))
-                        # surface.update({
-                        #     'location': np.array(payload[idx:idx + 3]),
-                        #     'max_radius': np.array(payload[idx + 3]),
-                        #     'min_radius': np.array(payload[idx + 4]),
-                        #     'x_axis': np.array(payload[idx + 5:idx + 8]),
-                        #     'y_axis': np.array(payload[idx + 8:idx + 11]),
-                        #     'z_axis': np.array(payload[idx + 11:idx + 14])
-                        # })
+
                     elif stype == 5:  # BSplineSurface
                         u_degree, v_degree, continuity, u_rational, v_rational, u_periodic, v_periodic, u_closed, v_closed, is_trimmed, face_domain_len = payload[idx:idx + 11]
                         idx += 11
@@ -408,33 +372,14 @@ class Shape:
                                                          u_knots=u_knots,
                                                          v_knots=v_knots,
                                                          weights=weights)
-                        # surface.update({
-                        #     'u_degree': np.array(u_degree),
-                        #     'v_degree': np.array(v_degree),
-                        #     'continuity': np.array(continuity),
-                        #     'u_rational': np.array(u_rational),
-                        #     'v_rational': np.array(v_rational),
-                        #     'u_periodic': np.array(u_periodic),
-                        #     'v_periodic': np.array(v_periodic),
-                        #     'u_closed': np.array(u_closed),
-                        #     'v_closed': np.array(v_closed),
-                        #     'is_trimmed': np.array(is_trimmed),
-                        #     'face_domain': face_domain,
-                        #     'poles': poles,
-                        #     'u_knots': u_knots,
-                        #     'v_knots': v_knots,
-                        #     'weights': weights_dict
-                        # })
+
                     elif stype == 6:  # Extrusion
                         self.surfaces[i] = Extrusion(None,
                                                      trim_domain=trim_domain,
                                                      transform=transform,
                                                      direction=np.array(payload[idx:idx + 3]),
                                                      curve=self.curves3d_data[int(payload[idx + 3])])
-                        # surface.update({
-                        #     'direction': np.array(payload[idx:idx + 3]),
-                        #     'curve': self.curves3d_data[int(payload[idx + 3])]
-                        # })
+
                     elif stype == 7:  # Revolution
                         self.surfaces[i] = Revolution(None,
                                                      trim_domain=trim_domain,
@@ -442,11 +387,7 @@ class Shape:
                                                      location=np.array(payload[idx:idx + 3]),
                                                      z_axis=np.array(payload[idx + 3:idx + 6]),
                                                      curve=self.curves3d_data[int(payload[idx + 6])])
-                        # surface.update({
-                        #     'location': np.array(payload[idx:idx + 3]),
-                        #     'z_axis': np.array(payload[idx + 3:idx + 6]),
-                        #     'curve': self.curves3d_data[int(payload[idx + 6])]
-                        # })
+
                     elif stype == 8:  # Offset
                         self.surfaces[i] = Offset(None,
                                                  trim_domain=trim_domain,
@@ -454,15 +395,10 @@ class Shape:
                                                  value=np.array(payload[idx]),
                                                  surface=self.surfaces[int(payload[idx + 1])])
 
-                        # surface.update({
-                        #     'value': np.array(payload[idx]),
-                        #     'surface': int(payload[idx + 1])
-                        # })
+
                     elif stype == 9:  # Other
                         pass
 
-                    # self.surfaces[i] = create_surface(surface, False)[1]
-                # Parallel(n_jobs=-1, backend="threading")(delayed(process_surface)(i) for i in range(len(surface_index)-1))
                 del surface_index
                 del surface_data
             else:
@@ -710,10 +646,101 @@ class Shape:
                     shell.solids = shellMap[shell]['solids']
 
 
+        def __eq__(self, other):
+            if not isinstance(other, self.__class__):
+                return NotImplemented
+
+            def summarize_edges(edges):
+                return {
+                    e.id: (
+                        int(e.start_vertex),
+                        int(e.end_vertex),
+                        e.curve3d,
+                    )
+                    for e in edges
+                }
+
+            def summarize_halfedges(halfedges):
+                summary = {}
+                for h in halfedges:
+                    mate = getattr(h, "mates", None)
+                    mate_id = mate.id if mate is not None else None
+
+                    summary[h.id] = (
+                        bool(h.orientation_wrt_edge),
+                        h.edge.id,
+                        mate_id,
+                        h.curve2d,
+                    )
+                return summary
+
+            def summarize_loops(loops):
+
+                return {
+                    loop.id: tuple(h.id for h in loop.halfedges)
+                    for loop in loops
+                }
+
+            def summarize_faces(faces):
+                summary = {}
+                for f in faces:
+                    exact_domain = tuple(np.asarray(f.exact_domain).ravel().tolist())
+                    loop_ids = tuple(loop.id for loop in f.loops)
+
+                    sing_raw = getattr(f, "singularities", None)
+                    sing_summary = None
+                    if isinstance(sing_raw, dict):
+                        sing_summary = {}
+                        for key, inner in sing_raw.items():
+                            norm_inner = {}
+                            for k2, v in inner.items():
+                                if isinstance(v, (np.ndarray, list, tuple)):
+                                    norm_inner[k2] = np.asarray(v).ravel().tolist()
+                                else:
+                                    norm_inner[k2] = v
+                                sing_summary[key] = norm_inner
+
+                    summary[f.id] = (
+                        exact_domain,
+                        bool(getattr(f, "has_singularities", False)),
+                        int(getattr(f, "nr_singularities", 0)),
+                        int(f.outer_loop),
+                        bool(f.surface_orientation),
+                        loop_ids,
+                        # sing_summary,
+                        f.surface,
+                    )
+                return summary
+
+
+            def summarize_shells(shells):
+                summary = {}
+                for s in shells:
+                    faces = tuple((face.id, bool(orient)) for (face, orient) in s.faces)
+                    summary[s.id] = (
+                        bool(s.orientation_wrt_solid),
+                        faces,
+                    )
+                return summary
+
+            def summarize_solids(solids):
+                summary = {}
+                for s in solids:
+                    shell_ids = tuple(shell.id for shell in s.shells)
+                    summary[s.id] = shell_ids
+                return summary
+
+            return (
+                summarize_edges(self.edges) == summarize_edges(other.edges)
+                and summarize_halfedges(self.halfedges) == summarize_halfedges(other.halfedges)
+                and summarize_loops(self.loops) == summarize_loops(other.loops)
+                and summarize_faces(self.faces) == summarize_faces(other.faces)
+                and summarize_shells(self.shells) == summarize_shells(other.shells)
+                and summarize_solids(self.solids) == summarize_solids(other.solids)
+            )
 
 
 
-# Helper functions to construct topology objects
 def _get_edges(edge_data): return Edge(edge_data)
 def _get_faces(face_data): return Face(face_data)
 def _get_halfedges(halfedge_data): return Halfedge(halfedge_data)

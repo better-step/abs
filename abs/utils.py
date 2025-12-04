@@ -26,10 +26,11 @@ def read_meshes(file_path):
     """Read pre-computed mesh data (points and triangles) for each face of each part from an HDF5 file."""
     f = h5py.File(file_path, 'r')
     part = f['parts'].values()
+    version = f['parts'].attrs.get('version')
 
     meshes = []
     for i, p in enumerate(part):
-        s = Shape(p['geometry'], p['topology'])
+        s = Shape(p['geometry'], p['topology'], version)
         # If shape has no faces, append empty
         if not hasattr(s, 'Solid') or not hasattr(s.Solid, 'faces') or not s.Solid.faces:
             meshes.append([])

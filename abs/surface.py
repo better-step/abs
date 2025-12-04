@@ -69,6 +69,64 @@ class Surface:
 
         return self.area
 
+    def __eq__(self, other):
+        if not isinstance(other, Surface):
+            return NotImplemented
+        if type(self) is not type(other):
+            print(f"[Surface ==] Type mismatch: {type(self).__name__} vs {type(other).__name__}")
+            return False
+
+        rtol = 1e-8
+        atol = 1e-10
+
+        def _cmp(v1, v2, name):
+            if isinstance(v1, (np.ndarray, list, tuple)) or isinstance(v2, (np.ndarray, list, tuple)):
+                a1 = np.asarray(v1)
+                a2 = np.asarray(v2)
+                if a1.shape != a2.shape:
+                    print(f"[Surface ==] Attribute '{name}' shape mismatch: {a1.shape} vs {a2.shape}")
+                    return False
+                if np.issubdtype(a1.dtype, np.number) and np.issubdtype(a2.dtype, np.number):
+                    if not np.allclose(a1, a2, rtol=rtol, atol=atol):
+                        print(f"[Surface ==] Attribute '{name}' numeric values differ")
+                        return False
+                    return True
+                if not np.array_equal(a1, a2):
+                    print(f"[Surface ==] Attribute '{name}' array values differ")
+                    return False
+                return True
+
+            if isinstance(v1, (int, float, bool, np.generic, str)) and isinstance(v2,
+                                                                                  (int, float, bool, np.generic, str)):
+                if v1 != v2:
+                    print(f"[Surface ==] Attribute '{name}' scalar mismatch: {v1!r} vs {v2!r}")
+                    return False
+                return True
+
+            if v1 != v2:
+                print(f"[Surface ==] Attribute '{name}' mismatch (fallback compare): {v1!r} vs {v2!r}")
+                return False
+            return True
+
+        ignore = {"area", "surface_obj"}
+        attrs1 = {k: v for k, v in self.__dict__.items()
+                  if not k.startswith("_") and k not in ignore}
+        attrs2 = {k: v for k, v in other.__dict__.items()
+                  if not k.startswith("_") and k not in ignore}
+
+        if attrs1.keys() != attrs2.keys():
+            only1 = attrs1.keys() - attrs2.keys()
+            only2 = attrs2.keys() - attrs1.keys()
+            print(f"[Surface ==] Attribute key mismatch. "
+                  f"Only in self: {sorted(only1)}, only in other: {sorted(only2)}")
+            return False
+
+        for name in attrs1.keys():
+            if not _cmp(attrs1[name], attrs2[name], name):
+                return False
+
+        return True
+
 
 class Plane(Surface):
     """Plane surface."""

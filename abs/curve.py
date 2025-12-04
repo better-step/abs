@@ -55,6 +55,44 @@ class Curve:
         self.length = np.sum(lengths * weights) * (self.interval[0, 1] - self.interval[0, 0]) / 2
         return self.length
 
+    def __eq__(self, other):
+
+        if type(self) is not type(other):
+            return NotImplemented
+
+        rtol = 1e-8
+        atol = 1e-10
+
+        def _cmp(v1, v2):
+            if isinstance(v1, (np.ndarray, list, tuple)) or isinstance(v2, (np.ndarray, list, tuple)):
+                a1 = np.asarray(v1)
+                a2 = np.asarray(v2)
+                if a1.shape != a2.shape:
+                    return False
+                if np.issubdtype(a1.dtype, np.number) and np.issubdtype(a2.dtype, np.number):
+                    return np.allclose(a1, a2, rtol=rtol, atol=atol)
+                return np.array_equal(a1, a2)
+
+            if isinstance(v1, (int, float, bool, np.generic)) and isinstance(v2, (int, float, bool, np.generic)):
+                return v1 == v2
+
+            return v1 == v2
+
+        ignore = {"length", "bspline"}
+        attrs1 = {k: v for k, v in self.__dict__.items()
+                  if not k.startswith("_") and k not in ignore}
+        attrs2 = {k: v for k, v in other.__dict__.items()
+                  if not k.startswith("_") and k not in ignore}
+
+        if attrs1.keys() != attrs2.keys():
+            return False
+
+        for name in attrs1.keys():
+            if not _cmp(attrs1[name], attrs2[name]):
+                return False
+
+        return True
+
 
 
 class Line(Curve):
