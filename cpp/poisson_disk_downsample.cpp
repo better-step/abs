@@ -198,9 +198,10 @@ namespace
 		const int zi = Xs(i, 2);
 		// printf("%d %d %d - %g %g %g\n",xi,yi,zi,X(i,0),X(i,1),X(i,2));
 		//  cell indices of neighbors
-		int g = 4;
+		int g = 2; // ceil(r/s)
 		std::vector<int64_t> N;
-		N.reserve((1 + g * 1) ^ 3 - 1);
+		const auto est_size = 1 + g * 1;
+		N.reserve(est_size * est_size * est_size - 1);
 		for (int x = std::max(xi - g, 0); x <= std::min(xi + g, w - 1); x++)
 			for (int y = std::max(yi - g, 0); y <= std::min(yi + g, w - 1); y++)
 				for (int z = std::max(zi - g, 0); z <= std::min(zi + g, w - 1); z++)
@@ -283,7 +284,7 @@ namespace
 		std::unordered_map<int64_t, std::vector<int>> M;
 		std::unordered_map<int64_t, int> S;
 		// attempted to seed
-		std::unordered_map<int64_t, int> A;
+		// std::unordered_map<int64_t, int> A;
 		// Q: Too many?
 		// A: Seems to help though.
 		M.reserve(Xs.rows());
@@ -301,10 +302,11 @@ namespace
 				Miter->second.push_back(i);
 			}
 			S.emplace(k, -1);
-			A.emplace(k, false);
+			// A.emplace(k, false);
 		}
 
 		std::vector<int> active;
+		active.reserve(nx);
 		// precompute r²
 		// Q: is this necessary?
 		const double rr = r * r;
