@@ -8,7 +8,7 @@ include(CPM)
 CPMAddPackage(
     NAME nanospline
     GITHUB_REPOSITORY qnzhou/nanospline
-    GIT_TAG        660e3db75d8faa43f201f7638e9bd198bd5237d5
+    GIT_TAG        5657b8d39178e81ebf9ac91b37b47516ec361185
     OPTIONS
     "NANOSPLINE_BUILD_TESTS Off"
 )
