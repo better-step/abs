@@ -1,3 +1,5 @@
+#include <cstdint>
+
 #include <Eigen/Core>
 
 #include <pybind11/eigen.h>
