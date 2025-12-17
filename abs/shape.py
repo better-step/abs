@@ -1,24 +1,21 @@
-from abs.topology import *
-from abs.curve import *
-from abs.surface import *
-from abs import sampler
-from abs.winding_number import find_surface_uv_for_curve
+"""
+Combines geometry and topology to form complete shapes (parts).
+Provides the Shape class that assembles curves, surfaces, and topology into a structured object.
+"""
+from . import sampler
+from .topology import Edge, Face, Halfedge, Loop, Shell, Solid as TopoSolid, Topology
+from .curve import create_curve
+from .surface import create_surface
+from .winding_number import find_surface_uv_for_curve
+import numpy as np
 
-def _get_edges(edge_data):
-    return Edge(edge_data)
 
-def _get_faces(face_data):
-    return Face(face_data)
 
-def _get_halfedges(halfedge_data):
-    return Halfedge(halfedge_data)
-
-def _get_loops(loop_data):
-    return Loop(loop_data)
 
 
 
 class Shape:
+    """Represents a geometric part (one part from the CAD model) with geometry and topology assembled."""
     def __init__(self, geometry_data, topology_data, spacing=0.02):
 
         self._geometry_data = self._geometry_data(geometry_data)
@@ -145,7 +142,7 @@ class Shape:
                 'halfedges': (self.halfedges, _get_halfedges),
                 'loops': (self.loops, _get_loops),
                 'shells': (self.shells, Shell),
-                'solids': (self.solids, Solid)
+                'solids': (self.solids, TopoSolid)
             }
 
             for entity, (attr_list, constructor) in entity_map.items():
@@ -259,3 +256,8 @@ class Shape:
 
 
 
+# Helper functions to construct topology objects
+def _get_edges(edge_data): return Edge(edge_data)
+def _get_faces(face_data): return Face(face_data)
+def _get_halfedges(halfedge_data): return Halfedge(halfedge_data)
+def _get_loops(loop_data): return Loop(loop_data)

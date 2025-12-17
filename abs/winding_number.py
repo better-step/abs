@@ -1,5 +1,8 @@
-import numpy as np
+"""
+Computations for winding number and related operations for curves/surfaces.
+"""
 
+import numpy as np
 
 def winding_number(curve_uv_values, surface_uv_values):
     """ Compute the winding number for a polyline and surface UV values efficiently. """

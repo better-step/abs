@@ -5,7 +5,7 @@ from abs.winding_number import winding_number
 
 
 class Topology:
-
+    """Base class for topology entities (Edge, Face, etc.)"""
     @staticmethod
     def _get_topo_data(topo_data: h5py.File, entity: str) -> List[Dict[str, Any]]:
 
@@ -36,6 +36,7 @@ class Topology:
 
 
 class Edge(Topology):
+    """Edge in the topology, with pointers to its 3D curve and vertices."""
     def __init__(self, edge):
         self.curve3d = edge['3dcurve']
         self.end_vertex = int(edge['end_vertex'])
@@ -59,6 +60,7 @@ class Edge(Topology):
 
 
 class Face(Topology):
+    """Face in the topology, bounded by loops and referencing a surface."""
     def __init__(self, face):
         self.loops = np.array(face['loops'])
         self.surface = np.int64(face['surface'])
@@ -127,6 +129,7 @@ class Face(Topology):
 
 
 class Halfedge(Topology):
+    """Half-edge: directed edge segment, part of a loop boundary."""
     def __init__(self, halfedge):
         self.curve2d = np.int64(halfedge['2dcurve'])
         self.edge = np.int64(halfedge['edge'])
@@ -136,7 +139,6 @@ class Halfedge(Topology):
         else:
             self.mates = None
         self.loops = None
-
         self.id = halfedge['id']
 
 
@@ -153,6 +155,7 @@ class Halfedge(Topology):
 
 
 class Loop(Topology):
+    """Loop: a closed sequence of halfedges bounding a face."""
     def __init__(self, loop):
         self.halfedges = np.array(loop['halfedges'])
         self.faces = None
@@ -160,6 +163,7 @@ class Loop(Topology):
         self.id = loop['id']
 
 class Shell(Topology):
+    """Shell: collection of faces (part of a solid)."""
     def __init__(self, shell):
         self.faces = np.array(shell['faces'], dtype=object)
         self.orientation_wrt_solid = shell['orientation_wrt_solid']
@@ -171,6 +175,7 @@ class Shell(Topology):
 
 
 class Solid(Topology):
+    """Solid: top-level collection of shells comprising a part's volume."""
     def __init__(self, solid):
         self.shells = np.array(solid['shells'])
         self.id = solid['id']

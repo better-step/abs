@@ -1,8 +1,12 @@
-import numpy as np
-from geomdl import BSpline, NURBS
-from geomdl import operations
+"""
+Surface classes for various surface types (Plane, Cylinder, Cone, Sphere, Torus, etc.).
+Provide methods to sample points on surfaces and compute derivatives and normals.
+"""
 
-from abs.curve import create_curve
+import numpy as np
+from geomdl import operations
+from .curve import create_curve
+from scipy.stats import skew
 
 
 def create_surface(surface_data, compute_index=True):
@@ -27,16 +31,15 @@ def create_surface(surface_data, compute_index=True):
     if surface_class:
         return index, surface_class(surface_data)
     else:
-        # print(f"This surface type: {surface_type}, is currently not supported")
+        # Unsupported surface type
         return index, None
 
 class Surface:
+    """Base class for all surface types."""
     def sample(self, points):
         raise NotImplementedError("Sample method must be implemented by subclasses")
-
     def derivative(self, points, order=1):
         raise NotImplementedError("Derivative method must be implemented by subclasses")
-
     def normal(self, points):
         derivatives = self.derivative(points, order=1)
         normals = np.cross(derivatives[:, :, 0], derivatives[:, :, 1])
@@ -44,26 +47,29 @@ class Surface:
         return normals
 
     def get_area(self):
-        if self.area == -1:
-            x, w = np.polynomial.legendre.leggauss(4)
-            pts = np.array(np.meshgrid(x, x, indexing='ij')).reshape(2, -1).T+1
-            pts *= 0.5 * (self.trim_domain[:, 1] - self.trim_domain[:, 0])
-            pts += self.trim_domain[:, 0]
-            weights = (w * w[:, None]).ravel()
+        if getattr(self, "area", None) is not None and self.area != -1:
+            return self.area
+        # Approximate area via 4x4 Gauss-Legendre quadrature
 
-            dd = self.derivative(pts)
-            EE = np.sum(dd[:, :, 0] * dd[:, :, 0], axis=1)
-            FF = np.sum(dd[:, :, 0] * dd[:, :, 1], axis=1)
-            GG = np.sum(dd[:, :, 1] * dd[:, :, 1], axis=1)
+        x, w = np.polynomial.legendre.leggauss(4)
+        pts = np.array(np.meshgrid(x, x, indexing='ij')).reshape(2, -1).T+1
+        pts *= 0.5 * (self.trim_domain[:, 1] - self.trim_domain[:, 0])
+        pts += self.trim_domain[:, 0]
+        weights = (w * w[:, None]).ravel()
 
-            self.area = np.sum(np.sqrt(EE * GG - FF ** 2)*weights)*np.prod(self.trim_domain[:, 1] - self.trim_domain[:, 0]) / 4
+        dd = self.derivative(pts)
+        EE = np.sum(dd[:, :, 0] * dd[:, :, 0], axis=1)
+        FF = np.sum(dd[:, :, 0] * dd[:, :, 1], axis=1)
+        GG = np.sum(dd[:, :, 1] * dd[:, :, 1], axis=1)
+
+        self.area = np.sum(np.sqrt(EE * GG - FF ** 2)*weights)*np.prod(self.trim_domain[:, 1] - self.trim_domain[:, 0]) / 4
 
         return self.area
 
 
 class Plane(Surface):
+    """Plane surface."""
     def __init__(self, plane):
-
         self.location = np.array(plane.get('location')[()]).reshape(-1, 1).T
         self.coefficients = np.array(plane.get('coefficients')[()]).reshape(-1, 1).T
         self.trim_domain = np.array(plane.get('trim_domain')[()])
@@ -84,11 +90,13 @@ class Plane(Surface):
         if order == 0:
             return self.sample(sample_points)
         elif order == 1:
+            # Partial derivatives in u and v directions
             deriv = np.zeros((sample_points.shape[0], 3, 2))
             deriv[:, :, 0] = self.x_axis
             deriv[:, :, 1] = self.y_axis
             return deriv
         elif order == 2:
+            # Second derivative is zero
             return np.zeros((sample_points.shape[0], 3, 2, 2))
         else:
             raise ValueError("Order must be 0, 1, or 2")
@@ -101,6 +109,7 @@ class Plane(Surface):
 
 
 class Cylinder(Surface):
+    """Cylindrical surface."""
     def __init__(self, cylinder):
 
         self.location = np.array(cylinder.get('location')[()]).reshape(-1, 1).T
@@ -144,6 +153,7 @@ class Cylinder(Surface):
 
 
 class Cone(Surface):
+    """Conical surface."""
     def __init__(self, cone):
         self.location = np.array(cone.get('location')[()]).reshape(-1, 1).T
         self.radius = float(cone.get('radius')[()])
@@ -194,6 +204,7 @@ class Cone(Surface):
 
 
 class Sphere(Surface):
+    """Spherical surface."""
     def __init__(self, sphere):
 
         self.location = np.array(sphere.get('location')[()]).reshape(-1, 1).T
@@ -251,6 +262,8 @@ class Sphere(Surface):
             raise ValueError("Order must be 0, 1, or 2")
 
     def normal(self, sample_points):
+        if sample_points.size == 0:
+            return np.array([])
         sphere_points = self.sample(sample_points)
         normals = sphere_points - self.location
         normals = normals / np.linalg.norm(normals, axis=1)[:, np.newaxis]
@@ -258,6 +271,7 @@ class Sphere(Surface):
 
 
 class Torus(Surface):
+    """Torus (donut-shaped) surface."""
     def __init__(self, torus):
 
         self.location = np.array(torus.get('location')[()]).reshape(-1, 1).T
@@ -318,6 +332,7 @@ class Torus(Surface):
 
 
 class BSplineSurface(Surface):
+    """B-spline or NURBS surface (possibly trimmed)."""
     def __init__(self, bspline_surface):
 
         self.continuity = int(bspline_surface.get('continuity')[()])
@@ -344,48 +359,41 @@ class BSplineSurface(Surface):
         self.area = -1
         self.shape_name = bspline_surface.get('type')[()].decode('utf8')
 
-        if self.u_rational or self.v_rational:
-            self.surface_obj = NURBS.Surface(normalize_kv=False)
-        else:
-            self.surface_obj = BSpline.Surface(normalize_kv=False)
-
-        self.surface_obj.degree_u = self.u_degree
-        self.surface_obj.degree_v = self.v_degree
-        self.surface_obj.ctrlpts_size_u = self.poles.shape[0]
-        self.surface_obj.ctrlpts_size_v = self.poles.shape[1]
-        self.surface_obj.knotvector_u = self.u_knots.squeeze().tolist()
-        self.surface_obj.knotvector_v = self.v_knots.squeeze().tolist()
-        self.surface_obj.ctrlpts = self.poles.reshape(-1, 3).tolist()
-        if self.u_rational or self.v_rational:
-            self.surface_obj.weights = self.weights.flatten().tolist()
-
+        from abs import BSpline
+        self.surface_obj = BSpline(
+            degree_u = self.u_degree,
+            degree_v = self.v_degree,
+            u_rational = self.u_rational,
+            v_rational = self.v_rational,
+            u_knots = self.u_knots.T,
+            v_knots = self.v_knots.T,
+            grid = np.array(self.poles).reshape(-1, 3),
+            weights = (self.weights).reshape(-1, 1),
+            u_periodic = self.u_periodic,
+            v_periodic = self.v_periodic
+        )
 
 
     def sample(self, sample_points):
         if sample_points.size == 0:
             return self.poles[0, 0]
-        uv_pairs = [(sample_points[i, 0], sample_points[i, 1]) for i in range(len(sample_points[:, 0]))]
-        return np.array(self.surface_obj.evaluate_list(uv_pairs))
+        return np.array(self.surface_obj.sample(sample_points))
 
     def derivative(self, sample_points, order=1):
         if order == 0:
             return self.sample(sample_points)
         elif order == 1:
             res = np.zeros((sample_points.shape[0], 3, 2))
-            for i in range(sample_points.shape[0]):
-                d = self.surface_obj.derivatives(sample_points[i, 0], sample_points[i, 1], order)
-                res[i, :, 0] = d[1][0]
-                res[i, :, 1] = d[0][1]
+            res[:, :, 0], res[:, :, 1] = self.surface_obj.first_derivative(sample_points)
 
             return res
         elif order == 2:
             res = np.zeros((sample_points.shape[0], 3, 2, 2))
-            for i in range(sample_points.shape[0]):
-                d = self.surface_obj.derivatives(sample_points[i, 0], sample_points[i, 1], order)
-                res[i, :, 0, 0] = d[2][0]
-                res[i, :, 1, 0] = d[1][1]
-                res[i, :, 0, 1] = d[1][1]
-                res[i, :, 1, 1] = d[0][2]
+            duu, dvv, duv = self.surface_obj.second_derivative(sample_points)
+            res[:, :, 0, 0] = duu
+            res[:, :, 1, 0] = duv
+            res[:, :, 0, 1] = duv
+            res[:, :, 1, 1] = dvv
 
             return res
         else:
@@ -394,8 +402,11 @@ class BSplineSurface(Surface):
     def normal(self, sample_points):
         if sample_points.size == 0:
             return np.array([])
-        normals = operations.normal(self.surface_obj, sample_points)
-        normal_vectors = np.array([n[-1] for n in normals])
+
+        du, dv = self.surface_obj.first_derivative(sample_points)
+        normals = np.cross(du, dv)
+        norms = np.linalg.norm(normals, axis=1, keepdims=True)
+        normal_vectors = normals / norms
 
         return normal_vectors
 
