@@ -23,7 +23,7 @@ def estimate_total_curve_length(part):
     return total_length
 
 
-def process_part(part, num_samples, lambda_func, points_ratio=5, apply_transform=True):
+def process_part(part, num_samples, lambda_func, points_ratio, apply_transform, uniform_sample, use_poisson, force_num_points):
     """
     Sample points on all surfaces and curves of a shape part according to specified number.
     Uses an iterative strategy with oversampling (points_ratio) and Poisson disk downsampling to refine points.
@@ -41,7 +41,10 @@ def process_part(part, num_samples, lambda_func, points_ratio=5, apply_transform
         # Sample points on each face (surface)
         for face in part.Solid.faces:
             n_surf = int(np.ceil((face.get_area() / total_area) * num_points))
-            uv_points, pt = sampler.random_sample(face, n_surf, min_pts=2)
+            if uniform_sample:
+                uv_points, pt = sampler.uniform_sample(face, n_surf, min_pts=2)
+            else:
+                uv_points, pt = sampler.random_sample(face, n_surf, min_pts=2)
             s = lambda_func(part, face, uv_points)
             if s is not None:
                 if apply_transform:
@@ -70,10 +73,13 @@ def process_part(part, num_samples, lambda_func, points_ratio=5, apply_transform
                     current_ss.append(s[index, :])
         # Sample points on each edge (curve)
         for edge in part.Solid.edges:
-            if edge.curve3d is None:
+            if edge.curve3d is None or edge.curve3d.shape_name == "Other":
                 continue
             n_edge = int(np.ceil((edge.get_length() / total_length) * num_points))
-            uv_points, pt = sampler.random_sample(edge, n_edge, min_pts=2)
+            if uniform_sample:
+                uv_points, pt = sampler.uniform_sample(edge, n_edge, min_pts=2)
+            else:
+                uv_points, pt = sampler.random_sample(edge, n_edge, min_pts=2)
             s = lambda_func(part, edge, uv_points)
             if s is not None:
                 if apply_transform:
@@ -109,22 +115,32 @@ def process_part(part, num_samples, lambda_func, points_ratio=5, apply_transform
             else:
                 ss = np.concatenate(current_ss, axis=0) if len(current_ss) > 0 else []
         # Stop when enough points collected or nothing collected
-        if pts.shape[0] >= initial_num_points or pts.shape[0] == 0:
+        if not force_num_points or pts.shape[0] >= initial_num_points or pts.shape[0] == 0:
             break
         else:
             # Increase num_points for next iteration (upscale by factor to approach initial count)
             num_points = np.ceil(num_points * initial_num_points / max(len(pts), 1) * 1.2)
+
     # If no points at all, return empty structures
     if pts.shape[0] == 0:
         return pts, pts
     # Poisson disk downsample to exactly num_samples points
-    indices = poisson_disk_downsample(pts, num_samples)
-    if len(indices) < num_samples:
-        remaining_idx = [i for i in range(len(pts)) if i not in indices]
-        additional_indices = np.random.choice(remaining_idx, num_samples - len(indices), replace=False)
-        indices = np.concatenate([indices, additional_indices])
-    elif len(indices) > num_samples:
-        indices = np.random.choice(indices, num_samples, replace=False)
+
+    if use_poisson:
+        indices = poisson_disk_downsample(pts, num_samples)
+    else:
+        indices = np.arange(pts.shape[0])
+
+    if force_num_points:
+        if len(indices) < num_samples:
+            remaining_idx = [i for i in range(len(pts)) if i not in indices]
+            additional_indices = np.random.choice(remaining_idx, num_samples - len(indices), replace=False)
+            indices = np.concatenate([indices, additional_indices])
+        elif len(indices) > num_samples:
+            indices = np.random.choice(indices, num_samples, replace=False)
+
+    indices = np.sort(indices)
+
     if isinstance(ss, list):
         # Multiple associated arrays (e.g., normals in separate array)
         new_ss = [[sublist[i] for i in indices] for sublist in ss]
@@ -133,12 +149,12 @@ def process_part(part, num_samples, lambda_func, points_ratio=5, apply_transform
         return pts[indices], ss[indices] if isinstance(ss, np.ndarray) else ss
 
 
-def sample_parts(parts, num_samples, lambda_func, points_ratio=5, apply_transform=True):
+def sample_parts(parts, num_samples, lambda_func, points_ratio=5, apply_transform=True, uniform_sample=False, use_poisson=True, force_num_points=True):
     """Process a list of parts by sampling each part and returning lists of points and values."""
     pts_list = []
     ss_list = []
     for part in parts:
-        pts, ss = process_part(part, num_samples, lambda_func, points_ratio, apply_transform)
+        pts, ss = process_part(part, num_samples, lambda_func, points_ratio=points_ratio,apply_transform=apply_transform, uniform_sample=uniform_sample, use_poisson=use_poisson, force_num_points=force_num_points)
         pts_list.append(np.array(pts))
         if isinstance(ss, list):
             ss_list.extend([np.array(sublist) for sublist in ss])
