@@ -2,11 +2,57 @@ from abs import read_parts
 import time
 import h5py
 import shutil
-import numpy as np
-
 from abs.part_processor import sample_parts
 from abs.topology import Face
 from abs.utils import save_ply
+import numpy as np
+
+
+def _as_flat_list(x, expected_len=None):
+    arr = np.array(x)
+    flat = arr.reshape(-1).tolist()
+    if expected_len is not None and len(flat) != expected_len:
+        raise ValueError(f"Expected length {expected_len}, got {len(flat)}")
+    return flat
+
+def process_meshes(part):
+    mesh_group = part["mesh"]
+    ms = list(mesh_group.values())
+    meshes = [None] * len(ms)
+    for m in ms:
+        idx = int(m.name.split("/")[-1])
+        pts = np.asarray(m["points"][()], dtype=np.float32)
+        tri = np.asarray(m["triangle"][()], dtype=np.int32)
+        meshes[idx] = (pts, tri)
+
+    del part["mesh"]
+    mesh_out = part.create_group("mesh")
+
+    points_flat = []
+    triangles_flat = []
+    point_index = [0]
+    triangle_index = [0]
+
+    p_start = 0
+    t_start = 0
+    for pts, tri in meshes:
+        pts = np.asarray(pts, dtype=np.float32)
+        tri = np.asarray(tri, dtype=np.int32)
+
+        # Flatten (store element offsets)
+        points_flat.extend(pts.reshape(-1).tolist())
+        triangles_flat.extend(tri.reshape(-1).tolist())
+
+        p_start += pts.size
+        t_start += tri.size
+
+        point_index.append(p_start)
+        triangle_index.append(t_start)
+
+    mesh_out.create_dataset("points", data=np.asarray(points_flat, dtype=np.float32))
+    mesh_out.create_dataset("point_index", data=np.asarray(point_index, dtype=np.int64))
+    mesh_out.create_dataset("triangles", data=np.asarray(triangles_flat, dtype=np.int32))
+    mesh_out.create_dataset("triangle_index", data=np.asarray(triangle_index, dtype=np.int64))
 
 
 def process_edges(part):
@@ -24,7 +70,7 @@ def process_edges(part):
         edge_index.append(start)
         compressed.extend(e)
         start += len(e)
-    edge_index.append(start)  # add end index
+    edge_index.append(start)
 
     part['topology'].create_dataset('edges', data=compressed)
     part['topology'].create_dataset('edge_index', data=edge_index)
@@ -88,7 +134,7 @@ def process_shells(part):
         shell_index.append(start)
         compressed.extend(sh)
         start += len(sh)
-    shell_index.append(start)  # add end index
+    shell_index.append(start)
 
     part['topology'].create_dataset('shells', data=compressed)
     part['topology'].create_dataset('shell_index', data=shell_index)
@@ -108,7 +154,7 @@ def process_solids(part):
         solid_index.append(start)
         compressed.extend(sl)
         start += len(sl)
-    solid_index.append(start)  # add end index
+    solid_index.append(start)
 
     part['topology'].create_dataset('solids', data=compressed)
     part['topology'].create_dataset('solid_index', data=solid_index)
@@ -123,10 +169,34 @@ def process_faces(part):
         lps = f["loops"][()].tolist()
         ns = int(f["nr_singularities"][()])
         os = int(f["outer_loop"][()])
-        # sgs = f["singularities"].values() #TODO new format for singularities
+
+        sings_grp = f["singularities"]
+        items = []
+        for sg_name in sings_grp.keys():
+            try:
+                items.append((int(sg_name), sings_grp[sg_name]))
+            except ValueError:
+                items.append((sg_name, sings_grp[sg_name]))
+        items.sort(key=lambda t: t[0])
+
+        flat = []
+        for _, sg in items:
+            flat.extend(_as_flat_list(sg["first2d"][()], expected_len=2))
+            flat.append(float(sg["firstpar"][()]))
+
+            flat.extend(_as_flat_list(sg["last2d"][()], expected_len=2))
+            flat.append(float(sg["lastpar"][()]))
+
+            flat.extend(_as_flat_list(sg["point2d"][()], expected_len=2))
+            flat.extend(_as_flat_list(sg["point3d"][()], expected_len=3))
+
+            flat.append(float(sg["precision"][()]))
+            flat.append(float(sg["rank"][()]))
+            flat.append(int(bool(sg["uiso"][()])))
+
         srf = int(f["surface"][()])
         so = int(f["surface_orientation"][()])
-        faces[index] = ed + [hs, ns, os, srf, so] + lps
+        faces[index] = ed + [hs, ns, os, srf, so]+ flat + lps
 
     del part['topology']['faces']
     start = 0
@@ -265,7 +335,7 @@ def process_surfaces(part):
             xaxis.ravel().tolist() + \
             yaxis.ravel().tolist() + \
             zaxis.ravel().tolist()
-        elif tt == "Torus":  # torus
+        elif tt == "Torus":
             tt = 4
             surfaces[index] = [tt] + td + \
             s["location"][()].tolist() + \
@@ -273,7 +343,7 @@ def process_surfaces(part):
             s["x_axis"][()].tolist() + \
             s["y_axis"][()].tolist() + \
             s["z_axis"][()].tolist()
-        elif tt == "BSpline":  # BSplineSurface
+        elif tt == "BSpline":
             tt = 5
             surfaces[index] = [tt] + td
             face_domain = s["face_domain"][()].ravel().tolist()
@@ -342,15 +412,9 @@ def process_surfaces(part):
 
 
 if __name__ == "__main__":
-    path = '/Users/teseo/Downloads/abs/assembly 3.hdf5' # Loaded in 167.06935691833496 seconds
-    # path = '/Users/teseo/data/abc/Hdf5MeshSampler/data/sample_hdf5/Box.hdf5' # Loaded in 0.028881072998046875 seconds
-    # Loaded in 105.97194314002991 seconds
-    # path = '/Users/teseo/data/abc/Hdf5MeshSampler/data/sample_hdf5/Cone.hdf5'
-    # path = '/Users/teseo/data/abc/Hdf5MeshSampler/data/sample_hdf5/Sphere.hdf5'
-    # path = '/Users/teseo/data/abc/Hdf5MeshSampler/data/sample_hdf5/Circle.hdf5'
-    # path = '/Users/teseo/data/abc/Hdf5MeshSampler/data/sample_hdf5/Cylinder_Hole_Fillet_Chamfer.hdf5'
+    path = '/home/nafiseh/Documents/abs/data/sample_hdf5/Cone.hdf5'
 
-    create = False
+    create = True
 
     def compute_labels(part, topo, points ):
         if isinstance(topo, Face): return np.ones((points.shape[0], 1), dtype=np.float32)
@@ -373,6 +437,7 @@ if __name__ == "__main__":
         with h5py.File(path + '_new.hdf5', 'r+') as f:
             f['parts'].attrs["version"] = "3.0"
             for part in f['parts'].values():
+                process_meshes(part)
                 process_edges(part)
                 process_halfedges(part)
                 process_loops(part)

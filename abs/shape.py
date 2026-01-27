@@ -491,28 +491,62 @@ class Shape:
                 face_index = data.get('face_index', {})[()]
                 face_data = data.get('faces', {})[()]
                 self.faces = [None] * (len(face_index)-1)
-                for i in range(len(face_index)-1):
-                    tmp = face_data[face_index[i]:face_index[i+1]]
+                SING_WIDTH = 14
+
+                for i in range(len(face_index) - 1):
+                    tmp = face_data[face_index[i]:face_index[i + 1]]
 
                     exact_domain = tmp[:4]
                     has_singularities = bool(tmp[4])
-                    nr_singularities = tmp[5]
-                    # singularities = tmp[6:6+nr_singularities] #TODO new format for singularities
-                    outer_loop = tmp[6]
-                    surface = tmp[7]
+                    nr_singularities = int(tmp[5])
+
+                    # header positions (matches: ed + [hs, ns, os, srf, so] + singularities + loops)
+                    outer_loop = int(tmp[6])
+                    surface = int(tmp[7])
                     surface_orientation = bool(tmp[8])
-                    loops = np.array(tmp[9:]).astype(np.int64)
 
+                    sing_start = 9
+                    sing_end = sing_start + nr_singularities * SING_WIDTH
 
-                    local_face = {'id': i,
-                                    'exact_domain': exact_domain,
-                                    'has_singularities': has_singularities,
-                                    'nr_singularities': nr_singularities,
-                                    'outer_loop': outer_loop,
-                                'surface': surface,
-                                'singularities': [],
-                                'surface_orientation': surface_orientation,
-                                'loops': loops}
+                    sing_flat = tmp[sing_start:sing_end]
+
+                    singularities = []
+                    if has_singularities and nr_singularities > 0:
+                        if len(sing_flat) != nr_singularities * SING_WIDTH:
+                            raise ValueError(
+                                f"Face {i}: expected {nr_singularities * SING_WIDTH} singularity values, got {len(sing_flat)}"
+                            )
+
+                        for s in range(nr_singularities):
+                            b = s * SING_WIDTH
+                            block = sing_flat[b:b + SING_WIDTH]
+
+                            sg = {
+                                "first2d": np.array(block[0:2], dtype=np.float64),
+                                "firstpar": float(block[2]),
+                                "last2d": np.array(block[3:5], dtype=np.float64),
+                                "lastpar": float(block[5]),
+                                "point2d": np.array(block[6:8], dtype=np.float64),
+                                "point3d": np.array(block[8:11], dtype=np.float64),
+                                "precision": float(block[11]),
+                                "rank": int(block[12]),
+                                "uiso": bool(int(block[13])),
+                            }
+                            singularities.append(sg)
+
+                    loops = np.array(tmp[sing_end:], dtype=np.int64)
+
+                    local_face = {
+                        "id": i,
+                        "exact_domain": exact_domain,
+                        "has_singularities": has_singularities,
+                        "nr_singularities": nr_singularities,
+                        "outer_loop": outer_loop,
+                        "surface": surface,
+                        "singularities": singularities,
+                        "surface_orientation": surface_orientation,
+                        "loops": loops,
+                    }
                     self.faces[i] = Face(local_face)
                 # Parallel(n_jobs=-1, backend="threading")(delayed(process_face)(i) for i in range(len(face_index)-1))
                 del face_index
