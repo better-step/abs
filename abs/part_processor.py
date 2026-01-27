@@ -5,7 +5,7 @@ Functions for processing Shape parts: sampling points and computing normals.
 import numpy as np
 from . import sampler
 from abspy import poisson_disk_downsample
-
+from abspy import poisson_grid_downsample
 
 
 def estimate_total_surface_area(part):
@@ -117,6 +117,7 @@ def process_part(part, num_samples, lambda_func, points_ratio):
         return pts, pts
     # Poisson disk downsample to exactly num_samples points
     indices = poisson_disk_downsample(pts, num_samples)
+    # indices = poisson_grid_downsample(pts, num_samples)
     if len(indices) < num_samples:
         remaining_idx = [i for i in range(len(pts)) if i not in indices]
         additional_indices = np.random.choice(remaining_idx, num_samples - len(indices), replace=False)
