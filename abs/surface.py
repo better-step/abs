@@ -8,6 +8,13 @@ from geomdl import operations
 from .curve import create_curve
 from scipy.stats import skew
 
+_GAUSS_X, _GAUSS_W = np.polynomial.legendre.leggauss(4)
+_GAUSS_REF_PTS = np.stack(
+    np.meshgrid(_GAUSS_X, _GAUSS_X, indexing='ij'),
+    axis=-1
+).reshape(-1, 2)
+_GAUSS_WEIGHTS = np.outer(_GAUSS_W, _GAUSS_W).ravel()
+
 
 def create_surface(surface_data, compute_index=True):
     if compute_index:
@@ -15,7 +22,10 @@ def create_surface(surface_data, compute_index=True):
     else:
         index = None
 
-    surface_type = surface_data.get('type')[()].decode('utf-8')
+    if isinstance(surface_data, dict):
+        surface_type = surface_data.get('type')
+    else:
+        surface_type = surface_data.get('type')[()].decode('utf-8')
     surface_map = {
         'Plane': Plane,
         'Cylinder': Cylinder,
@@ -46,39 +56,138 @@ class Surface:
         normals = normals / np.linalg.norm(normals, axis=1)[:, np.newaxis]
         return normals
 
+    # def get_area(self):
+    #     if getattr(self, "area", None) is not None and self.area != -1:
+    #         return self.area
+    #     # Approximate area via 4x4 Gauss-Legendre quadrature
+    #
+    #     x, w = np.polynomial.legendre.leggauss(4)
+    #     pts = np.array(np.meshgrid(x, x, indexing='ij')).reshape(2, -1).T+1
+    #     pts *= 0.5 * (self.trim_domain[:, 1] - self.trim_domain[:, 0])
+    #     pts += self.trim_domain[:, 0]
+    #     weights = (w * w[:, None]).ravel()
+    #
+    #     dd = self.derivative(pts)
+    #     EE = np.sum(dd[:, :, 0] * dd[:, :, 0], axis=1)
+    #     FF = np.sum(dd[:, :, 0] * dd[:, :, 1], axis=1)
+    #     GG = np.sum(dd[:, :, 1] * dd[:, :, 1], axis=1)
+    #
+    #     self.area = np.sum(np.sqrt(EE * GG - FF ** 2)*weights)*np.prod(self.trim_domain[:, 1] - self.trim_domain[:, 0]) / 4
+    #
+    #     return self.area
     def get_area(self):
+
         if getattr(self, "area", None) is not None and self.area != -1:
             return self.area
-        # Approximate area via 4x4 Gauss-Legendre quadrature
 
-        x, w = np.polynomial.legendre.leggauss(4)
-        pts = np.array(np.meshgrid(x, x, indexing='ij')).reshape(2, -1).T+1
-        pts *= 0.5 * (self.trim_domain[:, 1] - self.trim_domain[:, 0])
-        pts += self.trim_domain[:, 0]
-        weights = (w * w[:, None]).ravel()
+        umin, umax = self.trim_domain[0]
+        vmin, vmax = self.trim_domain[1]
 
-        dd = self.derivative(pts)
-        EE = np.sum(dd[:, :, 0] * dd[:, :, 0], axis=1)
-        FF = np.sum(dd[:, :, 0] * dd[:, :, 1], axis=1)
-        GG = np.sum(dd[:, :, 1] * dd[:, :, 1], axis=1)
+        du = 0.5 * (umax - umin)
+        dv = 0.5 * (vmax - vmin)
 
-        self.area = np.sum(np.sqrt(EE * GG - FF ** 2)*weights)*np.prod(self.trim_domain[:, 1] - self.trim_domain[:, 0]) / 4
+        uv = np.empty_like(_GAUSS_REF_PTS)
+        uv[:, 0] = du * _GAUSS_REF_PTS[:, 0] + 0.5 * (umin + umax)
+        uv[:, 1] = dv * _GAUSS_REF_PTS[:, 1] + 0.5 * (vmin + vmax)
 
+        dd = self.derivative(uv)
+
+        Su = dd[:, :, 0]
+        Sv = dd[:, :, 1]
+
+        cross = np.cross(Su, Sv)
+        jac = np.linalg.norm(cross, axis=1)
+
+        area = np.dot(jac, _GAUSS_WEIGHTS) * du * dv
+
+        self.area = float(area)
         return self.area
+
+    def __eq__(self, other):
+        if not isinstance(other, Surface):
+            return NotImplemented
+        if type(self) is not type(other):
+            print(f"[Surface ==] Type mismatch: {type(self).__name__} vs {type(other).__name__}")
+            return False
+
+        rtol = 1e-8
+        atol = 1e-10
+
+        def _cmp(v1, v2, name):
+            if isinstance(v1, (np.ndarray, list, tuple)) or isinstance(v2, (np.ndarray, list, tuple)):
+                a1 = np.asarray(v1)
+                a2 = np.asarray(v2)
+                if a1.shape != a2.shape:
+                    print(f"[Surface ==] Attribute '{name}' shape mismatch: {a1.shape} vs {a2.shape}")
+                    return False
+                if np.issubdtype(a1.dtype, np.number) and np.issubdtype(a2.dtype, np.number):
+                    if not np.allclose(a1, a2, rtol=rtol, atol=atol):
+                        print(f"[Surface ==] Attribute '{name}' numeric values differ")
+                        return False
+                    return True
+                if not np.array_equal(a1, a2):
+                    print(f"[Surface ==] Attribute '{name}' array values differ")
+                    return False
+                return True
+
+            if isinstance(v1, (int, float, bool, np.generic, str)) and isinstance(v2,
+                                                                                  (int, float, bool, np.generic, str)):
+                if v1 != v2:
+                    print(f"[Surface ==] Attribute '{name}' scalar mismatch: {v1!r} vs {v2!r}")
+                    return False
+                return True
+
+            if v1 != v2:
+                print(f"[Surface ==] Attribute '{name}' mismatch (fallback compare): {v1!r} vs {v2!r}")
+                return False
+            return True
+
+        ignore = {"area", "surface_obj"}
+        attrs1 = {k: v for k, v in self.__dict__.items()
+                  if not k.startswith("_") and k not in ignore}
+        attrs2 = {k: v for k, v in other.__dict__.items()
+                  if not k.startswith("_") and k not in ignore}
+
+        if attrs1.keys() != attrs2.keys():
+            only1 = attrs1.keys() - attrs2.keys()
+            only2 = attrs2.keys() - attrs1.keys()
+            print(f"[Surface ==] Attribute key mismatch. "
+                  f"Only in self: {sorted(only1)}, only in other: {sorted(only2)}")
+            return False
+
+        for name in attrs1.keys():
+            if not _cmp(attrs1[name], attrs2[name], name):
+                return False
+
+        return True
 
 
 class Plane(Surface):
     """Plane surface."""
-    def __init__(self, plane):
-        self.location = np.array(plane.get('location')[()]).reshape(-1, 1).T
-        self.coefficients = np.array(plane.get('coefficients')[()]).reshape(-1, 1).T
-        self.trim_domain = np.array(plane.get('trim_domain')[()])
-        self.x_axis = np.array(plane.get('x_axis')[()]).reshape(-1, 1).T
-        self.y_axis = np.array(plane.get('y_axis')[()]).reshape(-1, 1).T
-        self.z_axis = np.array(plane.get('z_axis')[()]).reshape(-1, 1).T
-        self.transform = np.array(plane.get('transform')[()])
+    def __init__(self, plane, location=None, coefficients=None, trim_domain=None, x_axis=None, y_axis=None, z_axis=None, transform=None):
         self.area = -1
-        self.shape_name = plane.get('type')[()].decode('utf8')
+
+        if plane is None:
+            self.location = location.reshape(-1, 1).T
+            self.coefficients = coefficients.reshape(-1, 1).T
+            self.trim_domain = trim_domain
+            self.x_axis = x_axis.reshape(-1, 1).T
+            self.y_axis = y_axis.reshape(-1, 1).T
+            self.z_axis = z_axis.reshape(-1, 1).T
+            self.transform = transform
+            self.shape_name = 'Plane'
+        else:
+            self.location = np.array(plane.get('location')[()]).reshape(-1, 1).T
+            self.coefficients = np.array(plane.get('coefficients')[()]).reshape(-1, 1).T
+            self.trim_domain = np.array(plane.get('trim_domain')[()])
+            self.x_axis = np.array(plane.get('x_axis')[()]).reshape(-1, 1).T
+            self.y_axis = np.array(plane.get('y_axis')[()]).reshape(-1, 1).T
+            self.z_axis = np.array(plane.get('z_axis')[()]).reshape(-1, 1).T
+            self.transform = np.array(plane.get('transform')[()])
+            if isinstance(plane, dict):
+                self.shape_name = plane.get('type')
+            else:
+                self.shape_name = plane.get('type')[()].decode('utf8')
 
     def sample(self, sample_points):
         if sample_points.size == 0:
@@ -110,18 +219,33 @@ class Plane(Surface):
 
 class Cylinder(Surface):
     """Cylindrical surface."""
-    def __init__(self, cylinder):
-
-        self.location = np.array(cylinder.get('location')[()]).reshape(-1, 1).T
-        self.radius = float(cylinder.get('radius')[()])
-        self.coefficients = np.array(cylinder.get('coefficients')[()]).reshape(-1, 1).T
-        self.trim_domain = np.array(cylinder.get('trim_domain')[()])
-        self.x_axis = np.array(cylinder.get('x_axis')[()]).reshape(-1, 1).T
-        self.y_axis = np.array(cylinder.get('y_axis')[()]).reshape(-1, 1).T
-        self.z_axis = np.array(cylinder.get('z_axis')[()]).reshape(-1, 1).T
-        self.transform = np.array(cylinder.get('transform')[()])
+    def __init__(self, cylinder, trim_domain=None, transform=None, location=None, radius=None, coefficients=None,
+                 x_axis=None, y_axis=None, z_axis=None):
         self.area = -1
-        self.shape_name = cylinder.get('type')[()].decode('utf8')
+
+        if cylinder is None:
+            self.location = location.reshape(-1, 1).T
+            self.radius = radius
+            self.coefficients = coefficients.reshape(-1, 1).T
+            self.trim_domain = trim_domain
+            self.x_axis = x_axis.reshape(-1, 1).T
+            self.y_axis = y_axis.reshape(-1, 1).T
+            self.z_axis = z_axis.reshape(-1, 1).T
+            self.transform = transform
+            self.shape_name = 'Cylinder'
+        else:
+            self.location = np.array(cylinder.get('location')[()]).reshape(-1, 1).T
+            self.radius = float(cylinder.get('radius')[()])
+            self.coefficients = np.array(cylinder.get('coefficients')[()]).reshape(-1, 1).T
+            self.trim_domain = np.array(cylinder.get('trim_domain')[()])
+            self.x_axis = np.array(cylinder.get('x_axis')[()]).reshape(-1, 1).T
+            self.y_axis = np.array(cylinder.get('y_axis')[()]).reshape(-1, 1).T
+            self.z_axis = np.array(cylinder.get('z_axis')[()]).reshape(-1, 1).T
+            self.transform = np.array(cylinder.get('transform')[()])
+            if isinstance(cylinder, dict):
+                self.shape_name = cylinder.get('type')
+            else:
+                self.shape_name = cylinder.get('type')[()].decode('utf8')
 
     def sample(self, sample_points):
 
@@ -154,19 +278,37 @@ class Cylinder(Surface):
 
 class Cone(Surface):
     """Conical surface."""
-    def __init__(self, cone):
-        self.location = np.array(cone.get('location')[()]).reshape(-1, 1).T
-        self.radius = float(cone.get('radius')[()])
-        self.coefficients = np.array(cone.get('coefficients')[()]).reshape(-1, 1).T
-        self.trim_domain = np.array(cone.get('trim_domain')[()])
-        self.apex = np.array(cone.get('apex')[()]).reshape(-1, 1).T
-        self.angle = float(cone.get('angle')[()])
-        self.x_axis = np.array(cone.get('x_axis')[()]).reshape(-1, 1).T
-        self.y_axis = np.array(cone.get('y_axis')[()]).reshape(-1, 1).T
-        self.z_axis = np.array(cone.get('z_axis')[()]).reshape(-1, 1).T
-        self.transform = np.array(cone.get('transform')[()])
+    def __init__(self, cone, trim_domain=None, transform=None, location=None, radius=None, coefficients=None,
+                 apex=None, angle=None, x_axis=None, y_axis=None, z_axis=None):
         self.area = -1
-        self.shape_name = cone.get('type')[()].decode('utf8')
+
+        if cone is None:
+            self.location = location.reshape(-1, 1).T
+            self.radius = radius
+            self.coefficients = coefficients.reshape(-1, 1).T
+            self.trim_domain = trim_domain
+            self.apex = apex.reshape(-1, 1).T
+            self.angle = angle
+            self.x_axis = x_axis.reshape(-1, 1).T
+            self.y_axis = y_axis.reshape(-1, 1).T
+            self.z_axis = z_axis.reshape(-1, 1).T
+            self.transform = transform
+            self.shape_name = 'Cone'
+        else:
+            self.location = np.array(cone.get('location')[()]).reshape(-1, 1).T
+            self.radius = float(cone.get('radius')[()])
+            self.coefficients = np.array(cone.get('coefficients')[()]).reshape(-1, 1).T
+            self.trim_domain = np.array(cone.get('trim_domain')[()])
+            self.apex = np.array(cone.get('apex')[()]).reshape(-1, 1).T
+            self.angle = float(cone.get('angle')[()])
+            self.x_axis = np.array(cone.get('x_axis')[()]).reshape(-1, 1).T
+            self.y_axis = np.array(cone.get('y_axis')[()]).reshape(-1, 1).T
+            self.z_axis = np.array(cone.get('z_axis')[()]).reshape(-1, 1).T
+            self.transform = np.array(cone.get('transform')[()])
+            if isinstance(cone, dict):
+                self.shape_name = cone.get('type')
+            else:
+                self.shape_name = cone.get('type')[()].decode('utf8')
 
     def sample(self, sample_points):
 
@@ -205,21 +347,36 @@ class Cone(Surface):
 
 class Sphere(Surface):
     """Spherical surface."""
-    def __init__(self, sphere):
-
-        self.location = np.array(sphere.get('location')[()]).reshape(-1, 1).T
-        self.radius = float(sphere.get('radius')[()])
-        self.coefficients = np.array(sphere.get('coefficients')[()]).reshape(-1, 1).T
-        self.trim_domain = np.array(sphere.get('trim_domain')[()])
-        self.x_axis = np.array(sphere.get('x_axis')[()]).reshape(-1, 1).T
-        self.y_axis = np.array(sphere.get('y_axis')[()]).reshape(-1, 1).T
-        if 'z_axis' in sphere:
-            self.z_axis = np.array(sphere.get('z_axis')[()]).reshape(-1, 1).T
-        else:
-            self.z_axis = np.cross(self.x_axis, self.y_axis)
-        self.transform = np.array(sphere.get('transform')[()])
+    def __init__(self, sphere, trim_domain=None, transform=None, location=None, radius=None, coefficients=None,
+                 x_axis=None, y_axis=None, z_axis=None):
         self.area = -1
-        self.shape_name = sphere.get('type')[()].decode('utf8')
+
+        if sphere is None:
+            self.location = location.reshape(-1, 1).T
+            self.radius = radius
+            self.coefficients = coefficients.reshape(-1, 1).T
+            self.trim_domain = trim_domain
+            self.x_axis = x_axis.reshape(-1, 1).T
+            self.y_axis = y_axis.reshape(-1, 1).T
+            self.z_axis = z_axis.reshape(-1, 1).T
+            self.transform = transform
+            self.shape_name = 'Sphere'
+        else:
+            self.location = np.array(sphere.get('location')[()]).reshape(-1, 1).T
+            self.radius = float(sphere.get('radius')[()])
+            self.coefficients = np.array(sphere.get('coefficients')[()]).reshape(-1, 1).T
+            self.trim_domain = np.array(sphere.get('trim_domain')[()])
+            self.x_axis = np.array(sphere.get('x_axis')[()]).reshape(-1, 1).T
+            self.y_axis = np.array(sphere.get('y_axis')[()]).reshape(-1, 1).T
+            if 'z_axis' in sphere:
+                self.z_axis = np.array(sphere.get('z_axis')[()]).reshape(-1, 1).T
+            else:
+                self.z_axis = np.cross(self.x_axis, self.y_axis)
+            self.transform = np.array(sphere.get('transform')[()])
+            if isinstance(sphere, dict):
+                self.shape_name = sphere.get('type')
+            else:
+                self.shape_name = sphere.get('type')[()].decode('utf8')
 
     def sample(self, sample_points):
         if sample_points.size == 0:
@@ -272,18 +429,33 @@ class Sphere(Surface):
 
 class Torus(Surface):
     """Torus (donut-shaped) surface."""
-    def __init__(self, torus):
-
-        self.location = np.array(torus.get('location')[()]).reshape(-1, 1).T
-        self.max_radius = float(torus.get('max_radius')[()])
-        self.min_radius = float(torus.get('min_radius')[()])
-        self.trim_domain = np.array(torus.get('trim_domain')[()])
-        self.x_axis = np.array(torus.get('x_axis')[()]).reshape(-1, 1).T
-        self.y_axis = np.array(torus.get('y_axis')[()]).reshape(-1, 1).T
-        self.z_axis = np.array(torus.get('z_axis')[()]).reshape(-1, 1).T
-        self.transform = np.array(torus.get('transform')[()])
+    def __init__(self, torus, trim_domain=None, transform=None, location=None, max_radius=None, min_radius=None,
+                 x_axis=None, y_axis=None, z_axis=None):
         self.area = -1
-        self.shape_name = torus.get('type')[()].decode('utf8')
+
+        if torus is None:
+            self.location = location.reshape(-1, 1).T
+            self.max_radius = max_radius
+            self.min_radius = min_radius
+            self.trim_domain = trim_domain
+            self.x_axis = x_axis.reshape(-1, 1).T
+            self.y_axis = y_axis.reshape(-1, 1).T
+            self.z_axis = z_axis.reshape(-1, 1).T
+            self.transform = transform
+            self.shape_name = 'Torus'
+        else:
+            self.location = np.array(torus.get('location')[()]).reshape(-1, 1).T
+            self.max_radius = float(torus.get('max_radius')[()])
+            self.min_radius = float(torus.get('min_radius')[()])
+            self.trim_domain = np.array(torus.get('trim_domain')[()])
+            self.x_axis = np.array(torus.get('x_axis')[()]).reshape(-1, 1).T
+            self.y_axis = np.array(torus.get('y_axis')[()]).reshape(-1, 1).T
+            self.z_axis = np.array(torus.get('z_axis')[()]).reshape(-1, 1).T
+            self.transform = np.array(torus.get('transform')[()])
+            if isinstance(torus, dict):
+                self.shape_name = torus.get('type')
+            else:
+                self.shape_name = torus.get('type')[()].decode('utf8')
 
     def sample(self, sample_points):
         if sample_points.size == 0:
@@ -333,31 +505,57 @@ class Torus(Surface):
 
 class BSplineSurface(Surface):
     """B-spline or NURBS surface (possibly trimmed)."""
-    def __init__(self, bspline_surface):
-
-        self.continuity = int(bspline_surface.get('continuity')[()])
-        self.face_domain = np.array(bspline_surface.get('face_domain')[()]).reshape(-1, 1).T
-        self.is_trimmed = bool(bspline_surface.get('is_trimmed')[()])
-        self.poles = np.array(bspline_surface.get('poles')[()])
-        self.trim_domain = np.array(bspline_surface.get('trim_domain')[()])
-        if len(self.trim_domain.shape) == 1:
-            self.trim_domain = np.reshape(self.trim_domain, [2, 2])
-        self.u_closed = bool(bspline_surface.get('u_closed')[()])
-        self.u_degree = int(bspline_surface.get('u_degree')[()])
-        self.u_knots = np.array(bspline_surface.get('u_knots')[()]).reshape(-1, 1).T
-        self.u_rational = bool(bspline_surface.get('u_rational')[()])
-        self.v_closed = bool(bspline_surface.get('v_closed')[()])
-        self.v_degree = int(bspline_surface.get('v_degree')[()])
-        self.v_knots = np.array(bspline_surface.get('v_knots')[()]).reshape(-1, 1).T
-        self.v_rational = bool(bspline_surface.get('v_rational')[()])
-        self.weights = np.column_stack(
-            [bspline_surface['weights'][str(i)][()] for i in range(len(bspline_surface['weights']))]).T
-
-        self.u_periodic = bool(bspline_surface.get('u_periodic')[()])
-        self.v_periodic = bool(bspline_surface.get('v_periodic')[()])
-        self.transform = np.array(bspline_surface.get('transform')[()])
+    def __init__(self, bspline_surface, trim_domain=None, transform=None, continuity=None, face_domain=None,
+                 is_trimmed=None, poles=None, u_closed=None, u_degree=None, u_knots=None, u_rational=None,
+                 v_closed=None, v_degree=None, v_knots=None, v_rational=None, weights=None, u_periodic=None,
+                 v_periodic=None):
         self.area = -1
-        self.shape_name = bspline_surface.get('type')[()].decode('utf8')
+
+        if bspline_surface is None:
+            self.continuity = continuity
+            self.face_domain = face_domain.reshape(-1, 1).T
+            self.is_trimmed = is_trimmed
+            self.poles = poles
+            self.trim_domain = trim_domain
+            self.u_closed = u_closed
+            self.u_degree = u_degree
+            self.u_knots = u_knots.reshape(-1, 1).T
+            self.u_rational = u_rational
+            self.v_closed = v_closed
+            self.v_degree = v_degree
+            self.v_knots = v_knots.reshape(-1, 1).T
+            self.v_rational = v_rational
+            self.weights = weights.T
+            self.u_periodic = u_periodic
+            self.v_periodic = v_periodic
+            self.transform = transform
+            self.shape_name = 'BSpline'
+        else:
+            self.continuity = int(bspline_surface.get('continuity')[()])
+            self.face_domain = np.array(bspline_surface.get('face_domain')[()]).reshape(-1, 1).T
+            self.is_trimmed = bool(bspline_surface.get('is_trimmed')[()])
+            self.poles = np.array(bspline_surface.get('poles')[()])
+            self.trim_domain = np.array(bspline_surface.get('trim_domain')[()])
+            if len(self.trim_domain.shape) == 1:
+                self.trim_domain = np.reshape(self.trim_domain, [2, 2])
+            self.u_closed = bool(bspline_surface.get('u_closed')[()])
+            self.u_degree = int(bspline_surface.get('u_degree')[()])
+            self.u_knots = np.array(bspline_surface.get('u_knots')[()]).reshape(-1, 1).T
+            self.u_rational = bool(bspline_surface.get('u_rational')[()])
+            self.v_closed = bool(bspline_surface.get('v_closed')[()])
+            self.v_degree = int(bspline_surface.get('v_degree')[()])
+            self.v_knots = np.array(bspline_surface.get('v_knots')[()]).reshape(-1, 1).T
+            self.v_rational = bool(bspline_surface.get('v_rational')[()])
+            self.weights = np.column_stack(
+                [bspline_surface['weights'][str(i)][()] for i in range(len(bspline_surface['weights']))]).T
+
+            self.u_periodic = bool(bspline_surface.get('u_periodic')[()])
+            self.v_periodic = bool(bspline_surface.get('v_periodic')[()])
+            self.transform = np.array(bspline_surface.get('transform')[()])
+            if isinstance(bspline_surface, dict):
+                self.shape_name = bspline_surface.get('type')
+            else:
+                self.shape_name = bspline_surface.get('type')[()].decode('utf8')
 
         from abs import BSpline
         self.surface_obj = BSpline(
@@ -367,8 +565,8 @@ class BSplineSurface(Surface):
             v_rational = self.v_rational,
             u_knots = self.u_knots.T,
             v_knots = self.v_knots.T,
-            grid = np.array(self.poles).reshape(-1, 3),
-            weights = (self.weights).reshape(-1, 1),
+            grid = self.poles.reshape(-1, 3),
+            weights = self.weights.reshape(-1, 1),
             u_periodic = self.u_periodic,
             v_periodic = self.v_periodic
         )
@@ -413,13 +611,24 @@ class BSplineSurface(Surface):
 
 
 class Extrusion(Surface):
-    def __init__(self, extrusion):
-        self.direction = np.array(extrusion.get('direction')[()]).reshape(-1, 1).T
-        self.trim_domain = np.array(extrusion.get('trim_domain')[()])
-        self.transform = np.array(extrusion.get('transform')[()])
+    def __init__(self, extrusion, trim_domain=None, transform=None, direction=None, curve=None):
         self.area = -1
-        self.shape_name = extrusion.get('type')[()].decode('utf8')
-        _, self.curve = create_curve(extrusion['curve'], False)
+
+        if extrusion is None:
+            self.direction = direction.reshape(-1, 1).T
+            self.trim_domain = trim_domain
+            self.transform = transform
+            self.curve = curve
+            self.shape_name = 'Extrusion'
+        else:
+            self.direction = np.array(extrusion.get('direction')[()]).reshape(-1, 1).T
+            self.trim_domain = np.array(extrusion.get('trim_domain')[()])
+            self.transform = np.array(extrusion.get('transform')[()])
+            if isinstance(extrusion, dict):
+                self.shape_name = extrusion.get('type')
+            else:
+                self.shape_name = extrusion.get('type')[()].decode('utf8')
+            _, self.curve = create_curve(extrusion['curve'], False)
 
     def sample(self, points):
         return self.curve.sample(points[:, 0][:, np.newaxis]) + points[:, 1][:, np.newaxis] * self.direction
@@ -440,14 +649,25 @@ class Extrusion(Surface):
 
 
 class Revolution(Surface):
-    def __init__(self, revolution):
-        self.location = np.array(revolution.get('location')[()]).reshape(-1, 1).T
-        self.trim_domain = np.array(revolution.get('trim_domain')[()])
-        self.transform = np.array(revolution.get('transform')[()])
+    def __init__(self, revolution, trim_domain=None, transform=None, location=None, z_axis=None, curve=None):
         self.area = -1
-        self.shape_name = revolution.get('type')[()].decode('utf8')
-        self.z_axis = np.array(revolution.get('z_axis')[()]).reshape(-1, 1).T
-        _, self.curve = create_curve(revolution['curve'], False)
+        if revolution is None:
+            self.location = location.reshape(-1, 1).T
+            self.trim_domain = trim_domain
+            self.transform = transform
+            self.z_axis = z_axis.reshape(-1, 1).T
+            self.curve = curve
+            self.shape_name = 'Revolution'
+        else:
+            self.location = np.array(revolution.get('location')[()]).reshape(-1, 1).T
+            self.trim_domain = np.array(revolution.get('trim_domain')[()])
+            self.transform = np.array(revolution.get('transform')[()])
+            if isinstance(revolution, dict):
+                self.shape_name = revolution.get('type')
+            else:
+                self.shape_name = revolution.get('type')[()].decode('utf8')
+            self.z_axis = np.array(revolution.get('z_axis')[()]).reshape(-1, 1).T
+            _, self.curve = create_curve(revolution['curve'], False)
 
     def sample(self, points):
         dx, dy, dz = self.z_axis[0, 0], self.z_axis[0, 1], self.z_axis[0, 2]
@@ -581,13 +801,24 @@ class Revolution(Surface):
 
 
 class Offset(Surface):
-    def __init__(self, offset):
-        self.trim_domain = np.array(offset.get('trim_domain')[()])
-        self.transform = np.array(offset.get('transform')[()])
+    def __init__(self, offset, trim_domain=None, transform=None, value=None, surface=None):
         self.area = -1
-        self.value = np.float64(offset.get('value')[()])
-        self.shape_name = offset.get('type')[()].decode('utf8')
-        _, self.surface = create_surface(offset['surface'], False)
+
+        if offset is None:
+            self.trim_domain = trim_domain
+            self.transform = transform
+            self.value = value
+            self.surface = surface
+            self.shape_name = 'Offset'
+        else:
+            self.trim_domain = np.array(offset.get('trim_domain')[()])
+            self.transform = np.array(offset.get('transform')[()])
+            self.value = np.float64(offset.get('value')[()])
+            if isinstance(offset, dict):
+                self.shape_name = offset.get('type')
+            else:
+                self.shape_name = offset.get('type')[()].decode('utf8')
+            _, self.surface = create_surface(offset['surface'], False)
 
     def sample(self, points):
 

@@ -12,10 +12,11 @@ def read_parts(file_path):
     """Read all parts from an HDF5 file and construct Shape objects for each."""
     f = h5py.File(file_path, 'r')
     part = f['parts'].values()
+    version = f['parts'].attrs.get('version')
 
     parts = []
     for i, p in enumerate(part):
-        s = Shape(p['geometry'], p['topology'])
+        s = Shape(p['geometry'], p['topology'], version)
         parts.append(s)
 
     return parts
@@ -25,26 +26,50 @@ def read_meshes(file_path):
     """Read pre-computed mesh data (points and triangles) for each face of each part from an HDF5 file."""
     f = h5py.File(file_path, 'r')
     part = f['parts'].values()
+    version = f['parts'].attrs.get('version')
 
     meshes = []
     for i, p in enumerate(part):
-        s = Shape(p['geometry'], p['topology'])
+        s = Shape(p['geometry'], p['topology'], version)
         # If shape has no faces, append empty
         if not hasattr(s, 'Solid') or not hasattr(s.Solid, 'faces') or not s.Solid.faces:
             meshes.append([])
             continue
-        mesh_group = p['mesh']
-        current_mesh = [None] * len(s.Solid.faces)
-        for key in mesh_group:
-            submesh = mesh_group[key]
-            vertices = submesh['points']
-            faces = submesh['triangle']
+        if version == '2.0':
+            mesh_group = p['mesh']
+            current_mesh = [None] * len(s.Solid.faces)
+            for key in mesh_group:
+                submesh = mesh_group[key]
+                vertices = submesh['points']
+                faces = submesh['triangle']
 
-            current_mesh[int(key)] = {
-                'points': vertices,
-                'triangle': faces
-            }
-        meshes.append(current_mesh)
+                current_mesh[int(key)] = {
+                    'points': vertices,
+                    'triangle': faces
+                }
+            meshes.append(current_mesh)
+        elif version == '3.0':
+            mesh_group = p['mesh']
+
+            all_points = mesh_group['points'][()]
+            all_tris = mesh_group['triangles'][()]
+            p_idx = mesh_group['point_index'][()]  # shape (n_meshes+1,)
+            t_idx = mesh_group['triangle_index'][()]  # shape (n_meshes+1,)
+
+            n_meshes = len(p_idx) - 1
+            current_mesh = [None] * n_meshes
+
+            for mi in range(n_meshes):
+                ps = all_points[p_idx[mi]:p_idx[mi + 1], :]
+                ts = all_tris[t_idx[mi]:t_idx[mi + 1], :]
+
+                current_mesh[mi] = {
+                    'points': ps,
+                    'triangle': ts
+                }
+
+            meshes.append(current_mesh)
+
 
     return meshes
 
