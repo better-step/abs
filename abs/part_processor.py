@@ -5,7 +5,7 @@ Functions for processing Shape parts: sampling points and computing normals.
 import numpy as np
 from . import sampler
 from abspy import poisson_disk_downsample
-from abspy import poisson_grid_downsample
+# from abspy import poisson_grid_downsample
 
 
 def estimate_total_surface_area(part):
@@ -23,7 +23,7 @@ def estimate_total_curve_length(part):
     return total_length
 
 
-def process_part(part, num_samples, lambda_func, points_ratio):
+def process_part(part, num_samples, lambda_func, points_ratio, apply_transform):
     """
     Sample points on all surfaces and curves of a shape part according to specified number.
     Uses an iterative strategy with oversampling (points_ratio) and Poisson disk downsampling to refine points.
@@ -44,10 +44,11 @@ def process_part(part, num_samples, lambda_func, points_ratio):
             uv_points, pt = sampler.random_sample(face, n_surf, min_pts=2)
             s = lambda_func(part, face, uv_points)
             if s is not None:
-                # Transform points to surface's local coordinate system
-                R = np.linalg.inv(face.surface.transform[:, :3])
-                t = face.surface.transform[:, 3]
-                pt = (pt - t) @ R.T
+                if apply_transform:
+                    # Transform points to surface's local coordinate system
+                    R = np.linalg.inv(face.surface.transform[:, :3])
+                    t = face.surface.transform[:, 3]
+                    pt = (pt - t) @ R.T
                 # Filter out points outside trimming loops
                 index = face.filter_outside_points(uv_points)
                 current_pts.append(pt[index, :])
@@ -75,9 +76,10 @@ def process_part(part, num_samples, lambda_func, points_ratio):
             uv_points, pt = sampler.random_sample(edge, n_edge, min_pts=2)
             s = lambda_func(part, edge, uv_points)
             if s is not None:
-                R = np.linalg.inv(edge.curve3d.transform[:, :3])
-                t = edge.curve3d.transform[:, 3]
-                pt = (pt - t) @ R.T
+                if apply_transform:
+                    R = np.linalg.inv(edge.curve3d.transform[:, :3])
+                    t = edge.curve3d.transform[:, 3]
+                    pt = (pt - t) @ R.T
                 # Edges have no trimming curves; include all sampled points
                 index = np.ones(uv_points.shape[0], dtype=bool)
                 current_pts.append(pt[index, :])
@@ -132,12 +134,12 @@ def process_part(part, num_samples, lambda_func, points_ratio):
         return pts[indices], ss[indices] if isinstance(ss, np.ndarray) else ss
 
 
-def sample_parts(parts, num_samples, lambda_func, points_ratio=5):
+def sample_parts(parts, num_samples, lambda_func, points_ratio=5, apply_transform=True):
     """Process a list of parts by sampling each part and returning lists of points and values."""
     pts_list = []
     ss_list = []
     for part in parts:
-        pts, ss = process_part(part, num_samples, lambda_func, points_ratio)
+        pts, ss = process_part(part, num_samples, lambda_func, points_ratio, apply_transform)
         pts_list.append(np.array(pts))
         if isinstance(ss, list):
             ss_list.extend([np.array(sublist) for sublist in ss])

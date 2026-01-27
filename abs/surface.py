@@ -754,7 +754,11 @@ class Revolution(Surface):
             # Basic components
             uuT = np.outer(u, u)
             I = np.eye(3)
-            u_skew = skew(u)
+            u_skew = np.array([
+                [0, -u[2], u[1]],
+                [u[2], 0, -u[0]],
+                [-u[1], u[0], 0]
+            ])
 
             # Rotation matrices R
             R = (

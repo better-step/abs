@@ -7,10 +7,11 @@ message(STATUS "Third-party (external): creating target 'nanospline::nanospline'
 include(CPM)
 CPMAddPackage(
     NAME nanospline
-    GITHUB_REPOSITORY qnzhou/nanospline
-    GIT_TAG        660e3db75d8faa43f201f7638e9bd198bd5237d5
+    GITHUB_REPOSITORY teseoch/nanospline
+    GIT_TAG        a4bba801c09177f2beaf0522554e4fdf7a49ce1a
     OPTIONS
     "NANOSPLINE_BUILD_TESTS Off"
+    "NANOSPLINE_MSHIO Off"
 )
 FetchContent_MakeAvailable(nanospline)
 
