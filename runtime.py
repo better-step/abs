@@ -1,3 +1,5 @@
+from fontTools.cu2qu.cu2qu import NAN
+
 from abs import read_parts
 import time
 import h5py
@@ -160,11 +162,16 @@ def process_solids(part):
     part['topology'].create_dataset('solid_index', data=solid_index)
 
 def process_faces(part):
+    if getattr(part['topology']['faces'], "values", None) is None:
+        return
     fs = part['topology']['faces'].values()
     faces = [None]*len(fs)
     for f in fs:
         index = int(f.name.split("/")[-1])
-        ed = f["exact_domain"][()].tolist()
+        if len(f['exact_domain']) == 0:
+             ed = [NAN, NAN ,NAN,NAN]
+        else:
+            ed = f["exact_domain"][()].tolist()
         hs = int(f["has_singularities"][()])
         lps = f["loops"][()].tolist()
         ns = int(f["nr_singularities"][()])
@@ -211,64 +218,70 @@ def process_faces(part):
     part['topology'].create_dataset('faces', data=compressed)
     part['topology'].create_dataset('face_index', data=face_index)
 
+def process_curve(c, has_trafo):
+    tt = c["type"][()].decode('utf8')
+    res = []
+    if tt == "Line":  # line
+        tt = 0
+        res = [tt] + \
+                        c["interval"][()].tolist() + \
+                        c["location"][()].tolist() + \
+                        c["direction"][()].tolist()
+    elif tt == "Circle":  # circle
+        tt = 1
+        res = [tt] + \
+                        c["interval"][()].tolist() + \
+                        c["location"][()].tolist() + \
+                        c["x_axis"][()].tolist() + \
+                        c["y_axis"][()].tolist()
+        if 'z_axis' in c:
+            res += c["z_axis"][()].tolist()
+        res += [c["radius"][()]]
+    elif tt == "Ellipse":  # ellipse
+        tt = 2
+        res = [tt] + \
+                        c["interval"][()].tolist() + \
+                        c["focus1"][()].tolist() + \
+                        c["focus2"][()].tolist() + \
+                        c["x_axis"][()].tolist() + \
+                        c["y_axis"][()].tolist()
+        if 'z_axis' in c:
+            res += c["z_axis"][()].tolist()
+        res += [c["maj_radius"][()], c["min_radius"][()]]
+    elif tt == "BSpline":  # BSplineCurve
+        tt = 3
+        res = [tt]
+        pshape = c["poles"][()].shape
+        poles = c["poles"][()].flatten().tolist()
+        knots = c["knots"][()].flatten().tolist()
+        weights = c["weights"][()].flatten().tolist()
+        res += c["interval"][()].tolist() + \
+                         [c["degree"][()],
+                          c["continuity"][()],
+                          c["rational"][()],
+                          c["periodic"][()],
+                          c["closed"][()]] + \
+                         [len(poles)] + list(pshape) + poles + \
+                         [len(knots)] + knots + \
+                         [len(weights)] + weights
+    elif tt == "Other":  # Other
+        tt = 4
+        res = [tt]
+    else:
+        raise ValueError(f"Unknown curve type: {tt}")
+
+    if has_trafo:
+        res += c["transform"][()].flatten().tolist()
+
+    return res
 
 def process_curves(part, curve_type, has_trafo):
     cs = part['geometry'][curve_type].values()
     curves = [None]*len(cs)
     for c in cs:
         index = int(c.name.split("/")[-1])
-        tt = c["type"][()].decode('utf8')
-        if tt == "Line":  # line
-            tt = 0
-            curves[index] = [tt] + \
-            c["interval"][()].tolist() + \
-            c["location"][()].tolist() + \
-            c["direction"][()].tolist()
-        elif tt == "Circle":  # circle
-            tt = 1
-            curves[index] = [tt] + \
-            c["interval"][()].tolist() + \
-            c["location"][()].tolist() + \
-            c["x_axis"][()].tolist() + \
-            c["y_axis"][()].tolist()
-            if 'z_axis' in c:
-                curves[index] += c["z_axis"][()].tolist()
-            curves[index] += [c["radius"][()]]
-        elif tt == "Ellipse":  # ellipse
-            tt = 2
-            curves[index] = [tt] + \
-            c["interval"][()].tolist() + \
-            c["focus1"][()].tolist() + \
-            c["focus2"][()].tolist() + \
-            c["x_axis"][()].tolist() + \
-            c["y_axis"][()].tolist()
-            if 'z_axis' in c:
-                curves[index] += c["z_axis"][()].tolist()
-            curves[index] += [c["maj_radius"][()], c["min_radius"][()]]
-        elif tt == "BSpline":  # BSplineCurve
-            tt = 3
-            curves[index] = [tt]
-            pshape = c["poles"][()].shape
-            poles = c["poles"][()].flatten().tolist()
-            knots = c["knots"][()].flatten().tolist()
-            weights = c["weights"][()].flatten().tolist()
-            curves[index] += c["interval"][()].tolist() + \
-                [c["degree"][()],
-                c["continuity"][()],
-                c["rational"][()],
-                c["periodic"][()],
-                c["closed"][()]] + \
-                [len(poles)] + list(pshape) + poles + \
-                [len(knots)] + knots + \
-                [len(weights)] + weights
-        elif tt == "Other": # Other
-            tt = 4
-            curves[index] = [tt]
-        else:
-            raise ValueError(f"Unknown curve type: {tt}")
+        curves[index] = process_curve(c, has_trafo)
 
-        if has_trafo:
-            curves[index] += c["transform"][()].flatten().tolist()
 
     del part['geometry'][curve_type]
     start = 0
@@ -284,117 +297,124 @@ def process_curves(part, curve_type, has_trafo):
     part['geometry'].create_dataset(curve_type, data=compressed)
     part['geometry'].create_dataset(curve_type + '_index', data=curve_index)
 
+
+def process_surface(s):
+    tt = s["type"][()].decode('utf8')
+    td = s["trim_domain"][()].flatten().tolist()
+    res = []
+    if tt == "Plane":  # plane
+        tt = 0
+        res = [tt] + td + \
+                          s["location"][()].tolist() + \
+                          s["coefficients"][()].tolist() + \
+                          s["x_axis"][()].tolist() + \
+                          s["y_axis"][()].tolist() + \
+                          s["z_axis"][()].tolist()
+    elif tt == "Cylinder":  # cylinder
+        tt = 1
+        res = [tt] + td + \
+                          s["location"][()].tolist() + \
+                          [s["radius"][()]] + \
+                          s["coefficients"][()].tolist() + \
+                          s["x_axis"][()].tolist() + \
+                          s["y_axis"][()].tolist() + \
+                          s["z_axis"][()].tolist()
+    elif tt == "Cone":  # cone
+        tt = 2
+        res = [tt] + td + \
+                          s["location"][()].tolist() + \
+                          [s["radius"][()]] + \
+                          s["coefficients"][()].tolist() + \
+                          s["apex"][()].tolist() + \
+                          [s["angle"][()]] + \
+                          s["x_axis"][()].tolist() + \
+                          s["y_axis"][()].tolist() + \
+                          s["z_axis"][()].tolist()
+    elif tt == "Sphere":  # sphere
+        tt = 3
+        xaxis = np.array(s.get('x_axis')[()]).reshape(-1, 1).T
+        yaxis = np.array(s.get('y_axis')[()]).reshape(-1, 1).T
+        if 'z_axis' in s:
+            zaxis = np.array(s.get('z_axis')[()]).reshape(-1, 1).T
+        else:
+            zaxis = np.cross(xaxis, yaxis)
+
+        res = [tt] + td + \
+                          s["location"][()].tolist() + \
+                          [s["radius"][()]] + \
+                          s["coefficients"][()].tolist() + \
+                          xaxis.ravel().tolist() + \
+                          yaxis.ravel().tolist() + \
+                          zaxis.ravel().tolist()
+    elif tt == "Torus":
+        tt = 4
+        res = [tt] + td + \
+                          s["location"][()].tolist() + \
+                          [s["max_radius"][()], s["min_radius"][()]] + \
+                          s["x_axis"][()].tolist() + \
+                          s["y_axis"][()].tolist() + \
+                          s["z_axis"][()].tolist()
+    elif tt == "BSpline":
+        tt = 5
+        res = [tt] + td
+        face_domain = s["face_domain"][()].ravel().tolist()
+        pshape = s["poles"][()].shape
+        poles = s["poles"][()].ravel().tolist()
+        uknots = s["u_knots"][()].ravel().tolist()
+        vknots = s["v_knots"][()].ravel().tolist()
+        weights_obj = s["weights"]
+        if isinstance(weights_obj, h5py.Group):
+            weights = np.column_stack([weights_obj[str(i)][()] for i in range(len(weights_obj))])
+        else:
+            weights = weights_obj[()]
+
+        wshape = weights.shape
+
+        res += [
+                               s["u_degree"][()],
+                               s["v_degree"][()],
+                               s["continuity"][()],
+                               s["u_rational"][()],
+                               s["v_rational"][()],
+                               s["u_periodic"][()],
+                               s["v_periodic"][()],
+                               s["u_closed"][()],
+                               s["v_closed"][()],
+                               s["is_trimmed"][()],
+                               len(face_domain)] + \
+                           face_domain + \
+                           [len(poles)] + list(pshape) + poles + \
+                           [len(uknots)] + uknots + \
+                           [len(vknots)] + vknots + \
+                           [weights.size] + list(wshape) + weights.ravel().tolist()
+    elif tt == "Extrusion":  # Extrusion
+        tt = 6
+        res = [tt] + td + \
+                          s["direction"][()].tolist() + process_curve(s["curve"], True)
+    elif tt == "Revolution":  # Revolution
+        tt = 7
+        res = [tt] + td + \
+                          s["location"][()].tolist() + \
+                          s["z_axis"][()].tolist() + process_curve(s["curve"], True)
+    elif tt == "Offset":  # Other
+        tt = 8
+        res = [tt] + td + [s["value"][()]] + process_surface(s["surface"])
+    elif tt == "Other":  # Other
+        tt = 9
+        res = [tt] + td
+    else:
+        raise ValueError(f"Unknown surface type: {tt}")
+
+    res += s["transform"][()].flatten().tolist()
+
+    return res
+
 def process_surfaces(part):
     ss = part['geometry']['surfaces'].values()
     surfaces = [None]*len(ss)
     for s in ss:
         index = int(s.name.split("/")[-1])
-        tt = s["type"][()].decode('utf8')
-        td = s["trim_domain"][()].flatten().tolist()
-        if tt == "Plane":  # plane
-            tt = 0
-            surfaces[index] = [tt] + td + \
-            s["location"][()].tolist() + \
-            s["coefficients"][()].tolist() + \
-            s["x_axis"][()].tolist() + \
-            s["y_axis"][()].tolist() + \
-            s["z_axis"][()].tolist()
-        elif tt == "Cylinder":  # cylinder
-            tt = 1
-            surfaces[index] = [tt] + td + \
-            s["location"][()].tolist() + \
-            [s["radius"][()]] + \
-            s["coefficients"][()].tolist() + \
-            s["x_axis"][()].tolist() + \
-            s["y_axis"][()].tolist() + \
-            s["z_axis"][()].tolist()
-        elif tt == "Cone":  # cone
-            tt = 2
-            surfaces[index] = [tt] + td + \
-            s["location"][()].tolist() + \
-            [s["radius"][()]] + \
-            s["coefficients"][()].tolist() + \
-            s["apex"][()].tolist() + \
-            [s["angle"][()]] + \
-            s["x_axis"][()].tolist() + \
-            s["y_axis"][()].tolist() + \
-            s["z_axis"][()].tolist()
-        elif tt == "Sphere":  # sphere
-            tt = 3
-            xaxis = np.array(s.get('x_axis')[()]).reshape(-1, 1).T
-            yaxis = np.array(s.get('y_axis')[()]).reshape(-1, 1).T
-            if 'z_axis' in s:
-                zaxis = np.array(s.get('z_axis')[()]).reshape(-1, 1).T
-            else:
-                zaxis = np.cross(xaxis, yaxis)
-
-            surfaces[index] = [tt] + td + \
-            s["location"][()].tolist() + \
-            [s["radius"][()]] + \
-            s["coefficients"][()].tolist() + \
-            xaxis.ravel().tolist() + \
-            yaxis.ravel().tolist() + \
-            zaxis.ravel().tolist()
-        elif tt == "Torus":
-            tt = 4
-            surfaces[index] = [tt] + td + \
-            s["location"][()].tolist() + \
-            [s["max_radius"][()], s["min_radius"][()]] + \
-            s["x_axis"][()].tolist() + \
-            s["y_axis"][()].tolist() + \
-            s["z_axis"][()].tolist()
-        elif tt == "BSpline":
-            tt = 5
-            surfaces[index] = [tt] + td
-            face_domain = s["face_domain"][()].ravel().tolist()
-            pshape = s["poles"][()].shape
-            poles = s["poles"][()].ravel().tolist()
-            uknots = s["u_knots"][()].ravel().tolist()
-            vknots = s["v_knots"][()].ravel().tolist()
-            weights_obj = s["weights"]
-            if isinstance(weights_obj, h5py.Group):
-                weights = np.column_stack([weights_obj[str(i)][()] for i in range(len(weights_obj))])
-            else:
-                weights = weights_obj[()]
-
-            wshape = weights.shape
-
-            surfaces[index] += [
-                s["u_degree"][()],
-                s["v_degree"][()],
-                s["continuity"][()],
-                s["u_rational"][()],
-                s["v_rational"][()],
-                s["u_periodic"][()],
-                s["v_periodic"][()],
-                s["u_closed"][()],
-                s["v_closed"][()],
-                s["is_trimmed"][()],
-                len(face_domain)] + \
-                face_domain + \
-                [len(poles)] + list(pshape) + poles + \
-                [len(uknots)] + uknots + \
-                [len(vknots)] + vknots + \
-                [weights.size] + list(wshape) + weights.ravel().tolist()
-        elif tt == "Extrusion":  # Extrusion
-            tt = 6
-            surfaces[index] = [tt] + td + \
-            s["direction"][()].tolist() + [s["curve"][()]]
-        elif tt == "Revolution":  # Revolution
-            tt = 7
-            surfaces[index] = [tt] + td + \
-            s["location"][()].tolist() + \
-            s["z_axis"][()].tolist() + [s["curve"][()]]
-        elif tt == "Offset": # Other
-            tt = 8
-            surfaces[index] = [tt] + td + [s["value"][()], s["surface"][()]]
-        elif tt == "Other": # Other
-            tt = 9
-            surfaces[index] = [tt] + td
-        else:
-            raise ValueError(f"Unknown surface type: {tt}")
-
-        surfaces[index] += s["transform"][()].flatten().tolist()
+        surfaces[index] = process_surface(s)
 
     del part['geometry']['surfaces']
 
@@ -414,7 +434,7 @@ def process_surfaces(part):
 if __name__ == "__main__":
     path = '/home/nafiseh/Documents/abs/data/sample_hdf5/Cone.hdf5'
 
-    create = True
+    create = False
 
     def compute_labels(part, topo, points ):
         if isinstance(topo, Face): return np.ones((points.shape[0], 1), dtype=np.float32)

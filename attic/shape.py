@@ -1,8 +1,8 @@
-from . import sampler
-from .topology import Edge, Face, Halfedge, Loop, Shell, Solid as TopoSolid, Topology
-from .curve import Circle, Ellipse, Line, BSplineCurve, Other
-from .surface import *
-from .winding_number import find_surface_uv_for_curve
+from abs import sampler
+from abs.topology import Edge, Face, Halfedge, Loop, Shell, Solid as TopoSolid, Topology
+from abs.curve import Circle, Ellipse, Line, BSplineCurve, Other
+from abs.surface import *
+from abs.winding_number import find_surface_uv_for_curve
 import numpy as np
 
 
@@ -17,8 +17,8 @@ class Shape:
         self.vertices = self._geometry_data.vertices
 
         self._create_2d_trimming_curves(self._geometry_data.curves2d, self._geometry_data.curves3d, spacing)
-        self.edges, self.faces, self.halfedges, self.loops, self.shells, self.solids = \
-            self._assemble_topology(self._topology_data, self._geometry_data, self.trimming_curves_2d)
+        self.Solid = self.Solid(self._topology_data, self._geometry_data, self.trimming_curves_2d)
+
 
     def _create_2d_trimming_curves(self, curves_2d, curves_3d, spacing):
         """
@@ -88,197 +88,8 @@ class Shape:
 
                     self.trimming_curves_2d[face_index].append(closest_surface_uv_values_of_curve)
 
-    def _assemble_topology(self, topo, geo, trimming_curves):
-        edges, faces, halfedges, loops, shells, solids = [], [], [], [], [], []
-
-        # Edges
-        for edge in topo.edges:
-            edge.curve3d = geo.curves3d[int(edge.curve3d)]
-            edges.append(edge)
-
-        # Halfedges
-        for halfedge in topo.halfedges:
-            c2d = int(halfedge.curve2d)
-            halfedge.curve2d = geo.curves2d[c2d] if (c2d is not None and c2d < len(geo.curves2d)) else None
-
-            halfedge.edge = edges[int(halfedge.edge)]
-
-            if halfedge.mates:
-                halfedge.mates = topo.halfedges[int(halfedge.mates[0])]
-            halfedges.append(halfedge)
-
-        # Loops
-        for loop in topo.loops:
-            loop.halfedges = [topo.halfedges[int(hid)] for hid in loop.halfedges]
-            loops.append(loop)
-
-        # Faces
-        for idx, face in enumerate(topo.faces):
-            face.surface = geo.surfaces[int(face.surface)]
-            face.loops = [topo.loops[int(lid)] for lid in face.loops]
-
-            # safer indexing (in case trimming_curves is shorter)
-            face.trimming_curves_2d = trimming_curves[idx] if idx < len(trimming_curves) else None
-
-            faces.append(face)
-
-        # Shells
-        for shell in topo.shells:
-            shell.faces = [(topo.faces[int(f)], bool(o)) for (f, o) in shell.faces]
-            shells.append(shell)
-
-        # Solids
-        for solid in topo.solids:
-            solid.shells = [topo.shells[int(sid)] for sid in solid.shells]
-            solids.append(solid)
-
-        # ---- reverse mappings (same as before but using locals) ----
-
-        # edges -> halfedges
-        edgeMap = {}
-        for he in halfedges:
-            e = he.edge
-            edgeMap.setdefault(e, {'halfedges': []})['halfedges'].append(he)
-        for e in edgeMap:
-            e._halfedges = edgeMap[e]['halfedges']
-
-        # halfedges -> loops
-        halfEdgeMap = {}
-        for lp in loops:
-            for he in lp.halfedges:
-                halfEdgeMap.setdefault(he, {'loops': []})['loops'].append(lp)
-        for he in halfEdgeMap:
-            he.loops = halfEdgeMap[he]['loops']
-
-        # loops -> faces
-        loopMap = {}
-        for fc in faces:
-            for lp in fc.loops:
-                loopMap.setdefault(lp, {'faces': []})['faces'].append(fc)
-        for lp in loopMap:
-            lp.faces = loopMap[lp]['faces']
-
-        # faces -> shells
-        faceMap = {}
-        for sh in shells:
-            for fc, _ in sh.faces:
-                faceMap.setdefault(fc, {'shells': []})['shells'].append(sh)
-        for fc in faceMap:
-            fc.shells = faceMap[fc]['shells']
-
-        # shells -> solids
-        if len(solids) > 0:
-            shellMap = {}
-            for sd in solids:
-                for sh in sd.shells:
-                    shellMap.setdefault(sh, {'solids': []})['solids'].append(sd)
-            for sh in shellMap:
-                sh.solids = shellMap[sh]['solids']
-
-        # solids -> parts
-        solidMap = {}
-        for sd in solids:
-            solidMap.setdefault(sd, {'parts': []})['parts'].append(self)
-
-        for sd in solidMap:
-            sd.part = solidMap[sd]['parts']
-            # # optionally also store a single shortcut:
-            # sd.part = solidMap[sd]['parts'][0]
 
 
-        return edges, faces, halfedges, loops, shells, solids
-
-    def __eq__(self, other):
-        if not isinstance(other, self.__class__):
-            return NotImplemented
-
-        def summarize_edges(edges):
-            return {
-                e.id: (
-                    int(e.start_vertex),
-                    int(e.end_vertex),
-                    e.curve3d,
-                )
-                for e in edges
-            }
-
-        def summarize_halfedges(halfedges):
-            summary = {}
-            for h in halfedges:
-                mate = getattr(h, "mates", None)
-                mate_id = mate.id if mate is not None else None
-
-                summary[h.id] = (
-                    bool(h.orientation_wrt_edge),
-                    h.edge.id,
-                    mate_id,
-                    h.curve2d,
-                )
-            return summary
-
-        def summarize_loops(loops):
-
-            return {
-                loop.id: tuple(h.id for h in loop.halfedges)
-                for loop in loops
-            }
-
-        def summarize_faces(faces):
-            summary = {}
-            for f in faces:
-                exact_domain = tuple(np.asarray(f.exact_domain).ravel().tolist())
-                loop_ids = tuple(loop.id for loop in f.loops)
-
-                sing_raw = getattr(f, "singularities", None)
-                sing_summary = None
-                if isinstance(sing_raw, dict):
-                    sing_summary = {}
-                    for key, inner in sing_raw.items():
-                        norm_inner = {}
-                        for k2, v in inner.items():
-                            if isinstance(v, (np.ndarray, list, tuple)):
-                                norm_inner[k2] = np.asarray(v).ravel().tolist()
-                            else:
-                                norm_inner[k2] = v
-                            sing_summary[key] = norm_inner
-
-                summary[f.id] = (
-                    exact_domain,
-                    bool(getattr(f, "has_singularities", False)),
-                    int(getattr(f, "nr_singularities", 0)),
-                    int(f.outer_loop),
-                    bool(f.surface_orientation),
-                    loop_ids,
-                    # sing_summary,
-                    f.surface,
-                )
-            return summary
-
-        def summarize_shells(shells):
-            summary = {}
-            for s in shells:
-                faces = tuple((face.id, bool(orient)) for (face, orient) in s.faces)
-                summary[s.id] = (
-                    bool(s.orientation_wrt_solid),
-                    faces,
-                )
-            return summary
-
-        def summarize_solids(solids):
-            summary = {}
-            for s in solids:
-                shell_ids = tuple(shell.id for shell in s.shells)
-                summary[s.id] = shell_ids
-            return summary
-
-        return (
-            summarize_edges(self.edges) == summarize_edges(other.edges)
-            and summarize_halfedges(self.halfedges) == summarize_halfedges(other.halfedges)
-            and summarize_loops(self.loops) == summarize_loops(other.loops)
-            and summarize_faces(self.faces) == summarize_faces(other.faces)
-            and summarize_shells(self.shells) == summarize_shells(other.shells)
-            and summarize_solids(self.solids) == summarize_solids(other.solids)
-        )
 
     class _geometry_data:
         def __init__(self, geometry_data, version):
@@ -753,6 +564,204 @@ class Shape:
                 for entity, (attr_list, constructor) in entity_map.items():
                     entity_data = Topology._get_topo_data(data, entity)
                     attr_list.extend(constructor(item) for item in entity_data)
+
+
+    class Solid:
+        def __init__(self, topology, geometry, trimming_curves):
+            self.edges, self.faces, self.halfedges, self.loops, self.shells, self.solids = [], [], [], [], [], []
+            self.__init_solid(topology, geometry, trimming_curves)
+
+
+        def __init_solid(self, topo, geo, trimming_curves):
+
+            # Loop over edges
+            for edge in topo.edges:
+                edge.curve3d = geo.curves3d[edge.curve3d]
+                self.edges.append(edge)
+
+            # loop over halfedges
+            for halfedge in topo.halfedges:
+                halfedge.curve2d = geo.curves2d[halfedge.curve2d] if halfedge.curve2d < len(geo.curves2d) else None
+                halfedge.edge = self.edges[halfedge.edge]
+                if halfedge.mates:
+                    halfedge.mates = topo.halfedges[int(halfedge.mates[0])]
+                self.halfedges.append(halfedge)
+
+            # Loop over loops
+            for loop in topo.loops:
+                loop.halfedges = [topo.halfedges[halfedge_id] for halfedge_id in loop.halfedges]
+                self.loops.append(loop)
+
+            # Loop over faces
+            for idx, face in enumerate(topo.faces):
+                face.surface = geo.surfaces[face.surface]
+                face.loops = [topo.loops[loop_id] for loop_id in face.loops]
+                face.trimming_curves_2d = trimming_curves[idx]
+                self.faces.append(face)
+
+            # Loop over shells
+            for shell in topo.shells:
+                for idx, orientation in enumerate(shell.faces):
+                    shell.faces[idx] = (topo.faces[orientation[0]] , orientation[1])
+                self.shells.append(shell)
+
+            # loop over solids
+            for solid in topo.solids:
+                solid.shells = [topo.shells[shell_id] for shell_id in solid.shells]
+                self.solids.append(solid)
+
+            # adding the reverse mapping
+
+            # from edges to halfedges
+            edgeMap = {}
+            for halfEdge in self.halfedges:
+                edge = halfEdge.edge
+                edgeMapValue = edgeMap.get(edge, {'halfedges': []})
+                edgeMapValue['halfedges'].append(halfEdge)
+                edgeMap[edge] = edgeMapValue
+
+            for edge in edgeMap:
+                edge._halfedges = edgeMap[edge]['halfedges']
+
+            # from halfedges to loops
+            halfEdgeMap = {}
+            for loop in self.loops:
+                for halfedge in loop.halfedges:
+                    halfEdgeMapValue = halfEdgeMap.get(halfedge, {'loops': []})
+                    halfEdgeMapValue['loops'].append(loop)
+                    halfEdgeMap[halfedge] = halfEdgeMapValue
+
+            for halfedge in halfEdgeMap:
+                halfedge.loops = halfEdgeMap[halfedge]['loops']
+
+            # from loops to faces
+            loopMap = {}
+            for face in self.faces:
+                for loop in face.loops:
+                    loopMapValue = loopMap.get(loop, {'faces': []})
+                    loopMapValue['faces'].append(face)
+                    loopMap[loop] = loopMapValue
+
+            for loop in loopMap:
+                loop.faces = loopMap[loop]['faces']
+
+            # from faces to shells
+            faceMap = {}
+            for shell in self.shells:
+                for face, _ in shell.faces:
+                    faceMapValue = faceMap.get(face, {'shells': []})
+                    faceMapValue['shells'].append(shell)
+                    faceMap[face] = faceMapValue
+
+            for face in faceMap:
+                face.shells = faceMap[face]['shells']
+
+            # from shells to solids
+            shellMap = {}
+            if len(self.solids) > 0:
+                for solid in self.solids:
+                    for shell in solid.shells:
+                        shellMapValue = shellMap.get(shell, {'solids': []})
+                        shellMapValue['solids'].append(solid)
+                        shellMap[shell] = shellMapValue
+
+                for shell in shellMap:
+                    shell.solids = shellMap[shell]['solids']
+
+
+        def __eq__(self, other):
+            if not isinstance(other, self.__class__):
+                return NotImplemented
+
+            def summarize_edges(edges):
+                return {
+                    e.id: (
+                        int(e.start_vertex),
+                        int(e.end_vertex),
+                        e.curve3d,
+                    )
+                    for e in edges
+                }
+
+            def summarize_halfedges(halfedges):
+                summary = {}
+                for h in halfedges:
+                    mate = getattr(h, "mates", None)
+                    mate_id = mate.id if mate is not None else None
+
+                    summary[h.id] = (
+                        bool(h.orientation_wrt_edge),
+                        h.edge.id,
+                        mate_id,
+                        h.curve2d,
+                    )
+                return summary
+
+            def summarize_loops(loops):
+
+                return {
+                    loop.id: tuple(h.id for h in loop.halfedges)
+                    for loop in loops
+                }
+
+            def summarize_faces(faces):
+                summary = {}
+                for f in faces:
+                    exact_domain = tuple(np.asarray(f.exact_domain).ravel().tolist())
+                    loop_ids = tuple(loop.id for loop in f.loops)
+
+                    sing_raw = getattr(f, "singularities", None)
+                    sing_summary = None
+                    if isinstance(sing_raw, dict):
+                        sing_summary = {}
+                        for key, inner in sing_raw.items():
+                            norm_inner = {}
+                            for k2, v in inner.items():
+                                if isinstance(v, (np.ndarray, list, tuple)):
+                                    norm_inner[k2] = np.asarray(v).ravel().tolist()
+                                else:
+                                    norm_inner[k2] = v
+                                sing_summary[key] = norm_inner
+
+                    summary[f.id] = (
+                        exact_domain,
+                        bool(getattr(f, "has_singularities", False)),
+                        int(getattr(f, "nr_singularities", 0)),
+                        int(f.outer_loop),
+                        bool(f.surface_orientation),
+                        loop_ids,
+                        # sing_summary,
+                        f.surface,
+                    )
+                return summary
+
+
+            def summarize_shells(shells):
+                summary = {}
+                for s in shells:
+                    faces = tuple((face.id, bool(orient)) for (face, orient) in s.faces)
+                    summary[s.id] = (
+                        bool(s.orientation_wrt_solid),
+                        faces,
+                    )
+                return summary
+
+            def summarize_solids(solids):
+                summary = {}
+                for s in solids:
+                    shell_ids = tuple(shell.id for shell in s.shells)
+                    summary[s.id] = shell_ids
+                return summary
+
+            return (
+                summarize_edges(self.edges) == summarize_edges(other.edges)
+                and summarize_halfedges(self.halfedges) == summarize_halfedges(other.halfedges)
+                and summarize_loops(self.loops) == summarize_loops(other.loops)
+                and summarize_faces(self.faces) == summarize_faces(other.faces)
+                and summarize_shells(self.shells) == summarize_shells(other.shells)
+                and summarize_solids(self.solids) == summarize_solids(other.solids)
+            )
+
 
 
 def _get_edges(edge_data): return Edge(edge_data)

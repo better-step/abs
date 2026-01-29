@@ -1,6 +1,3 @@
-"""
-Utility functions for reading shape parts from files and saving data in common formats.
-"""
 from pathlib import Path
 import meshio as mio
 import numpy as np
@@ -9,16 +6,14 @@ from .shape import Shape
 
 
 def read_parts(file_path):
-    """Read all parts from an HDF5 file and construct Shape objects for each."""
+    """Read all parts from an HDF5 file and construct Shape objects."""
     f = h5py.File(file_path, 'r')
     part = f['parts'].values()
     version = f['parts'].attrs.get('version')
-
     parts = []
     for i, p in enumerate(part):
         s = Shape(p['geometry'], p['topology'], version)
         parts.append(s)
-
     return parts
 
 
@@ -27,22 +22,19 @@ def read_meshes(file_path):
     f = h5py.File(file_path, 'r')
     part = f['parts'].values()
     version = f['parts'].attrs.get('version')
-
     meshes = []
     for i, p in enumerate(part):
         s = Shape(p['geometry'], p['topology'], version)
-        # If shape has no faces, append empty
-        if not hasattr(s, 'Solid') or not hasattr(s.Solid, 'faces') or not s.Solid.faces:
+        if not hasattr(s, 'faces') or not s.faces:
             meshes.append([])
             continue
         if version == '2.0':
             mesh_group = p['mesh']
-            current_mesh = [None] * len(s.Solid.faces)
+            current_mesh = [None] * len(s.faces)
             for key in mesh_group:
                 submesh = mesh_group[key]
                 vertices = submesh['points']
                 faces = submesh['triangle']
-
                 current_mesh[int(key)] = {
                     'points': vertices,
                     'triangle': faces
@@ -54,54 +46,48 @@ def read_meshes(file_path):
             all_tris = mesh_group['triangles'][()]
             p_idx = mesh_group['point_index'][()]
             t_idx = mesh_group['triangle_index'][()]
-
             n_meshes = len(p_idx) - 1
             current_mesh = [None] * n_meshes
-
             for mi in range(n_meshes):
-                # ps = all_points[p_idx[mi]:p_idx[mi + 1], :]
-                # ts = all_tris[t_idx[mi]:t_idx[mi + 1], :]
                 ps = all_points[p_idx[mi]:p_idx[mi + 1]].reshape(-1, 3).astype(np.float32, copy=False)
                 ts = all_tris[t_idx[mi]:t_idx[mi + 1]].reshape(-1, 3).astype(np.int32, copy=False)
-
                 current_mesh[mi] = {
                     'points': ps,
                     'triangle': ts
                 }
-
             meshes.append(current_mesh)
-
-
     return meshes
 
+# -------------------------
+# Saving utilities
+# -------------------------
 
-# Functions for saving data (if needed)
-def save_obj(filename, pts):
-    '''
-    Save a set of 3D points to an .obj file.
-    '''
+def save_obj_points(filename, pts):
+    """Save a set of 2D/3D points to an .obj file."""
     with open(filename, "w") as f:
         if pts.shape[1] == 2:
-            [f.write(f"v {pts[i, 0]} {pts[i, 1]} 0\n") for i in range(pts.shape[0])]
+            for i in range(pts.shape[0]):
+                f.write(f"v {pts[i, 0]} {pts[i, 1]} 0\n")
         else:
-            [f.write(f"v {pts[i, 0]} {pts[i, 1]} {pts[i, 2]}\n") for i in range(pts.shape[0])]
+            for i in range(pts.shape[0]):
+                f.write(f"v {pts[i, 0]} {pts[i, 1]} {pts[i, 2]}\n")
 
 
 def save_obj_mesh(filename, pts, faces):
-    '''
-    Save a set of 3D points and faces to an .obj file.
-    '''
+    """Save a set of 3D points and faces to an .obj file."""
     if pts.shape[0] == 0:
         print("Skipping saving meshes: mesh is empty")
         return
-
     with open(filename, "w") as f:
         if pts.shape[1] == 2:
-            [f.write(f"v {pts[i, 0]} {pts[i, 1]} 0\n") for i in range(pts.shape[0])]
+            for i in range(pts.shape[0]):
+                f.write(f"v {pts[i, 0]} {pts[i, 1]} 0\n")
         else:
-            [f.write(f"v {pts[i, 0]} {pts[i, 1]} {pts[i, 2]}\n") for i in range(pts.shape[0])]
+            for i in range(pts.shape[0]):
+                f.write(f"v {pts[i, 0]} {pts[i, 1]} {pts[i, 2]}\n")
+        for i in range(faces.shape[0]):
+            f.write(f"f {faces[i, 0] + 1} {faces[i, 1] + 1} {faces[i, 2] + 1}\n")
 
-        [f.write(f"f {faces[i, 0]+1} {faces[i, 1]+1} {faces[i, 2]+1}\n") for i in range(faces.shape[0])]
 
 
 def save_ply(filename, P, normals=None):
@@ -110,23 +96,6 @@ def save_ply(filename, P, normals=None):
     '''
     total_points = []
     total_normals = []
-
-    # for idx, part in enumerate(P):
-    #     if normals:
-    #         normal = normals[idx]
-    #     for i, pts in enumerate(part):
-    #         if normals:
-    #             if pts.shape[0] != normal.shape[0]:
-    #                 raise ValueError("The number of points and normals must be the same")
-    #             if pts.shape[1] != 3 or normal.shape[1] != 3:
-    #                 raise ValueError("Both pts and normals must have shape (n, 3)")
-    #             total_points.append(pts)
-    #             total_normals.append(normal)
-    #         else:
-    #             if pts.shape[1] != 3:
-    #                 raise ValueError("Points must have shape (n, 3)")
-    #             total_points.append(pts)
-
 
     for i, pts in enumerate(P):
         if (pts.shape[0] == 0):
@@ -198,12 +167,8 @@ end_header
             np.savetxt(f, data, fmt='%f %f %f')
 
 def save_to_xyz(points, filename):
-    """
-    Save 3D points to an .xyz file.
-    """
     with open(filename, 'w') as f:
         for point in points:
-            # Write each point as X Y Z in a new line
             f.write(f"{point[0]} {point[1]} {point[2]}\n")
 
 
@@ -211,104 +176,55 @@ def save_vtu(save_file_path , P):
     m = mio.Mesh(P, cells={"triangle":np.array([np.arange(P.shape[0]), np.arange(P.shape[0]), np.arange(P.shape[0])]).T})
     m.write(save_file_path)
 
-
-
-
 def get_mesh(meshes):
     global_vertices = []
     global_faces = []
     vertex_offset = 0
-
     for mesh in meshes:
         for sub_mesh in mesh:
             if sub_mesh is None:
                 continue
-
             vertices = sub_mesh["points"][:]
             if len(vertices) == 0:
                 continue
-
             global_vertices.append(vertices)
             faces = sub_mesh["triangle"][:] + vertex_offset
             global_faces.append(faces)
-
             vertex_offset += vertices.shape[0]
-
     if global_vertices:
         global_vertices = np.vstack(global_vertices)
     else:
         global_vertices = np.empty((0, 3))
-
     if global_faces:
         global_faces = np.vstack(global_faces)
     else:
         global_faces = np.empty((0, 3), dtype=int)
-
     return global_vertices, global_faces
-
-
-
-def get_mesh_part(mesh):
-    global_vertices = []
-    global_faces = []
-    vertex_offset = 0
-
-    for key in mesh:
-
-        sub_mesh = mesh[key]
-
-        vertices = sub_mesh["points"][:]
-        if len(vertices) == 0:
-            continue
-        global_vertices.append(vertices)
-
-        faces = sub_mesh["triangle"][:] + vertex_offset
-        global_faces.append(faces)
-
-        vertex_offset += vertices.shape[0]
-
-    global_vertices = np.vstack(global_vertices)
-    global_faces = np.vstack(global_faces)
-
-    return global_vertices, global_faces
-
 
 def get_mesh_per_part(meshes):
 
     global_vertices = []
     global_faces = []
-
     for mesh in meshes:
         V_list = []
         F_list = []
         offset = 0
-
         for sub_mesh in mesh:
             if sub_mesh is None:
                 continue
-
             vertices = np.asarray(sub_mesh["points"], dtype=np.float32).reshape(-1, 3)
             faces = np.asarray(sub_mesh["triangle"], dtype=np.int32).reshape(-1, 3)
-
             if vertices.shape[0] == 0 or faces.shape[0] == 0:
                 continue
-
             V_list.append(vertices)
             F_list.append(faces + offset)
             offset += vertices.shape[0]
-
         if V_list:
             Vp = np.vstack(V_list)
             Fp = np.vstack(F_list) if F_list else np.zeros((0, 3), dtype=np.int32)
         else:
             Vp = np.zeros((0, 3), dtype=np.float32)
             Fp = np.zeros((0, 3), dtype=np.int32)
-
         global_vertices.append(Vp)
         global_faces.append(Fp)
-
     return global_vertices, global_faces
-
-
-
-

@@ -1,7 +1,3 @@
-"""
-Functions for processing Shape parts: sampling points and computing normals.
-"""
-
 import numpy as np
 from . import sampler
 from abspy import poisson_disk_downsample
@@ -11,14 +7,14 @@ from abspy import poisson_disk_downsample
 def estimate_total_surface_area(part):
     """Estimate the total surface area of all faces in a Shape part."""
     total_area = 0.0
-    for face in part.Solid.faces:
+    for face in part.faces:
         total_area += face.get_area()
     return total_area
 
 def estimate_total_curve_length(part):
     """Estimate the total curve length of all edges in a Shape part."""
     total_length = 0.0
-    for edge in part.Solid.edges:
+    for edge in part.edges:
         total_length += edge.get_length()
     return total_length
 
@@ -38,8 +34,7 @@ def process_part(part, num_samples, lambda_func, points_ratio, apply_transform):
     while True:
         current_pts = []
         current_ss = []
-        # Sample points on each face (surface)
-        for face in part.Solid.faces:
+        for face in part.faces:
             n_surf = int(np.ceil((face.get_area() / total_area) * num_points))
             uv_points, pt = sampler.random_sample(face, n_surf, min_pts=2)
             s = lambda_func(part, face, uv_points)
@@ -68,8 +63,7 @@ def process_part(part, num_samples, lambda_func, points_ratio, apply_transform):
                     elif s.shape[1] != pt.shape[1]:
                         s = np.tile(s, (1, pt.shape[1]))
                     current_ss.append(s[index, :])
-        # Sample points on each edge (curve)
-        for edge in part.Solid.edges:
+        for edge in part.edges:
             if edge.curve3d is None:
                 continue
             n_edge = int(np.ceil((edge.get_length() / total_length) * num_points))
