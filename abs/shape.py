@@ -13,7 +13,7 @@ class Shape:
         self._geometry_data = self._geometry_data(geometry_data, version)
         self._topology_data = self._topology_data(topology_data, version)
         spacing *= np.linalg.norm(self._geometry_data.bbox[0][1] - self._geometry_data.bbox[0][0])
-        self.bbox = self._geometry_data.bbox
+        self.bbox = self._geometry_data.bbox[0]
         self.vertices = self._geometry_data.vertices
 
         self._create_2d_trimming_curves(self._geometry_data.curves2d, self._geometry_data.curves3d, spacing)
