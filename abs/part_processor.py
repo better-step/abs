@@ -23,7 +23,7 @@ def estimate_total_curve_length(part):
     return total_length
 
 
-def process_part(part, num_samples, lambda_func, points_ratio, apply_transform, uniform_sample, use_poisson, force_num_points):
+def process_part(part, num_samples, lambda_func, points_ratio, apply_transform, uniform_sample, use_poisson, force_num_points, sample_num_tolerance):
     """
     Sample points on all surfaces and curves of a shape part according to specified number.
     Uses an iterative strategy with oversampling (points_ratio) and Poisson disk downsampling to refine points.
@@ -125,7 +125,7 @@ def process_part(part, num_samples, lambda_func, points_ratio, apply_transform, 
     # Poisson disk downsample to exactly num_samples points
 
     if use_poisson:
-        indices = poisson_disk_downsample(pts, num_samples)
+        indices = poisson_disk_downsample(pts, num_samples, sample_num_tolerance=sample_num_tolerance)
         # indices = poisson_grid_downsample(pts, num_samples)
     else:
         indices = np.arange(pts.shape[0])
@@ -148,12 +148,12 @@ def process_part(part, num_samples, lambda_func, points_ratio, apply_transform, 
         return pts[indices], ss[indices] if isinstance(ss, np.ndarray) else ss
 
 
-def sample_parts(parts, num_samples, lambda_func, points_ratio=5, apply_transform=True, uniform_sample=False, use_poisson=True, force_num_points=True):
+def sample_parts(parts, num_samples, lambda_func, points_ratio=5, apply_transform=True, uniform_sample=False, use_poisson=True, force_num_points=True, sample_num_tolerance=0.04):
     """Process a list of parts by sampling each part and returning lists of points and values."""
     pts_list = []
     ss_list = []
     for part in parts:
-        pts, ss = process_part(part, num_samples, lambda_func, points_ratio=points_ratio,apply_transform=apply_transform, uniform_sample=uniform_sample, use_poisson=use_poisson, force_num_points=force_num_points)
+        pts, ss = process_part(part, num_samples, lambda_func, points_ratio=points_ratio,apply_transform=apply_transform, uniform_sample=uniform_sample, use_poisson=use_poisson, force_num_points=force_num_points,sample_num_tolerance=sample_num_tolerance)
         pts_list.append(np.array(pts))
         if isinstance(ss, list):
             ss_list.extend([np.array(sublist) for sublist in ss])

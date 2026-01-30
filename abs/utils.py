@@ -24,11 +24,12 @@ def read_meshes(file_path):
     version = f['parts'].attrs.get('version')
     meshes = []
     for i, p in enumerate(part):
-        s = Shape(p['geometry'], p['topology'], version)
-        if not hasattr(s, 'faces') or not s.faces:
-            meshes.append([])
-            continue
         if version == '2.0':
+            s = Shape(p['geometry'], p['topology'], version)
+            if not hasattr(s, 'faces') or not s.faces:
+                meshes.append([])
+                continue
+
             mesh_group = p['mesh']
             current_mesh = [None] * len(s.faces)
             for key in mesh_group:
@@ -47,6 +48,7 @@ def read_meshes(file_path):
             p_idx = mesh_group['point_index'][()]
             t_idx = mesh_group['triangle_index'][()]
             n_meshes = len(p_idx) - 1
+            assert(len(p_idx) == len(t_idx))
             current_mesh = [None] * n_meshes
             for mi in range(n_meshes):
                 ps = all_points[p_idx[mi]:p_idx[mi + 1]].reshape(-1, 3).astype(np.float32, copy=False)
@@ -72,6 +74,8 @@ def save_obj_points(filename, pts):
             for i in range(pts.shape[0]):
                 f.write(f"v {pts[i, 0]} {pts[i, 1]} {pts[i, 2]}\n")
 
+def save_ply_mesh(filename, pts, faces):
+    mio.write_points_cells(filename, pts, [("triangle", faces)])
 
 def save_obj_mesh(filename, pts, faces):
     """Save a set of 3D points and faces to an .obj file."""
@@ -94,77 +98,24 @@ def save_ply(filename, P, normals=None):
     '''
     Save a set of 3D points to a .ply file. Optionally, also save normals.
     '''
-    total_points = []
-    total_normals = []
 
-    for i, pts in enumerate(P):
-        if (pts.shape[0] == 0):
-            continue
-        if normals:
-            normal = normals[i]
-            if pts.shape[0] != normal.shape[0]:
-                raise ValueError("The number of points and normals must be the same")
-            if pts.shape[1] != 3 or normal.shape[1] != 3:
-                raise ValueError("Both pts and normals must have shape (n, 3)")
-            total_points.append(pts)
-            total_normals.append(normal)
-        else:
-            if pts.shape[1] != 3:
-                raise ValueError("Points must have shape (n, 3)")
-            total_points.append(pts)
+    new_pts = np.vstack(P)
 
-    new_pts = np.asarray(total_points)
-    if new_pts.shape[2] == 1:
-        new_pts = np.squeeze(new_pts, axis=0)
-    else:
-        new_pts = np.vstack(new_pts)
-
-    if total_normals:
-        new_normal = np.asarray(total_normals)
-        if new_normal.shape[2] == 1:
-            new_normal = np.squeeze(new_normal, axis=0)
-        else:
-            new_normal = np.vstack(new_normal)
+    if normals:
+        new_normal = np.vstack(normals)
 
         if new_pts.shape[0] != new_normal.shape[0]:
             raise ValueError("The number of points and normals must be the same")
 
         if new_pts.shape[1] != 3 or new_normal.shape[1] != 3:
             raise ValueError("Both pts and normals must have shape (n, 3)")
-
-        data = np.hstack((new_pts, new_normal))
-
-        header = f"""ply
-format ascii 1.0
-element vertex {data.shape[0]}
-property float x
-property float y
-property float z
-property float nx
-property float ny
-property float nz
-end_header
-"""
     else:
         if new_pts.shape[1] != 3:
             raise ValueError("Points must have shape (n, 3)")
 
         data = new_pts
 
-        header = f"""ply
-format ascii 1.0
-element vertex {data.shape[0]}
-property float x
-property float y
-property float z
-end_header
-"""
-    with open(filename, 'w') as f:
-        f.write(header)
-        if normals is not None:
-            np.savetxt(f, data, fmt='%f %f %f %f %f %f')
-        else:
-            np.savetxt(f, data, fmt='%f %f %f')
+    mio.write_points_cells(filename, new_pts, [("vertex", np.arange(new_pts.shape[0], dtype=np.int32)[:, None])])
 
 def save_to_xyz(points, filename):
     with open(filename, 'w') as f:
