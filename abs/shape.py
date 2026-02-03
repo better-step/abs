@@ -182,8 +182,6 @@ class Shape:
 
         for sd in solidMap:
             sd.part = solidMap[sd]['parts']
-            # # optionally also store a single shortcut:
-            # sd.part = solidMap[sd]['parts'][0]
 
 
         return edges, faces, halfedges, loops, shells, solids
@@ -285,6 +283,214 @@ class Shape:
             self.curves2d, self.curves3d, self.surfaces, self.bbox, self.vertices = [], [], [], [], []
             self.__init_geometry(geometry_data, version)
 
+        def _create_3dcurve(self, tmp):
+            ctype = int(tmp[0])
+            interval = tmp[1:3]
+            transform = tmp[len(tmp) - 12:]  # last 16 values are the transformation matrix
+            transform = np.array(transform).reshape((3, 4))
+
+            if ctype == 0:  # Line
+                res = Line(None,
+                                        interval=interval,
+                                        location=tmp[3:6],
+                                        direction=tmp[6:9],
+                                        transform=transform)
+            elif ctype == 1:  # Circle
+                res = Circle(None,
+                                          interval=interval,
+                                          location=tmp[3:6],
+                                          x_axis=tmp[6:9],
+                                          y_axis=tmp[9:12],
+                                          z_axis=tmp[12:15],
+                                          radius=tmp[15],
+                                          transform=transform)
+            elif ctype == 2:  # Ellipse
+                res = Ellipse(None,
+                                           interval=interval,
+                                           focus1=tmp[3:6],
+                                           focus2=tmp[6:9],
+                                           x_axis=tmp[9:12],
+                                           y_axis=tmp[12:15],
+                                           z_axis=tmp[15:18],
+                                           maj_radius=tmp[18],
+                                           min_radius=tmp[19],
+                                           transform=transform)
+            elif ctype == 3:  # BSplineCurve
+                degree = int(tmp[3])
+                continuity = int(tmp[4])
+                rational = bool(tmp[5])
+                periodic = bool(tmp[6])
+                closed = bool(tmp[7])
+                len_poles = int(tmp[8])
+                pshape = (int(tmp[9]), int(tmp[10]))
+                poles = np.array(tmp[11:11 + len_poles]).reshape(pshape)
+                idx = 11 + len_poles
+                len_knots = int(tmp[idx])
+                knots = tmp[idx + 1:idx + 1 + len_knots]
+                idx = idx + 1 + len_knots
+                len_weights = int(tmp[idx])
+                weights = tmp[idx + 1:idx + 1 + len_weights]
+
+                res = BSplineCurve(None,
+                                                interval=interval,
+                                                degree=degree,
+                                                continuity=continuity,
+                                                rational=rational,
+                                                periodic=periodic,
+                                                closed=closed,
+                                                poles=poles,
+                                                knots=knots,
+                                                weights=weights,
+                                                transform=transform)
+            elif ctype == 4:  # Other
+                res = Other(None, interval=interval, transform=transform)
+            else:
+                raise ValueError(f"Unknown curve type: {ctype} for curve {tmp}")
+
+            return res
+
+        def _create_surface(self, tmp):
+            transform = np.array(tmp[-12:]).reshape((3, 4))
+            payload = tmp[:-12]
+            stype = int(payload[0])
+
+            trim_domain = np.array(payload[1:5]).reshape((2, 2))
+            idx = 5
+
+            if stype == 0:  # Plane
+                res = Plane(None,
+                             trim_domain=trim_domain,
+                             transform=transform,
+                             location=np.array(payload[idx:idx + 3]),
+                             coefficients=np.array(payload[idx + 3:idx + 7]),
+                             x_axis=np.array(payload[idx + 7:idx + 10]),
+                             y_axis=np.array(payload[idx + 10:idx + 13]),
+                             z_axis=np.array(payload[idx + 13:idx + 16]))
+
+            elif stype == 1:  # Cylinder
+                res = Cylinder(None,
+                                trim_domain=trim_domain,
+                                transform=transform,
+                                location=np.array(payload[idx:idx + 3]),
+                                radius=payload[idx + 3],
+                                coefficients=np.array(payload[idx + 4:-9]),
+                                x_axis=np.array(payload[-9:-6]),
+                                y_axis=np.array(payload[-6:-3]),
+                                z_axis=np.array(payload[-3:]))
+
+            elif stype == 2:  # Cone
+                res = Cone(None,
+                            trim_domain=trim_domain,
+                            transform=transform,
+                            location=np.array(payload[idx:idx + 3]),
+                            radius=payload[idx + 3],
+                            coefficients=np.array(payload[idx + 4:-13]),
+                            apex=np.array(payload[-13:-10]),
+                            angle=payload[-10],
+                            x_axis=np.array(payload[-9:-6]),
+                            y_axis=np.array(payload[-6:-3]),
+                            z_axis=np.array(payload[-3:]))
+
+            elif stype == 3:  # Sphere
+                res = Sphere(None,
+                              trim_domain=trim_domain,
+                              transform=transform,
+                              location=np.array(payload[idx:idx + 3]),
+                              radius=payload[idx + 3],
+                              coefficients=np.array(payload[idx + 4:-9]),
+                              x_axis=np.array(payload[-9:-6]),
+                              y_axis=np.array(payload[-6:-3]),
+                              z_axis=np.array(payload[-3:]))
+
+            elif stype == 4:  # Torus
+                res = Torus(None,
+                             trim_domain=trim_domain,
+                             transform=transform,
+                             location=np.array(payload[idx:idx + 3]),
+                             max_radius=payload[idx + 3],
+                             min_radius=payload[idx + 4],
+                             x_axis=np.array(payload[idx + 5:idx + 8]),
+                             y_axis=np.array(payload[idx + 8:idx + 11]),
+                             z_axis=np.array(payload[idx + 11:idx + 14]))
+
+            elif stype == 5:  # BSplineSurface
+                u_degree, v_degree, continuity, u_rational, v_rational, u_periodic, v_periodic, u_closed, v_closed, is_trimmed, face_domain_len = payload[
+                    idx:idx + 11]
+                idx += 11
+                face_domain_len = int(face_domain_len)
+                face_domain = np.array(payload[idx:idx + face_domain_len])
+                idx += face_domain_len
+
+                len_poles = int(payload[idx])
+                pshape = [int(val) for val in payload[idx + 1:idx + 4]]
+                idx += 4
+                poles = np.array(payload[idx:idx + len_poles]).reshape(pshape)
+                idx += len_poles
+
+                len_uknots = int(payload[idx])
+                idx += 1
+                u_knots = np.array(payload[idx:idx + len_uknots])
+                idx += len_uknots
+
+                len_vknots = int(payload[idx])
+                idx += 1
+                v_knots = np.array(payload[idx:idx + len_vknots])
+                idx += len_vknots
+
+                len_weights = int(payload[idx])
+                wshape = [int(val) for val in payload[idx + 1:idx + 3]]
+                idx += 3
+                weights = np.array(payload[idx:idx + len_weights]).reshape(wshape)
+                # weights_dict = {str(j): weights[j] for j in range(weights.shape[0])}
+
+                res = BSplineSurface(None,
+                                      trim_domain=trim_domain,
+                                      transform=transform,
+                                      u_degree=int(u_degree),
+                                      v_degree=int(v_degree),
+                                      continuity=int(continuity),
+                                      u_rational=bool(u_rational),
+                                      v_rational=bool(v_rational),
+                                      u_periodic=bool(u_periodic),
+                                      v_periodic=bool(v_periodic),
+                                      u_closed=bool(u_closed),
+                                      v_closed=bool(v_closed),
+                                      is_trimmed=bool(is_trimmed),
+                                      face_domain=face_domain,
+                                      poles=poles,
+                                      u_knots=u_knots,
+                                      v_knots=v_knots,
+                                      weights=weights)
+
+            elif stype == 6:  # Extrusion
+                res = Extrusion(None,
+                                 trim_domain=trim_domain,
+                                 transform=transform,
+                                 direction=np.array(payload[idx:idx + 3]),
+                                 curve=self._create_3dcurve(payload[idx + 3:]))
+
+            elif stype == 7:  # Revolution
+                res = Revolution(None,
+                                  trim_domain=trim_domain,
+                                  transform=transform,
+                                  location=np.array(payload[idx:idx + 3]),
+                                  z_axis=np.array(payload[idx + 3:idx + 6]),
+                                  curve=self._create_3dcurve(payload[idx + 6:]))
+
+            elif stype == 8:  # Offset
+                res = Offset(None,
+                              trim_domain=trim_domain,
+                              transform=transform,
+                              value=np.array(payload[idx]),
+                              surface=self._create_surface(payload[idx + 1:]))
+
+
+            elif stype == 9:  # Other
+                res = None
+                pass
+
+            return res
+
         def __init_geometry(self, data, version):
             if version == "3.0":
                 curve2d_index = data.get('2dcurves_index', {})[()]
@@ -356,68 +562,8 @@ class Shape:
                 self.curves3d = [None] * (len(curve3d_index)-1)
                 for i in range(len(curve3d_index)-1):
                     tmp = curve3d_data[curve3d_index[i]:curve3d_index[i+1]]
-                    ctype = int(tmp[0])
-                    interval = tmp[1:3]
-                    transform = tmp[len(tmp)-12:]  # last 16 values are the transformation matrix
-                    transform = np.array(transform).reshape((3,4))
+                    self.curves3d[i] = self._create_3dcurve(tmp)
 
-                    if ctype == 0:  # Line
-                        self.curves3d[i] = Line(None,
-                                                interval=interval,
-                                                location=tmp[3:6],
-                                                direction=tmp[6:9],
-                                                transform=transform)
-                    elif ctype == 1:  # Circle
-                        self.curves3d[i] = Circle(None,
-                                                 interval=interval,
-                                                 location=tmp[3:6],
-                                                 x_axis=tmp[6:9],
-                                                 y_axis=tmp[9:12],
-                                                 z_axis=tmp[12:15],
-                                                 radius=tmp[15],
-                                                 transform=transform)
-                    elif ctype == 2:  # Ellipse
-                        self.curves3d[i] = Ellipse(None,
-                                                  interval=interval,
-                                                  focus1=tmp[3:6],
-                                                  focus2=tmp[6:9],
-                                                  x_axis=tmp[9:12],
-                                                  y_axis=tmp[12:15],
-                                                  z_axis=tmp[15:18],
-                                                  maj_radius=tmp[18],
-                                                  min_radius=tmp[19],
-                                                   transform=transform)
-                    elif ctype == 3:  # BSplineCurve
-                        degree = int(tmp[3])
-                        continuity = int(tmp[4])
-                        rational = bool(tmp[5])
-                        periodic = bool(tmp[6])
-                        closed = bool(tmp[7])
-                        len_poles = int(tmp[8])
-                        pshape = (int(tmp[9]), int(tmp[10]))
-                        poles = np.array(tmp[11:11+len_poles]).reshape(pshape)
-                        idx = 11 + len_poles
-                        len_knots = int(tmp[idx])
-                        knots = tmp[idx+1:idx+1+len_knots]
-                        idx = idx + 1 + len_knots
-                        len_weights = int(tmp[idx])
-                        weights = tmp[idx+1:idx+1+len_weights]
-
-                        self.curves3d[i] = BSplineCurve(None,
-                                                       interval=interval,
-                                                       degree=degree,
-                                                       continuity=continuity,
-                                                       rational=rational,
-                                                       periodic=periodic,
-                                                       closed=closed,
-                                                       poles=poles,
-                                                       knots=knots,
-                                                       weights=weights,
-                                                        transform=transform)
-                    elif ctype == 4:  # Other
-                        self.curves3d[i] = Other(None, interval=interval, transform=transform)
-                    else:
-                        raise ValueError(f"Unknown curve type: {ctype} for curve {i}")
 
                 del curve3d_index
                 del curve3d_data
@@ -440,142 +586,8 @@ class Shape:
 
                 for i in range(len(surface_index) - 1):
                     tmp = surface_data[surface_index[i]:surface_index[i + 1]]
-                    transform = np.array(tmp[-12:]).reshape((3, 4))
-                    payload = tmp[:-12]
-                    stype = int(payload[0])
+                    self.surfaces[i] = self._create_surface(tmp)
 
-                    trim_domain = np.array(payload[1:5]).reshape((2, 2))
-                    idx = 5
-
-                    if stype == 0:  # Plane
-                        self.surfaces[i] = Plane(None,
-                                                trim_domain=trim_domain,
-                                                transform=transform,
-                                                location=np.array(payload[idx:idx + 3]),
-                                                coefficients=np.array(payload[idx + 3:idx + 7]),
-                                                x_axis=np.array(payload[idx + 7:idx + 10]),
-                                                y_axis=np.array(payload[idx + 10:idx + 13]),
-                                                z_axis=np.array(payload[idx + 13:idx + 16]))
-
-                    elif stype == 1:  # Cylinder
-                        self.surfaces[i] = Cylinder(None,
-                                                   trim_domain=trim_domain,
-                                                   transform=transform,
-                                                   location=np.array(payload[idx:idx + 3]),
-                                                   radius=payload[idx + 3],
-                                                   coefficients=np.array(payload[idx + 4:-9]),
-                                                   x_axis=np.array(payload[-9:-6]),
-                                                   y_axis=np.array(payload[-6:-3]),
-                                                   z_axis=np.array(payload[-3:]))
-
-                    elif stype == 2:  # Cone
-                        self.surfaces[i] = Cone(None,
-                                                trim_domain=trim_domain,
-                                                transform=transform,
-                                                location=np.array(payload[idx:idx + 3]),
-                                                radius=payload[idx + 3],
-                                                coefficients=np.array(payload[idx + 4:-13]),
-                                                apex=np.array(payload[-13:-10]),
-                                                angle=payload[-10],
-                                                x_axis=np.array(payload[-9:-6]),
-                                                y_axis=np.array(payload[-6:-3]),
-                                                z_axis=np.array(payload[-3:]))
-
-                    elif stype == 3:  # Sphere
-                        self.surfaces[i] = Sphere(None,
-                                                 trim_domain=trim_domain,
-                                                 transform=transform,
-                                                 location=np.array(payload[idx:idx + 3]),
-                                                 radius=payload[idx + 3],
-                                                 coefficients=np.array(payload[idx + 4:-9]),
-                                                x_axis=np.array(payload[-9:-6]),
-                                                y_axis=np.array(payload[-6:-3]),
-                                                z_axis=np.array(payload[-3:]))
-
-                    elif stype == 4:  # Torus
-                        self.surfaces[i] = Torus(None,
-                                                trim_domain=trim_domain,
-                                                transform=transform,
-                                                location=np.array(payload[idx:idx + 3]),
-                                                max_radius=payload[idx + 3],
-                                                min_radius=payload[idx + 4],
-                                                x_axis=np.array(payload[idx + 5:idx + 8]),
-                                                y_axis=np.array(payload[idx + 8:idx + 11]),
-                                                z_axis=np.array(payload[idx + 11:idx + 14]))
-
-                    elif stype == 5:  # BSplineSurface
-                        u_degree, v_degree, continuity, u_rational, v_rational, u_periodic, v_periodic, u_closed, v_closed, is_trimmed, face_domain_len = payload[idx:idx + 11]
-                        idx += 11
-                        face_domain_len = int(face_domain_len)
-                        face_domain = np.array(payload[idx:idx + face_domain_len])
-                        idx += face_domain_len
-
-                        len_poles = int(payload[idx])
-                        pshape = [int(val) for val in payload[idx + 1:idx + 4]]
-                        idx += 4
-                        poles = np.array(payload[idx:idx + len_poles]).reshape(pshape)
-                        idx += len_poles
-
-                        len_uknots = int(payload[idx])
-                        idx += 1
-                        u_knots = np.array(payload[idx:idx + len_uknots])
-                        idx += len_uknots
-
-                        len_vknots = int(payload[idx])
-                        idx += 1
-                        v_knots = np.array(payload[idx:idx + len_vknots])
-                        idx += len_vknots
-
-                        len_weights = int(payload[idx])
-                        wshape = [int(val) for val in payload[idx + 1:idx + 3]]
-                        idx += 3
-                        weights = np.array(payload[idx:idx + len_weights]).reshape(wshape)
-                        # weights_dict = {str(j): weights[j] for j in range(weights.shape[0])}
-
-                        self.surfaces[i] = BSplineSurface(None,
-                                                         trim_domain=trim_domain,
-                                                         transform=transform,
-                                                         u_degree=int(u_degree),
-                                                         v_degree=int(v_degree),
-                                                         continuity=int(continuity),
-                                                         u_rational=bool(u_rational),
-                                                         v_rational=bool(v_rational),
-                                                         u_periodic=bool(u_periodic),
-                                                         v_periodic=bool(v_periodic),
-                                                         u_closed=bool(u_closed),
-                                                         v_closed=bool(v_closed),
-                                                         is_trimmed=bool(is_trimmed),
-                                                         face_domain=face_domain,
-                                                         poles=poles,
-                                                         u_knots=u_knots,
-                                                         v_knots=v_knots,
-                                                         weights=weights)
-
-                    elif stype == 6:  # Extrusion
-                        self.surfaces[i] = Extrusion(None,
-                                                     trim_domain=trim_domain,
-                                                     transform=transform,
-                                                     direction=np.array(payload[idx:idx + 3]),
-                                                     curve=self.curves3d_data[int(payload[idx + 3])])
-
-                    elif stype == 7:  # Revolution
-                        self.surfaces[i] = Revolution(None,
-                                                     trim_domain=trim_domain,
-                                                     transform=transform,
-                                                     location=np.array(payload[idx:idx + 3]),
-                                                     z_axis=np.array(payload[idx + 3:idx + 6]),
-                                                     curve=self.curves3d_data[int(payload[idx + 6])])
-
-                    elif stype == 8:  # Offset
-                        self.surfaces[i] = Offset(None,
-                                                 trim_domain=trim_domain,
-                                                 transform=transform,
-                                                 value=np.array(payload[idx]),
-                                                 surface=self.surfaces[int(payload[idx + 1])])
-
-
-                    elif stype == 9:  # Other
-                        pass
 
                 del surface_index
                 del surface_data
@@ -677,7 +689,11 @@ class Shape:
                 del solid_data
 
                 # Faces
-                face_index = data.get('face_index', {})[()]
+                face_index = data.get("face_index")
+                if not isinstance(face_index, dict) and not face_index:
+                    print('No face is avaialbe in the input - Skipping')
+                    return
+                face_index = face_index[()]
                 face_data = data.get('faces', {})[()]
                 self.faces = [None] * (len(face_index)-1)
                 SING_WIDTH = 14

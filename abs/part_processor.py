@@ -1,12 +1,27 @@
 """
 Functions for processing Shape parts: sampling points and computing normals.
 """
-
 import numpy as np
 from . import sampler
 from abspy import poisson_disk_downsample
 # from abspy import poisson_grid_downsample
 
+def _slice(res, indices, n):
+    if isinstance(res, list) or isinstance(res, tuple):
+        tmp = []
+        for sub_res in res:
+            if len(sub_res) != n:
+                raise ValueError("Invalid shape {} != {}".format(len(sub_res), n))
+            if isinstance(sub_res, list):
+                tmp.append([sub_res[i] for i in range(n) if indices[i]])
+            else:
+                assert (isinstance(sub_res, np.ndarray))
+                tmp.append(sub_res[indices])
+
+        return tmp
+
+    assert (isinstance(res, np.ndarray))
+    return res[indices]
 
 def estimate_total_surface_area(part):
     """Estimate the total surface area of all faces in a Shape part."""
@@ -23,8 +38,18 @@ def estimate_total_curve_length(part):
     return total_length
 
 
-def process_part(part, num_samples, lambda_func, points_ratio, apply_transform, uniform_sample, use_poisson, force_num_points, sample_num_tolerance):
+def process_part(part,
+                 num_samples,
+                 face_func,
+                 edge_func,
+                 points_ratio,
+                 apply_transform,
+                 uniform_sample,
+                 use_poisson,
+                 force_num_points,
+                 sample_num_tolerance):
     """
+    FIXME
     Sample points on all surfaces and curves of a shape part according to specified number.
     Uses an iterative strategy with oversampling (points_ratio) and Poisson disk downsampling to refine points.
     The lambda_func is a function(part, topo_entity, param_points) that returns associated values (e.g., normals).
@@ -33,75 +58,48 @@ def process_part(part, num_samples, lambda_func, points_ratio, apply_transform, 
     num_points = initial_num_points
     total_area = estimate_total_surface_area(part)
     total_length = estimate_total_curve_length(part)
-    pts = np.zeros((0, 3))
-    ss = []
     while True:
         current_pts = []
         current_ss = []
-        for face in part.faces:
-            n_surf = int(np.ceil((face.get_area() / total_area) * num_points))
-            if uniform_sample:
-                uv_points, pt = sampler.uniform_sample(face, n_surf, min_pts=2)
-            else:
-                uv_points, pt = sampler.random_sample(face, n_surf, min_pts=2)
-            s = lambda_func(part, face, uv_points)
-            if s is not None:
-                if apply_transform:
-                    # Transform points to surface's local coordinate system
-                    R = np.linalg.inv(face.surface.transform[:, :3])
-                    t = face.surface.transform[:, 3]
-                    pt = (pt - t) @ R.T
-                # Filter out points outside trimming loops
-                index = face.filter_outside_points(uv_points)
-                current_pts.append(pt[index, :])
-                if isinstance(s, list):
-                    # If lambda_func returns multiple arrays
-                    for i, val in enumerate(s):
-                        if len(val) != len(pt):
-                            val = np.full((pt.shape[0], pt.shape[1]), val)
-                        elif val.shape[1] != pt.shape[1]:
-                            val = np.tile(val, (1, pt.shape[1]))
-                        if len(current_ss) == 0:
-                            current_ss = [[] for _ in range(len(s))]
-                        current_ss[i].extend(val[index, :])
+
+        if face_func is not None:
+            for face in part.faces:
+                n_surf = int(np.ceil((face.get_area() / total_area) * num_points))
+                if uniform_sample:
+                    uv_points, pt = sampler.uniform_sample(face, n_surf, min_pts=2)
                 else:
-                    if len(s) != len(pt):
-                        s = np.full((pt.shape[0], pt.shape[1]), s)
-                    elif s.shape[1] != pt.shape[1]:
-                        s = np.tile(s, (1, pt.shape[1]))
-                    current_ss.append(s[index, :])
-        for edge in part.edges:
-            if edge.curve3d is None or edge.curve3d.shape_name == "Other":
-                continue
-            n_edge = int(np.ceil((edge.get_length() / total_length) * num_points))
-            if uniform_sample:
-                uv_points, pt = sampler.uniform_sample(edge, n_edge, min_pts=2)
-            else:
-                uv_points, pt = sampler.random_sample(edge, n_edge, min_pts=2)
-            s = lambda_func(part, edge, uv_points)
-            if s is not None:
-                if apply_transform:
-                    R = np.linalg.inv(edge.curve3d.transform[:, :3])
-                    t = edge.curve3d.transform[:, 3]
-                    pt = (pt - t) @ R.T
-                # Edges have no trimming curves; include all sampled points
-                index = np.ones(uv_points.shape[0], dtype=bool)
-                current_pts.append(pt[index, :])
-                if isinstance(s, list):
-                    for i, val in enumerate(s):
-                        if len(val) != len(pt):
-                            val = np.full((pt.shape[0], pt.shape[1]), val)
-                        elif val.shape[1] != pt.shape[1]:
-                            val = np.tile(val, (1, pt.shape[1]))
-                        if len(current_ss) == 0:
-                            current_ss = [[] for _ in range(len(s))]
-                        current_ss[i].extend(val[index, :])
+                    uv_points, pt = sampler.random_sample(face, n_surf, min_pts=2)
+                s = face_func(face, uv_points)
+                if s is not None:
+                    if apply_transform:
+                        # Transform points to surface's local coordinate system
+                        R = np.linalg.inv(face.surface.transform[:, :3])
+                        t = face.surface.transform[:, 3]
+                        pt = (pt - t) @ R.T
+                    # Filter out points outside trimming loops
+                    index = face.filter_outside_points(uv_points)
+                    current_pts.append(pt[index, :])
+                    current_ss.append(_slice(s, index, pt.shape[0]))
+
+        if edge_func is not None:
+            for edge in part.edges:
+                if edge.curve3d is None or edge.curve3d.shape_name == "Other":
+                    continue
+                n_edge = int(np.ceil((edge.get_length() / total_length) * num_points))
+                if uniform_sample:
+                    uv_points, pt = sampler.uniform_sample(edge, n_edge, min_pts=2)
                 else:
-                    if len(s) != len(pt):
-                        s = np.full((pt.shape[0], pt.shape[1]), s)
-                    elif s.shape[1] != pt.shape[1]:
-                        s = np.tile(s, (1, pt.shape[1]))
-                    current_ss.append(s[index, :])
+                    uv_points, pt = sampler.random_sample(edge, n_edge, min_pts=2)
+                s = edge_func(edge, uv_points)
+                if s is not None:
+                    if apply_transform:
+                        R = np.linalg.inv(edge.curve3d.transform[:, :3])
+                        t = edge.curve3d.transform[:, 3]
+                        pt = (pt - t) @ R.T
+                    # Edges have no trimming curves; include all sampled points
+                    index = np.ones(uv_points.shape[0], dtype=bool)
+                    current_pts.append(pt[index, :])
+                    current_ss.append(_slice(s, index, pt.shape[0]))
         # Combine all collected points and associated data
         if len(current_pts) == 0:
             pts = np.zeros((0, 3))
@@ -109,7 +107,15 @@ def process_part(part, num_samples, lambda_func, points_ratio, apply_transform, 
         else:
             pts = np.concatenate(current_pts, axis=0)
             if isinstance(current_ss, list) and len(current_ss) > 0 and isinstance(current_ss[0], list):
-                ss = current_ss.copy()
+                ss = current_ss[0].copy()
+                for t in range(1, len(current_ss)):
+                    for i, j in enumerate(current_ss[t]):
+                        if isinstance(j, list):
+                            ss[i] += j
+                        else:
+                            assert(isinstance(j, np.ndarray))
+                            ss[i] = np.vstack((ss[i], j))
+
             else:
                 ss = np.concatenate(current_ss, axis=0) if len(current_ss) > 0 else []
         # Stop when enough points collected or nothing collected
@@ -142,22 +148,38 @@ def process_part(part, num_samples, lambda_func, points_ratio, apply_transform, 
 
     if isinstance(ss, list):
         # Multiple associated arrays (e.g., normals in separate array)
-        new_ss = [[sublist[i] for i in indices] for sublist in ss]
+        new_ss = []
+        for t in ss:
+            if isinstance(t, list):
+                new_ss.append([t[i] for i in indices])
+            else:
+                assert(isinstance(t, np.ndarray))
+                new_ss.append(t[indices])
+
         return pts[indices], new_ss
     else:
         return pts[indices], ss[indices] if isinstance(ss, np.ndarray) else ss
 
 
-def sample_parts(parts, num_samples, lambda_func, points_ratio=5, apply_transform=True, uniform_sample=False, use_poisson=True, force_num_points=True, sample_num_tolerance=0.04):
-    """Process a list of parts by sampling each part and returning lists of points and values."""
+def sample_parts(parts,
+                 num_samples,
+                 face_func=None,
+                 edge_func=None,
+                 points_ratio=5,
+                 apply_transform=True,
+                 uniform_sample=False,
+                 use_poisson=True,
+                 force_num_points=True,
+                 sample_num_tolerance=0.04):
+
+    """
+        Process a list of parts by sampling each part and returning lists of points and values.
+    """
     pts_list = []
     ss_list = []
     for part in parts:
-        pts, ss = process_part(part, num_samples, lambda_func, points_ratio=points_ratio,apply_transform=apply_transform, uniform_sample=uniform_sample, use_poisson=use_poisson, force_num_points=force_num_points,sample_num_tolerance=sample_num_tolerance)
-        pts_list.append(np.array(pts))
-        if isinstance(ss, list):
-            ss_list.extend([np.array(sublist) for sublist in ss])
-        else:
-            ss_list.append(np.array(ss))
+        pts, ss = process_part(part, num_samples, face_func, edge_func, points_ratio=points_ratio,apply_transform=apply_transform, uniform_sample=uniform_sample, use_poisson=use_poisson, force_num_points=force_num_points,sample_num_tolerance=sample_num_tolerance)
+        pts_list.append(pts)
+        ss_list.append(ss)
     return pts_list, ss_list
 

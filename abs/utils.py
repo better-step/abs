@@ -98,7 +98,6 @@ def save_ply(filename, P, normals=None):
     '''
     Save a set of 3D points to a .ply file. Optionally, also save normals.
     '''
-
     new_pts = np.vstack(P)
 
     if normals:
@@ -113,9 +112,11 @@ def save_ply(filename, P, normals=None):
         if new_pts.shape[1] != 3:
             raise ValueError("Points must have shape (n, 3)")
 
-        data = new_pts
+    # mio.write_points_cells(filename, new_pts, [("vertex", np.arange(new_pts.shape[0], dtype=np.int32)[:, None])])
 
-    mio.write_points_cells(filename, new_pts, [("vertex", np.arange(new_pts.shape[0], dtype=np.int32)[:, None])])
+    new_pts = np.asarray(new_pts, dtype=np.float64)
+    mesh = mio.Mesh(points=new_pts, cells=[])
+    mio.write(filename, mesh, file_format="ply", binary=True)
 
 def save_to_xyz(points, filename):
     with open(filename, 'w') as f:
