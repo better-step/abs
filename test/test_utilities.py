@@ -45,14 +45,6 @@ class H5Group:
     def __getitem__(self, key):
         return self._data[key]
 
-
-
-
-
-
-
-
-
 def line3d():
     data = {
         "type": "Line",

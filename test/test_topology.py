@@ -14,8 +14,8 @@ class TestTopology(unittest.TestCase):
         with h5py.File(file_path, 'r') as hdf:
             grp = hdf['parts/part_001/topology']
             geo = hdf['parts/part_001/geometry']
-            s = Shape(geo, grp)
-            topo_solid = s.Solid
+            s = Shape(geo, grp, 2)
+            topo_solid = s.solids
 
 
     def test_find_adjacent_faces(self):
@@ -24,11 +24,11 @@ class TestTopology(unittest.TestCase):
         with h5py.File(file_path, 'r') as hdf:
             grp = hdf['parts/part_001/topology']
             geo = hdf['parts/part_001/geometry']
-            s = Shape(geo, grp)
+            s = Shape(geo, grp, 2)
 
         face_index = 1
         # adjacent_faces = s.Solid.faces[face_index]
-        current_face = s.Solid.faces[face_index]
+        current_face = s.faces[face_index]
         adjacent_faces = current_face.find_adjacent_faces()
         # print(adjacent_faces)
 

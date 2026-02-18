@@ -200,9 +200,10 @@ namespace
 		const int zi = Xs(i, 2);
 		// printf("%d %d %d - %g %g %g\n",xi,yi,zi,X(i,0),X(i,1),X(i,2));
 		//  cell indices of neighbors
-		int g = 4;
+		int g = 2; // ceil(r/s)
 		std::vector<int64_t> N;
-		N.reserve((1 + g * 1) ^ 3 - 1);
+		const auto est_size = 1 + g * 1;
+		N.reserve(est_size * est_size * est_size - 1);
 		for (int x = std::max(xi - g, 0); x <= std::min(xi + g, w - 1); x++)
 			for (int y = std::max(yi - g, 0); y <= std::min(yi + g, w - 1); y++)
 				for (int z = std::max(zi - g, 0); z <= std::min(zi + g, w - 1); z++)
@@ -285,7 +286,7 @@ namespace
 		std::unordered_map<int64_t, std::vector<int>> M;
 		std::unordered_map<int64_t, int> S;
 		// attempted to seed
-		std::unordered_map<int64_t, int> A;
+		// std::unordered_map<int64_t, int> A;
 		// Q: Too many?
 		// A: Seems to help though.
 		M.reserve(Xs.rows());
@@ -303,10 +304,11 @@ namespace
 				Miter->second.push_back(i);
 			}
 			S.emplace(k, -1);
-			A.emplace(k, false);
+			// A.emplace(k, false);
 		}
 
 		std::vector<int> active;
+		active.reserve(nx);
 		// precompute r²
 		// Q: is this necessary?
 		const double rr = r * r;
@@ -455,6 +457,206 @@ namespace
 
 		return ret_i;
 	}
+
+	void grid_poisson_downsample_radius(
+		const Eigen::MatrixXd &X, // N x 3
+		double r,                 // radius
+		Eigen::VectorXi &XI,      // output indices
+		uint64_t random_seed)
+	{
+		using std::vector;
+		const int N = X.rows();
+		if (N == 0)
+		{
+			XI.resize(0);
+			return;
+		}
+
+		// 1. Bounding box
+		Eigen::RowVector3d minv = X.colwise().minCoeff();
+		Eigen::RowVector3d maxv = X.colwise().maxCoeff();
+		Eigen::RowVector3d extent = maxv - minv;
+
+		// 2. Grid dims
+		const double cell_size = r;
+		double inv_cell = 1.0 / cell_size;
+
+		Eigen::Array3i dims;
+		for (int k = 0; k < 3; ++k)
+		{
+			dims[k] = static_cast<int>(std::floor(extent[k] * inv_cell)) + 1;
+			if (dims[k] < 1)
+				dims[k] = 1;
+		}
+		long long Nx = dims[0], Ny = dims[1], Nz = dims[2];
+		long long grid_size = Nx * Ny * Nz;
+		if (grid_size <= 0 || grid_size > std::numeric_limits<int>::max())
+		{
+			// Fallback – just take everything
+			XI.setLinSpaced(N, 0, N - 1);
+			return;
+		}
+
+		auto grid_index = [Nx, Ny](int ix, int iy, int iz) -> int {
+			return ix + static_cast<int>(Nx) * (iy + static_cast<int>(Ny) * iz);
+		};
+
+		// 3. Shuffle candidates
+		std::vector<int> order(N);
+		for (int i = 0; i < N; ++i)
+			order[i] = i;
+		std::mt19937 rng(random_seed);
+		std::shuffle(order.begin(), order.end(), rng);
+
+		// 4. Grid: one accepted point index per cell (-1 = empty)
+		std::vector<int> grid(static_cast<size_t>(grid_size), -1);
+		const double r2 = r * r;
+
+		std::vector<int> selected;
+		selected.reserve(N);
+
+		for (int idx : order)
+		{
+			Eigen::RowVector3d p = X.row(idx);
+			Eigen::Array3d rel = (p.array() - minv.array()) * inv_cell;
+
+			int cx = static_cast<int>(std::floor(rel[0]));
+			int cy = static_cast<int>(std::floor(rel[1]));
+			int cz = static_cast<int>(std::floor(rel[2]));
+			cx = std::max(0, std::min(cx, dims[0] - 1));
+			cy = std::max(0, std::min(cy, dims[1] - 1));
+			cz = std::max(0, std::min(cz, dims[2] - 1));
+
+			bool ok = true;
+			// Check neighbors (3×3×3 cells)
+			for (int dx = -1; dx <= 1 && ok; ++dx)
+			{
+				int nx = cx + dx;
+				if (nx < 0 || nx >= dims[0])
+					continue;
+				for (int dy = -1; dy <= 1 && ok; ++dy)
+				{
+					int ny = cy + dy;
+					if (ny < 0 || ny >= dims[1])
+						continue;
+					for (int dz = -1; dz <= 1 && ok; ++dz)
+					{
+						int nz = cz + dz;
+						if (nz < 0 || nz >= dims[2])
+							continue;
+
+						int gidx = grid[grid_index(nx, ny, nz)];
+						if (gidx < 0)
+							continue;
+
+						Eigen::RowVector3d q = X.row(gidx);
+						Eigen::RowVector3d d = p - q;
+						if (d.squaredNorm() < r2)
+						{
+							ok = false;
+							break;
+						}
+					}
+				}
+			}
+
+			if (!ok)
+				continue;
+
+			selected.push_back(idx);
+			grid[grid_index(cx, cy, cz)] = idx;
+		}
+
+		// 5. Copy to XI
+		XI.resize(static_cast<int>(selected.size()));
+		for (int i = 0; i < (int)selected.size(); ++i)
+		{
+			XI(i) = selected[i];
+		}
+	}
+
+	Eigen::VectorXi grid_poisson_downsample(
+		const Eigen::MatrixXd &X,
+		int target_num_samples,
+		uint64_t random_seed,
+		double sample_num_tolerance)
+	{
+
+		using std::abs;
+		const int N = X.rows();
+		if (N == 0 || target_num_samples <= 0)
+		{
+			return Eigen::VectorXi();
+		}
+		if (target_num_samples >= N)
+		{
+			Eigen::VectorXi XI;
+			XI.setLinSpaced(N, 0, N - 1);
+			return XI;
+		}
+
+		if (random_seed != 0)
+			srand(random_seed);
+
+		// 1. Rough initial guess for r from bounding box volume
+		Eigen::RowVector3d minv = X.colwise().minCoeff();
+		Eigen::RowVector3d maxv = X.colwise().maxCoeff();
+		Eigen::RowVector3d extent = maxv - minv;
+		double volume = extent[0] * extent[1] * extent[2];
+		if (volume <= 0.0)
+			volume = 1.0; // degenerate case
+
+		// For uniformly distributed points, density ~ N / V,
+		// expected spacing ~ (V / k)^(1/3). Add a small factor for safety.
+		double r = std::cbrt(volume / double(target_num_samples)) * 0.9;
+
+		Eigen::VectorXi best_XI;
+		int best_diff = std::numeric_limits<int>::max();
+		double best_r = r;
+
+		for (int it = 0; it < 20; ++it)
+		{
+			Eigen::VectorXi cur_XI;
+			grid_poisson_downsample_radius(X, r, cur_XI, random_seed + it);
+			int M = cur_XI.size();
+			int diff = std::abs(M - target_num_samples);
+
+			// Update best (closest) result
+			if (diff < best_diff)
+			{
+				best_diff = diff;
+				best_XI = cur_XI;
+				best_r = r;
+			}
+
+			// Check relative tolerance
+			if (double(diff) <= sample_num_tolerance * target_num_samples)
+				break;
+
+			if (M == 0)
+			{
+				// Too big radius; shrink aggressively
+				r *= 0.5;
+				continue;
+			}
+
+			// 2. Update radius using M ~ const / r^3 => r_new = r * (M/k)^(1/3)
+			double factor = std::cbrt(double(M) / double(target_num_samples));
+			r *= factor;
+
+			// Clamp r to avoid going crazy
+			double diag = extent.norm();
+			double r_min = diag * 1e-4;
+			double r_max = diag;
+			if (r < r_min)
+				r = r_min;
+			if (r > r_max)
+				r = r_max;
+		}
+
+		return best_XI;
+	}
+
 } // namespace
 
 class BSpline
@@ -593,6 +795,18 @@ PYBIND11_MODULE(abspy, m)
 		},
 		"A (m,) shaped array of indices into v where m is the number of "
 		"Poisson-disk samples",
+		py::arg("v"), py::arg("target_num_samples"), py::arg("random_seed") = 0,
+		py::arg("sample_num_tolerance") = 0.04);
+
+	m.def(
+		"poisson_grid_downsample",
+		[](const Eigen::MatrixXd &v, int target_num_samples, uint64_t random_seed,
+		   double sample_num_tolerance) {
+			return grid_poisson_downsample(v, target_num_samples, random_seed,
+										   sample_num_tolerance);
+		},
+		"A (m,) shaped array of indices into v where m is the number of "
+		"Poisson-grid samples",
 		py::arg("v"), py::arg("target_num_samples"), py::arg("random_seed") = 0,
 		py::arg("sample_num_tolerance") = 0.04);
 

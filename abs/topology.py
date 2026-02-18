@@ -68,7 +68,7 @@ class Face(Topology):
         self.trimming_curves_2d = []
         self.shells = None
         self.exact_domain = np.array(face['exact_domain'])
-        self.nr_singularities = face['has_singularities']
+        self.has_singularities = face['has_singularities']
         self.nr_singularities = face['nr_singularities']
         self.outer_loop = face['outer_loop']
         self.singularities = face['singularities']
