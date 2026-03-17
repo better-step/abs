@@ -2,23 +2,14 @@
 Functions for processing Shape parts: sampling points and computing normals.
 """
 import numpy as np
-from . import sampler
+from abs import sampler
 from abspy import poisson_disk_downsample
 # from abspy import poisson_grid_downsample
 
 def _slice(res, indices, n):
     if isinstance(res, list) or isinstance(res, tuple):
-        tmp = []
-        for sub_res in res:
-            if len(sub_res) != n:
-                raise ValueError("Invalid shape {} != {}".format(len(sub_res), n))
-            if isinstance(sub_res, list):
-                tmp.append([sub_res[i] for i in range(n) if indices[i]])
-            else:
-                assert (isinstance(sub_res, np.ndarray))
-                tmp.append(sub_res[indices])
-
-        return tmp
+        assert(len(res) == n)
+        return [res[i] for i in range(n) if indices[i]]
 
     assert (isinstance(res, np.ndarray))
     return res[indices]
@@ -58,6 +49,7 @@ def process_part(part,
     num_points = initial_num_points
     total_area = estimate_total_surface_area(part)
     total_length = estimate_total_curve_length(part)
+    n_face_points = 0
     while True:
         current_pts = []
         current_ss = []
@@ -79,7 +71,12 @@ def process_part(part,
                     # Filter out points outside trimming loops
                     index = face.filter_outside_points(uv_points)
                     current_pts.append(pt[index, :])
-                    current_ss.append(_slice(s, index, pt.shape[0]))
+                    if isinstance(s, list) or isinstance(s, tuple):
+                        current_ss += _slice(s, index, pt.shape[0])
+                    else:
+                        current_ss.append(_slice(s, index, pt.shape[0]))
+
+        n_face_points = np.concatenate(current_pts, axis=0).shape[0]
 
         if edge_func is not None:
             for edge in part.edges:
@@ -99,25 +96,20 @@ def process_part(part,
                     # Edges have no trimming curves; include all sampled points
                     index = np.ones(uv_points.shape[0], dtype=bool)
                     current_pts.append(pt[index, :])
-                    current_ss.append(_slice(s, index, pt.shape[0]))
+                    if isinstance(s, list) or isinstance(s, tuple):
+                        current_ss += _slice(s, index, pt.shape[0])
+                    else:
+                        current_ss.append(_slice(s, index, pt.shape[0]))
         # Combine all collected points and associated data
         if len(current_pts) == 0:
             pts = np.zeros((0, 3))
             ss = []
         else:
             pts = np.concatenate(current_pts, axis=0)
-            if isinstance(current_ss, list) and len(current_ss) > 0 and isinstance(current_ss[0], list):
-                ss = current_ss[0].copy()
-                for t in range(1, len(current_ss)):
-                    for i, j in enumerate(current_ss[t]):
-                        if isinstance(j, list):
-                            ss[i] += j
-                        else:
-                            assert(isinstance(j, np.ndarray))
-                            ss[i] = np.vstack((ss[i], j))
-
-            else:
-                ss = np.concatenate(current_ss, axis=0) if len(current_ss) > 0 else []
+            try:
+                ss = np.concatenate(current_ss, axis=0)
+            except ValueError:
+                ss = current_ss
         # Stop when enough points collected or nothing collected
         if not force_num_points or pts.shape[0] >= initial_num_points or pts.shape[0] == 0:
             break
@@ -127,7 +119,7 @@ def process_part(part,
 
     # If no points at all, return empty structures
     if pts.shape[0] == 0:
-        return pts, pts
+        return pts, pts, pts, pts
     # Poisson disk downsample to exactly num_samples points
 
     if use_poisson:
@@ -146,19 +138,14 @@ def process_part(part,
 
     indices = np.sort(indices)
 
-    if isinstance(ss, list):
-        # Multiple associated arrays (e.g., normals in separate array)
-        new_ss = []
-        for t in ss:
-            if isinstance(t, list):
-                new_ss.append([t[i] for i in indices])
-            else:
-                assert(isinstance(t, np.ndarray))
-                new_ss.append(t[indices])
+    face_indices = indices[:n_face_points]
+    edge_indices = indices[n_face_points:]
 
-        return pts[indices], new_ss
+    if isinstance(ss, list):
+        return pts[face_indices], [ss[i] for i in face_indices], pts[edge_indices], [ss[i] for i in edge_indices]
     else:
-        return pts[indices], ss[indices] if isinstance(ss, np.ndarray) else ss
+        assert(isinstance(ss, np.ndarray))
+        return pts[face_indices], ss[face_indices], pts[edge_indices], ss[edge_indices]
 
 
 def sample_parts(parts,
@@ -175,11 +162,15 @@ def sample_parts(parts,
     """
         Process a list of parts by sampling each part and returning lists of points and values.
     """
-    pts_list = []
-    ss_list = []
+    pts_listf = []
+    pts_liste = []
+    ss_listf = []
+    ss_liste = []
     for part in parts:
-        pts, ss = process_part(part, num_samples, face_func, edge_func, points_ratio=points_ratio,apply_transform=apply_transform, uniform_sample=uniform_sample, use_poisson=use_poisson, force_num_points=force_num_points,sample_num_tolerance=sample_num_tolerance)
-        pts_list.append(pts)
-        ss_list.append(ss)
-    return pts_list, ss_list
+        ptsf, ssf, ptse, sse = process_part(part, num_samples, face_func, edge_func, points_ratio=points_ratio,apply_transform=apply_transform, uniform_sample=uniform_sample, use_poisson=use_poisson, force_num_points=force_num_points,sample_num_tolerance=sample_num_tolerance)
+        pts_listf.append(ptsf)
+        pts_liste.append(ptse)
+        ss_listf.append(ssf)
+        ss_liste.append(sse)
+    return pts_listf, ss_listf, pts_liste, ss_liste
 
