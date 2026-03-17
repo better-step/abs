@@ -3,8 +3,13 @@ from abs.part_processor import *
 import unittest
 import os
 
+
 def face_func(face, points):
     return face.normal(points)
+
+
+def curve_func(edge, points):
+    return None
 
 class TestShapeFunctions(unittest.TestCase):
 
@@ -16,11 +21,11 @@ class TestShapeFunctions(unittest.TestCase):
 
         num_samples = 5000
         parts = read_parts(file_path)
-        P, S = sample_parts(parts, num_samples, face_func)
+        face_points, face_feat, edge_points, edge_feat = sample_parts(parts, num_samples, face_func, curve_func)
 
-        self.assertEqual(len(P), len(parts))
-        self.assertEqual(len(S), len(parts))
-        self.assertEqual(len(P), len(S))
+        self.assertEqual(len(face_points), len(parts))
+        self.assertEqual(len(face_feat), len(parts))
+        self.assertEqual(len(face_points), len(face_feat))
 
 if __name__ == '__main__':
     unittest.main()
