@@ -7,10 +7,10 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "abs-hdf5"
-version = "v0.2.4"
+version = "v0.2.5"
 description = "A Python + C++ toolkit for reading CAD B-Rep data from HDF5, sampling surfaces/curves, and generating blue-noise point clouds."
 authors = [
-  { name = "Sai Chandra Madduri, Nafiseh Izadyar, Teseo Schneider", email = "teseo@uvic.ca" }
+  { name = "anonymous", email = " " }
 ]
 license = { text = "MIT" }
 readme = { file = "README.md", content-type = "text/markdown" }
