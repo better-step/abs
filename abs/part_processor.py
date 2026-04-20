@@ -138,8 +138,8 @@ def process_part(part,
 
     indices = np.sort(indices)
 
-    face_indices = indices[:n_face_points]
-    edge_indices = indices[n_face_points:]
+    face_indices = indices[indices < n_face_points]
+    edge_indices = indices[indices >= n_face_points]
 
     if isinstance(ss, list):
         return pts[face_indices], [ss[i] for i in face_indices], pts[edge_indices], [ss[i] for i in edge_indices]
