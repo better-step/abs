@@ -75,8 +75,8 @@ def process_part(part,
                         current_ss += _slice(s, index, pt.shape[0])
                     else:
                         current_ss.append(_slice(s, index, pt.shape[0]))
-
-        n_face_points = np.concatenate(current_pts, axis=0).shape[0]
+        if len(current_pts) >0:
+            n_face_points = np.concatenate(current_pts, axis=0).shape[0]
 
         if edge_func is not None:
             for edge in part.edges:
