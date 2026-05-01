@@ -28,7 +28,8 @@ dependencies = [
   "numpy",
   "scipy",
   "h5py",
-  "meshio"
+  "meshio",
+  "geomdl",
 ]
 
           # ensure pure-Python package goes into wheel
