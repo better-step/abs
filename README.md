@@ -1,207 +1,96 @@
+# Better STEP: A Standardized B-Rep Dataset and Pipeline for Reproducible CAD Evaluation
 
-
-# ABS-HDF5: Geometry processing & blue-noise sampling for HDF5 B-Rep data
 [![image](https://img.shields.io/pypi/v/abs-hdf5.svg)](https://pypi.python.org/pypi/abs-hdf5)
 
-# STEP-to-HDF5 Conversion and Point Cloud Sampling (steptohdf5 + ABS-HDF5)
+## ABS-HDF5
 
-## Introduction
+ABS-HDF5 reads B-Rep geometry from HDF5 files as a standard half-edge data structure, allowing you to navigate topology (faces, edges, halfedges, loops), sample points directly from continuous parametric surfaces and curves, and evaluate normals and derivatives. It supports user-specified tasks, and provides fast Poisson-disk downsampling for blue-noise point cloud generation.
 
-This guide explains how to use **steptohdf5** and **ABS-HDF5** together to convert CAD models from STEP/STP files into HDF5 datasets, and then sample those datasets into point clouds. These two tools are designed to work in tandem:
+> HDF5 files are produced by [steptohdf5](https://github.com/better-step/cadmesh), a companion converter that turns STEP/STP CAD files into the format ABS reads.
 
-- **steptohdf5** – a converter that turns CAD solids (from *.step or *.stp* files) into **analysis-ready HDF5** files. Each HDF5 file contains the model’s geometry (B-rep surfaces and curves), topology (faces, edges, etc.), and a high-quality triangular mesh for the surfaces. *Currently, steptohdf5 is not available on PyPI or Conda, so it is run via a Docker container.* (A PyPI/Conda release is planned – until then, use Docker as described below.)
-
-- **ABS-HDF5** – a Python/C++ toolkit (available on PyPI) that **reads the HDF5 files produced by steptohdf5** and generates point cloud samples from the geometry. It provides command-line tools to export point clouds to PLY files or Python pickles, and also a Python API for advanced sampling (including fast Poisson-disk downsampling for blue-noise distributions).
-
-**Workflow Overview:** Using these tools, a typical pipeline is:
-1. **Convert** a CAD model from STEP to HDF5 (using steptohdf5).  
-2. **Sample** the HDF5 model to a point cloud (using ABS-HDF5).  
-
-This README will cover the installation of both tools, then walk through the conversion and sampling steps with examples (including single-file and batch processing), and provide basic API usage for each. Both projects are open-source under the Better Step initiative – see their GitHub repositories for more details:
-- **steptohdf5**: https://github.com/better-step/cadmesh  
-- **ABS-HDF5**: https://github.com/better-step/abs  
-
----
-
-## Installation
-
-### steptohdf5 (via Docker)
-
-Since **steptohdf5** is not yet on PyPI or Conda, the easiest way to use it is through its Docker image (which comes with all required dependencies, such as OpenCASCADE). Ensure you have Docker installed, then pull the steptohdf5 image from the registry:
-
-```bash
-docker pull itsmechandu/steptohdf5:latest
-```
-
-
-> **Note:** steptohdf5 relies on OpenCASCADE (via `pythonocc-core` 7.4.0) for CAD B-rep processing and uses `meshio` for mesh generation. The Docker image has these pre-installed, so you don't need to install anything else on your host.
-
-### ABS-HDF5 (via pip)
-
-**ABS-HDF5** is distributed on PyPI. Install it into your Python environment (we recommend using a virtual environment):
+## Install
 
 ```bash
 pip install abs-hdf5
 ```
+## Usage
 
-This installs the `abs` Python package along with two CLI tools: `abs-to-ply` and `abs-to-pickle`. No additional system dependencies are required.
+### Reading and traversing topology
 
-> **Tip:** Ensure your `pip` is up-to-date and you’re using Python 3.8 or newer.
-
----
-
-## Usage: Conversion and Sampling Pipeline
-
-### 1. Convert STEP → HDF5 using steptohdf5
-
-Run the Docker container with your input and output folders bind-mounted:
-
-```bash
-docker run --rm \
-  -v /path/to/cad_workspace:/workspace \
-  -w /workspace \
-  itsmechandu/steptohdf5:latest \
-  steptohdf5 <input.step> -o hdf5 -l logs
-
-docker run --rm \
-  -v /path/to/cad_workspace:/workspace \
-  -w /workspace \
-  itsmechandu/steptohdf5:latest \
-  <input.step> \
-  -o output \
-  -l logs
-```
-
-- `<input.step>`: Path inside `/workspace`, e.g., `cad_files/Model.step`.  
-- `-o hdf5`: Output folder for `.hdf5` files (inside `/workspace`).  
-- `-l logs`: Folder for log files.
-
-**Single-file example:**
-
-```bash
-mkdir -p ~/cad_jobs/{cad_files,hdf5,logs}
-cp MyModel.step ~/cad_jobs/cad_files/
-cd ~/cad_jobs
-docker run --rm \
-  -v "$PWD":/workspace \
-  -w /workspace \
-  itsmechandu/steptohdf5:latest \
-  steptohdf5 cad_files/MyModel.step -o hdf5 -l logs
-
-```
-
-After running, you’ll have:
-```
-~/cad_jobs/hdf5/MyModel.hdf5
-~/cad_jobs/logs/MyModel.log
-```
-
-**Batch conversion with a list:**
-
-```bash
-ls cad_files/*.step > cad_files/list.txt
-docker run --rm \
-  -v "$PWD":/workspace \
-  -w /workspace \
-  itsmechandu/steptohdf5:latest \
-  steptohdf5 --list cad_files/list.txt -o hdf5 -l logs -j 4
-
-```
-
----
-
-### 2. Sample HDF5 → Point Cloud using ABS-HDF5
-
-With ABS-HDF5 installed, use the `abs-to-ply` CLI to generate PLY point clouds from HDF5:
-
-```bash
-abs-to-ply hdf5/MyModel.hdf5 samples -n 5000 -j 8
-```
-
-- `hdf5/MyModel.hdf5`: Input HDF5 file.  
-- `samples`: Output folder for PLY files.  
-- `-n 5000`: Points per part after Poisson-disk downsampling.  
-- `-j 8`: Parallel workers.
-
-**Batch PLY conversion:**
-
-Convert all HDF5 files in `hdf5/`:
-
-```bash
-abs-to-ply hdf5/ samples -n 3000 -j 8
-```
-
-This creates `samples/MyModel_part001.ply`, etc., for each part of each model.
-
-**abs-to-pickle example:**
-
-```bash
-abs-to-pickle hdf5/ pickles -n 5000 -j 4
-```
-
-Generates `.pkl` files containing Python dicts:
-```python
-{
-  'file': 'MyModel.hdf5',
-  'part': 1,
-  'points': ndarray(N,3),
-  'normals': ndarray(N,3)
-}
-```
-
----
-
-## API Usage
-
-#### steptohdf5 Python API (cadmesh)
+`read_parts` loads the full B-Rep structure into memory as linked Python objects.
 
 ```python
-from steptohdf5.utils.processing import process_step_files
+from abs import read_parts
 
-success, failed = process_step_files(
-    input='cad_files/list.txt',
-    output='/hdf5',
-    log='/log')
+parts = read_parts('model.hdf5')
+face = parts[0].faces[1]
+
+adjacent_faces = face.find_adjacent_faces()
+loop = face.loops[0]
 ```
 
-#### ABS-HDF5 Python API (abs)
+### Sampling points with user-defined labels
+
+`sample_parts` generates points on parametric surfaces and curves and passes them to your callbacks. Each callback receives the topological entity and the sampled points, and returns whatever per-point values your task needs including labels, normals, primitive types, etc.
 
 ```python
-from  abs import read_parts, sample_parts
+from abs import read_parts, sample_parts
+import numpy as np
 
-# Sample points + normals
-def compute_labels(part, topo, points ):
-  if topo.is_face(): return 1
-  else : return 0
+def face_func(face, points):
+    return np.zeros(points.shape[0])
 
-# Read parts from HDF5
-parts = read_parts('hdf5/Model.hdf5')
+def edge_func(edge, points):
+    return np.ones(points.shape[0])
 
-P, S = sample_parts(parts, num_samples, compute_labels)
+parts = read_parts('model.hdf5')
+face_points, face_labels, edge_points, edge_labels = sample_parts(
+    parts, num_samples=5000, face_func=face_func, edge_func=edge_func
+)
 ```
 
----
+### Computing normals
 
-## Development & Testing
+Normals are evaluated directly from the underlying parametric surfaces.
 
-```bash
+```python
+def get_normals(face, points):
+    return face.normal(points)
 
-# abs-hdf5
-git clone https://github.com/better-step/abs.git
-cd abs
-pip install -e .[dev]
-pytest -q
+face_points, face_normals, _, _ = sample_parts(
+    parts, num_samples=5000, face_func=get_normals
+)
 ```
 
----
+### Extracting the mesh
 
-## Contributing & License
+The mesh is stored independently from the B-Rep topology. `get_mesh` concatenates all per-face triangulations into a single consistent mesh.
 
-- **steptohdf5** (Python) – GPL-3.0  
-- **abs-hdf5** Python bindings – MIT  
-- **abs-hdf5** C++ core – MPL-2.0  
+```python
+from abs.utils import read_meshes, get_mesh
 
-Please review the Code of Conduct and open an issue before submitting larger changes.
+meshes = read_meshes('model.hdf5')
+V, F = get_mesh(meshes)
+```
 
----
-*Happy converting & sampling!*  – The Better Step maintainers
+## Dataset
+
+The dataset comprises over one million B-Rep models converted from two large-scale public CAD collections:
+
+- **ABC** — ~1,000,000 models
+- **Fusion 360 Gallery** — Assembly (162,707 parts), Joint (23,029 parts), Reconstruction (27,958 parts), and Segmentation (35,680 parts)
+
+Each model is stored in HDF5 as a collection of parts, where every part contains its geometry, topology, and an optional triangular mesh. Once converted, no CAD kernel is required to read or process the data.
+
+The dataset can be downloaded here: [link coming soon]
+
+## Converting your own STEP files
+
+To convert your own STEP files, please refer to the [steptohdf5](https://github.com/better-step/cadmesh) repository.
+## Contributing
+
+Contributions are welcome. Please open an issue before submitting larger changes.
+
+## License
+
+MIT
