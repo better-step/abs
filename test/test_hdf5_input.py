@@ -19,9 +19,8 @@ class Hdf5test(unittest.TestCase):
     def test_line2d(self):
         sample_name = 'Cone.hdf5'
         file_path = get_file(sample_name)
-        with h5py.File(file_path, 'r') as hdf:
-            grp = hdf['parts/part_001/geometry/2dcurves/000']
-            line = Line(grp)
+        parts = read_parts(file_path)
+        line = parts[0].halfedges[0].curve2d
 
         self.assertEqual(line.location.shape, (1, 2))
         self.assertEqual(line.interval.shape, (1, 2))
@@ -56,15 +55,15 @@ class Hdf5test(unittest.TestCase):
     def test_circle2d(self):
         sample_name = 'Cylinder_Hole.hdf5'
         file_path = get_file(sample_name)
-        with h5py.File(file_path, 'r') as hdf:
-            grp = hdf['parts/part_001/geometry/2dcurves/004']
-            circle = Circle(grp)
+
+        parts = read_parts(file_path)
+        circle = parts[0].halfedges[5].curve2d
 
         sample_points = np.linspace(0, 2 * np.pi, 10).reshape(-1, 1)
         self.assertEqual(circle.sample(sample_points).shape, (10, 2))
 
         self.assertEqual(circle.location.shape, (1, 2))
-        self.assertEqual(type(circle.radius), float)
+        self.assertEqual(type(circle.radius), np.float64)
         self.assertEqual(circle.interval.shape, (1, 2))
         self.assertEqual(circle.x_axis.shape, (1, 2))
         self.assertEqual(circle.y_axis.shape, (1, 2))
@@ -96,9 +95,8 @@ class Hdf5test(unittest.TestCase):
 
         sample_name = 'SingleSolidSphere.hdf5'
         file_path = get_file(sample_name)
-        with h5py.File(file_path, 'r') as hdf:
-            grp = hdf['parts/part_001/geometry/2dcurves/001']
-            bspline_curve2d = BSplineCurve(grp)
+        parts = read_parts(file_path)
+        bspline_curve2d = parts[0].halfedges[1].curve2d
 
         self.assertEqual(bspline_curve2d.closed, False)
         self.assertEqual(type(bspline_curve2d.continuity), int)
@@ -131,9 +129,9 @@ class Hdf5test(unittest.TestCase):
     def test_line3d(self):
         sample_name = 'Box.hdf5'
         file_path = get_file(sample_name)
-        with h5py.File(file_path, 'r') as hdf:
-            grp = hdf['parts/part_001/geometry/3dcurves/000']
-            line = Line(grp)
+
+        parts = read_parts(file_path)
+        line = parts[0].edges[0].curve3d
 
         self.assertEqual(line.location.shape, (1, 3))
         self.assertEqual(line.direction.shape, (1, 3))
@@ -156,12 +154,12 @@ class Hdf5test(unittest.TestCase):
     def test_circle3d(self):
         sample_name = 'Cone.hdf5'
         file_path = get_file(sample_name)
-        with h5py.File(file_path, 'r') as hdf:
-            grp = hdf['parts/part_001/geometry/3dcurves/000']
-            circle = Circle(grp)
+
+        parts = read_parts(file_path)
+        circle = parts[0].edges[0].curve3d
 
         self.assertEqual(circle.location.shape, (1, 3))
-        self.assertEqual(type(circle.radius), float)
+        self.assertEqual(type(circle.radius), np.float64)
         self.assertEqual(circle.interval.shape, (1, 2))
         self.assertEqual(circle.x_axis.shape, (1, 3))
         self.assertEqual(circle.y_axis.shape, (1, 3))
@@ -183,15 +181,15 @@ class Hdf5test(unittest.TestCase):
     def test_ellipse3d(self):
         sample_name = 'Ellipse.hdf5'
         file_path = get_file(sample_name)
-        with h5py.File(file_path, 'r') as hdf:
-            grp = hdf['parts/part_001/geometry/3dcurves/000']
-            ellipse = Ellipse(grp)
+
+        parts = read_parts(file_path)
+        ellipse = parts[0].edges[0].curve3d
 
         self.assertEqual(ellipse.focus1.shape, (1, 3))
         self.assertEqual(ellipse.focus2.shape, (1, 3))
         self.assertEqual(ellipse.interval.shape, (1, 2))
-        self.assertEqual(type(ellipse.maj_radius), float)
-        self.assertEqual(type(ellipse.min_radius), float)
+        self.assertEqual(type(ellipse.maj_radius), np.float64)
+        self.assertEqual(type(ellipse.min_radius), np.float64)
         self.assertEqual(ellipse.x_axis.shape, (1, 3))
         self.assertEqual(ellipse.y_axis.shape, (1, 3))
         self.assertEqual(ellipse.z_axis.shape, (1, 3))
@@ -213,9 +211,9 @@ class Hdf5test(unittest.TestCase):
     def test_bspline_3dcurve(self):
         sample_name = 'Cone.hdf5'
         file_path = get_file(sample_name)
-        with h5py.File(file_path, 'r') as hdf:
-            grp = hdf['parts/part_001/geometry/3dcurves/001']
-            bspline_curve3d = BSplineCurve(grp)
+
+        parts = read_parts(file_path)
+        bspline_curve3d = parts[0].edges[1].curve3d
 
         self.assertEqual(type(bspline_curve3d.closed), bool)
         self.assertEqual(type(bspline_curve3d.continuity), int)
@@ -244,9 +242,9 @@ class Hdf5test(unittest.TestCase):
     def test_plane(self):
         sample_name = 'Box.hdf5'
         file_path = get_file(sample_name)
-        with h5py.File(file_path, 'r') as hdf:
-            grp = hdf['parts/part_001/geometry/surfaces/001']
-            plane = Plane(grp)
+
+        parts = read_parts(file_path)
+        plane = parts[0].faces[1].surface
 
         self.assertEqual(plane.coefficients.shape, (1, 4))
         self.assertEqual(plane.location.shape, (1, 3))
@@ -276,12 +274,12 @@ class Hdf5test(unittest.TestCase):
     def test_cylinder(self):
         sample_name = 'Cylinder_Hole.hdf5'
         file_path = get_file(sample_name)
-        with h5py.File(file_path, 'r') as hdf:
-            grp = hdf['parts/part_001/geometry/surfaces/000']
-            cylinder = Cylinder(grp)
+
+        parts = read_parts(file_path)
+        cylinder = parts[0].faces[0].surface
 
         self.assertEqual(cylinder.location.shape, (1, 3))
-        self.assertEqual(type(cylinder.radius), float)
+        self.assertEqual(type(cylinder.radius), np.float64)
         self.assertEqual(cylinder.coefficients.shape, (1, 10))
         self.assertEqual(cylinder.trim_domain.shape, (2, 2))
         self.assertEqual(cylinder.x_axis.shape, (1, 3))
@@ -306,13 +304,13 @@ class Hdf5test(unittest.TestCase):
     def test_sphere(self):
         sample_name = 'Sphere.hdf5'
         file_path = get_file(sample_name)
-        with h5py.File(file_path, 'r') as hdf:
-            grp = hdf['parts/part_001/geometry/surfaces/000']
-            sphere = Sphere(grp)
+
+        parts = read_parts(file_path)
+        sphere = parts[0].faces[0].surface
 
         self.assertEqual(sphere.coefficients.shape, (1, 10))
         self.assertEqual(sphere.location.shape, (1, 3))
-        self.assertEqual(type(sphere.radius), float)
+        self.assertEqual(type(sphere.radius), np.float64)
         self.assertEqual(sphere.trim_domain.shape, (2, 2))
         self.assertEqual(sphere.x_axis.shape, (1, 3))
         self.assertEqual(sphere.y_axis.shape, (1, 3))
@@ -336,13 +334,13 @@ class Hdf5test(unittest.TestCase):
     def test_torus(self):
         sample_name = 'Cylinder_Hole_Fillet_Chamfer.hdf5'
         file_path = get_file(sample_name)
-        with h5py.File(file_path, 'r') as hdf:
-            grp = hdf['parts/part_001/geometry/surfaces/004']
-            torus = Torus(grp)
+
+        parts = read_parts(file_path)
+        torus = parts[0].faces[4].surface
 
         self.assertEqual(torus.location.shape, (1, 3))
-        self.assertEqual(type(torus.max_radius), float)
-        self.assertEqual(type(torus.min_radius), float)
+        self.assertEqual(type(torus.max_radius), np.float64)
+        self.assertEqual(type(torus.min_radius), np.float64)
         self.assertEqual(torus.trim_domain.shape, (2, 2))
         self.assertEqual(torus.x_axis.shape, (1, 3))
         self.assertEqual(torus.y_axis.shape, (1, 3))
@@ -367,9 +365,9 @@ class Hdf5test(unittest.TestCase):
 
         sample_name = 'Ellipse.hdf5'
         file_path = get_file(sample_name)
-        with h5py.File(file_path, 'r') as hdf:
-            grp = hdf['parts/part_001/geometry/surfaces/000']
-            bspline_surface = BSplineSurface(grp)
+
+        parts = read_parts(file_path)
+        bspline_surface = parts[0].faces[0].surface
 
         self.assertEqual(type(bspline_surface.continuity), int)
         self.assertEqual(bspline_surface.face_domain.shape, (1, 4))
@@ -403,15 +401,15 @@ class Hdf5test(unittest.TestCase):
     def test_cone(self):
         sample_name = 'Cone.hdf5'
         file_path = get_file(sample_name)
-        with h5py.File(file_path, 'r') as hdf:
-            grp = hdf['parts/part_001/geometry/surfaces/000']
-            cone = Cone(grp)
 
-        self.assertEqual(type(cone.angle), float)
+        parts = read_parts(file_path)
+        cone = parts[0].faces[0].surface
+
+        self.assertEqual(type(cone.angle), np.float64)
         self.assertEqual(cone.apex.shape, (1, 3))
         self.assertEqual(cone.coefficients.shape, (1, 10))
         self.assertEqual(cone.location.shape, (1, 3))
-        self.assertEqual(type(cone.radius), float)
+        self.assertEqual(type(cone.radius), np.float64)
         self.assertEqual(cone.trim_domain.shape, (2, 2))
         self.assertEqual(cone.x_axis.shape, (1, 3))
         self.assertEqual(cone.y_axis.shape, (1, 3))

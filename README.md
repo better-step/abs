@@ -73,6 +73,10 @@ meshes = read_meshes('model.hdf5')
 V, F = get_mesh(meshes)
 ```
 
+## Examples
+
+For a full set of worked examples, loading models, traversing topology, computing normals, primitive segmentation, and mesh extraction, see the [`abs/use_cases.ipynb`](abs/use_cases.ipynb) notebook.
+
 ## Dataset
 
 The dataset comprises over one million B-Rep models converted from two large-scale public CAD collections:
