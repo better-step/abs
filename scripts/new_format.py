@@ -1,5 +1,4 @@
-from runtime import *
-import os
+from scripts.convert_new_format import *
 import shutil
 import subprocess
 from pathlib import Path
@@ -48,16 +47,16 @@ def iter_hdf5_files(input_dir: Path):
 
 
 if __name__ == "__main__":
-    INPUT_DIR = Path("/media/nafiseh/5f43a9e1-ea28-46ea-ab14-42040d28983d/abs/sample_data/fusion")  # folder full of .hdf5
-    PRE_OUT_DIR = Path("/media/nafiseh/5f43a9e1-ea28-46ea-ab14-42040d28983d/abs/sample_data/c1")    # output BEFORE sys call
-    REPACK_OUT_DIR = Path("/media/nafiseh/5f43a9e1-ea28-46ea-ab14-42040d28983d/abs/sample_data/c2")  # output AFTER h5repack
+    INPUT_DIR = Path("./abs/sample_data/fusion")  # folder full of .hdf5
+    PRE_OUT_DIR = Path("./abs/sample_data/c1")    # output BEFORE sys call
+    REPACK_OUT_DIR = Path("./abs/sample_data/c2")  # output AFTER h5repack
 
     PRE_OUT_DIR.mkdir(parents=True, exist_ok=True)
     REPACK_OUT_DIR.mkdir(parents=True, exist_ok=True)
 
     files = list(iter_hdf5_files(INPUT_DIR))
     if not files:
-        raise FileNotFoundError(f"No .hdf5/.h5 files found in: {INPUT_DIR}")
+        raise FileNotFoundError(f"No .hdf5 files found in: {INPUT_DIR}")
 
     failures = []
     for src in files:
