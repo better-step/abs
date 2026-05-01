@@ -28,9 +28,6 @@ dependencies = [
   "numpy",
   "scipy",
   "h5py",
-  "geomdl",
-  "tqdm",
-  "joblib",
   "meshio"
 ]
 
