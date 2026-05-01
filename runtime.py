@@ -1,5 +1,3 @@
-from fontTools.cu2qu.cu2qu import NAN
-
 from abs import read_parts
 import time
 import h5py
@@ -8,6 +6,7 @@ from abs.part_processor import sample_parts
 from abs.topology import Face
 from abs.utils import save_ply
 import numpy as np
+import math
 
 
 def _as_flat_list(x, expected_len=None):
@@ -169,7 +168,7 @@ def process_faces(part):
     for f in fs:
         index = int(f.name.split("/")[-1])
         if len(f['exact_domain']) == 0:
-             ed = [NAN, NAN ,NAN,NAN]
+             ed = [math.nan, math.nan ,math.nan, math.nan]
         else:
             ed = f["exact_domain"][()].tolist()
         hs = int(f["has_singularities"][()])
@@ -432,9 +431,9 @@ def process_surfaces(part):
 
 
 if __name__ == "__main__":
-    path = '/home/nafiseh/Documents/abs/data/sample_hdf5/Cone.hdf5'
+    path = '/Users/nafiseh/Downloads/a1.0.0_00/a1.0.0_00/22461_0ba0e480/assembly.hdf5'
 
-    create = False
+    create = True
 
     def compute_labels(part, topo, points ):
         if isinstance(topo, Face): return np.ones((points.shape[0], 1), dtype=np.float32)
