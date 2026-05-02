@@ -7,7 +7,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "abs-hdf5"
-version = "v0.2.5"
+version = "v1.0.0"
 description = "A Python + C++ toolkit for reading CAD B-Rep data from HDF5, sampling surfaces/curves, and generating blue-noise point clouds."
 authors = [
   { name = "anonymous", email = " " }
@@ -28,15 +28,9 @@ dependencies = [
   "numpy",
   "scipy",
   "h5py",
+  "meshio",
   "geomdl",
-  "tqdm",
-  "joblib",
-  "meshio"
 ]
-
-[project.scripts]
-abs-to-ply    = "abs.cli:to_ply_main"
-abs-to-pickle = "abs.cli:to_pickle_main"
 
           # ensure pure-Python package goes into wheel
 

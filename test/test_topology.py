@@ -11,24 +11,18 @@ class TestTopology(unittest.TestCase):
     def test_topology(self):
         sample_name = 'Cone.hdf5'
         file_path = get_file(sample_name)
-        with h5py.File(file_path, 'r') as hdf:
-            grp = hdf['parts/part_001/topology']
-            geo = hdf['parts/part_001/geometry']
-            s = Shape(geo, grp, 2)
-            topo_solid = s.solids
+        parts = read_parts(file_path)
+        topo_solid = parts[0].solids
 
 
     def test_find_adjacent_faces(self):
         sample_name = 'Cone.hdf5'
         file_path = get_file(sample_name)
-        with h5py.File(file_path, 'r') as hdf:
-            grp = hdf['parts/part_001/topology']
-            geo = hdf['parts/part_001/geometry']
-            s = Shape(geo, grp, 2)
+        parts = read_parts(file_path)
 
         face_index = 1
         # adjacent_faces = s.Solid.faces[face_index]
-        current_face = s.faces[face_index]
+        current_face = parts[0].faces[face_index]
         adjacent_faces = current_face.find_adjacent_faces()
         # print(adjacent_faces)
 
