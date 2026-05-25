@@ -2,11 +2,13 @@
 
 #include <Eigen/Core>
 
+#ifndef ABS_BUILD_BINARY
 #include <pybind11/eigen.h>
 #include <pybind11/functional.h>
 #include <pybind11/iostream.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#endif
 
 #include <nanospline/BSplinePatch.h>
 #include <nanospline/NURBSPatch.h>
@@ -383,14 +385,21 @@ namespace
 											uint64_t random_seed,
 											double sample_num_tolerance)
 	{
+#ifdef ABS_BUILD_BINARY
+		if (target_num_samples <= 0)
+			throw std::invalid_argument(
+				"Cannot have both num_samples <= 0 and radius <= 0");
 
+		if (sample_num_tolerance > 1.0 || sample_num_tolerance <= 0.0)
+			throw std::invalid_argument("sample_num_tolerance must be in (0, 1]");
+#else
 		if (target_num_samples <= 0)
 			throw pybind11::value_error(
 				"Cannot have both num_samples <= 0 and radius <= 0");
 
 		if (sample_num_tolerance > 1.0 || sample_num_tolerance <= 0.0)
 			throw pybind11::value_error("sample_num_tolerance must be in (0, 1]");
-
+#endif
 		if (random_seed != 0)
 			srand(random_seed);
 
@@ -780,6 +789,66 @@ private:
 	std::unique_ptr<nanospline::PatchBase<double, 3>> patch;
 };
 
+#ifdef ABS_BUILD_BINARY
+
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <vector>
+#include <string>
+#include <cstdlib>
+
+int main(int argc, char *argv[])
+{
+	if (argc < 3)
+	{
+		std::cerr << "Usage: " << argv[0] << " points.txt samples" << std::endl;
+		return EXIT_FAILURE;
+	}
+
+	// measure loading time
+	auto start_time = std::chrono::high_resolution_clock::now();
+
+	// Load points
+	Eigen::MatrixXd points;
+	{
+		std::ifstream in(argv[1]);
+		if (!in)
+		{
+			std::cerr << "Failed to open file: " << argv[1] << std::endl;
+			return EXIT_FAILURE;
+		}
+		std::vector<Eigen::Vector3d> point_list;
+		std::string line;
+		while (std::getline(in, line))
+		{
+			std::istringstream iss(line);
+			Eigen::Vector3d p;
+			if (!(iss >> p[0] >> p[1] >> p[2]))
+			{
+				std::cerr << "Invalid line in input file: " << line << std::endl;
+				return EXIT_FAILURE;
+			}
+			point_list.push_back(p);
+		}
+		points = Eigen::Map<Eigen::MatrixXd>(point_list[0].data(), 3, point_list.size()).transpose();
+	}
+	auto end_time = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double> load_duration = end_time - start_time;
+	std::cout << "Loaded " << points.rows() << " points in " << load_duration.count() << " seconds." << std::endl;
+
+	const int target_num_samples = std::stoi(argv[2]);
+	const int random_seed = 0;
+	const double sample_num_tolerance = 0.04;
+	start_time = std::chrono::high_resolution_clock::now();
+	Eigen::VectorXi sample_indices = poisson_disk_downsample(points, target_num_samples, random_seed, sample_num_tolerance);
+	end_time = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double> sample_duration = end_time - start_time;
+	std::cout << "Generated " << sample_indices.size() << " samples in " << sample_duration.count() << " seconds." << std::endl;
+
+	return EXIT_SUCCESS;
+}
+#else
 PYBIND11_MODULE(abspy, m)
 {
 	namespace py = pybind11;
@@ -827,3 +896,4 @@ PYBIND11_MODULE(abspy, m)
 		.def("first_derivative", &BSpline::first_derivative, "Sample points on the derivative surface given parameter values", py::arg("params"))
 		.def("second_derivative", &BSpline::second_derivative, "Sample points on the second derivative surface given parameter values", py::arg("params"));
 }
+#endif
