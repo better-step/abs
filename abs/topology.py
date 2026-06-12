@@ -2,6 +2,7 @@ import numpy as np
 import h5py
 from typing import Any, Dict, List
 from abs.winding_number import winding_number
+from abspy import filter_inside_winding
 
 
 class Topology:
@@ -73,6 +74,7 @@ class Face(Topology):
         self.outer_loop = face['outer_loop']
         self.singularities = face['singularities']
         self.id = face['id']
+        self.segments = None
 
 
     def normal(self, points):
@@ -118,14 +120,17 @@ class Face(Topology):
         """
         Filter out points that are outside the trimming curve of a face.
         """
-        total_winding_numbers = np.zeros((len(uv_points), 1))
-        curves = self.trimming_curves_2d
-        for poly in curves:
-            total_winding_numbers += winding_number(poly, uv_points)
+        wn = filter_inside_winding(uv_points, self.segments).astype(bool)
+        return wn
+        
+        # total_winding_numbers = np.zeros((len(uv_points), 1))
+        # curves = self.trimming_curves_2d
+        # for poly in curves:
+        #     total_winding_numbers += winding_number(poly, uv_points)
 
-        res = total_winding_numbers > 0.5
-        res = res.reshape(-1)
-        return res
+        # res = total_winding_numbers > 0.5
+        # res = res.reshape(-1)
+        # return res
 
 
 class Halfedge(Topology):

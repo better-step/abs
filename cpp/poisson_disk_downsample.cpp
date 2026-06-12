@@ -2,22 +2,33 @@
 
 #include <Eigen/Core>
 
+#ifndef ABS_BUILD_BINARY
 #include <pybind11/eigen.h>
 #include <pybind11/functional.h>
 #include <pybind11/iostream.h>
+#include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#endif
 
 #include <nanospline/BSplinePatch.h>
 #include <nanospline/NURBSPatch.h>
 
 #include <algorithm>
+#include <cmath>
+#include <limits>
 #include <random>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace
 {
+	template <typename Scalar, int dim>
+	using PointMatrixRowMajor = Eigen::Matrix<Scalar, Eigen::Dynamic, dim, Eigen::RowMajor>;
+
+	template <typename Scalar, int dim>
+	using PointMatrixColMajor = Eigen::Matrix<Scalar, Eigen::Dynamic, dim, Eigen::ColMajor>;
 
 	// This file is part of libigl, a simple c++ geometry processing library.
 	//
@@ -99,8 +110,9 @@ namespace
 		return x + w * (y + w * z);
 	}
 
+	template <typename DerivedX>
 	inline bool blue_noise_far_enough(
-		const Eigen::MatrixXd &X,
+		const Eigen::MatrixBase<DerivedX> &X,
 		const Eigen::Matrix<int, Eigen::Dynamic, 3, Eigen::RowMajor> &Xs,
 		const std::unordered_map<int64_t, int> &S, const double rr, const int w,
 		const int i)
@@ -132,8 +144,9 @@ namespace
 		return true;
 	}
 
+	template <typename DerivedX>
 	inline bool
-	activate(const Eigen::MatrixXd &X,
+	activate(const Eigen::MatrixBase<DerivedX> &X,
 			 const Eigen::Matrix<int, Eigen::Dynamic, 3, Eigen::RowMajor> &Xs,
 			 const double rr, const int i, const int w, const int64_t nk,
 			 std::unordered_map<int64_t, std::vector<int>> &M,
@@ -179,8 +192,9 @@ namespace
 		return false;
 	}
 
+	template <typename DerivedX>
 	inline bool
-	step(const Eigen::MatrixXd &X,
+	step(const Eigen::MatrixBase<DerivedX> &X,
 		 const Eigen::Matrix<int, Eigen::Dynamic, 3, Eigen::RowMajor> &Xs,
 		 const double rr, const int w, DEFAULT_URBG &urbg,
 		 std::unordered_map<int64_t, std::vector<int>> &M,
@@ -252,9 +266,12 @@ namespace
 		return true;
 	}
 
-	void blue_noise_downsample(const Eigen::MatrixXd &X, const double r,
+	template <typename DerivedX>
+	void blue_noise_downsample(const Eigen::MatrixBase<DerivedX> &X, const double r,
 							   Eigen::VectorXi &XI, DEFAULT_URBG &&urbg)
 	{
+		using Scalar = typename DerivedX::Scalar;
+
 		assert(X.cols() == 3 && "Only 3D embeddings allowed");
 
 		// minimum radius
@@ -273,14 +290,15 @@ namespace
 		const int nx = X.rows();
 
 		// Rescale so that s = 1
+		const auto Xmin = X.colwise().minCoeff();
 		Eigen::Matrix<int, Eigen::Dynamic, 3, Eigen::RowMajor> Xs =
-			((X.rowwise() - X.colwise().minCoeff()) / s).template cast<int>();
+			((X.rowwise() - Xmin).template cast<double>() / s).template cast<int>();
 		const int w = Xs.maxCoeff() + 1;
 		Eigen::VectorXi SortIdx;
-		Eigen::MatrixXd Xsorted;
+		PointMatrixRowMajor<Scalar, 3> Xsorted;
 		{
 			sortrows(decltype(Xs)(Xs), true, Xs, SortIdx);
-			Xsorted = X(SortIdx, Eigen::all).eval();
+			Xsorted = X.derived()(SortIdx, Eigen::all).eval();
 		}
 		// Initialization
 		std::unordered_map<int64_t, std::vector<int>> M;
@@ -378,19 +396,30 @@ namespace
 	// Returns:
 	//     p_idx : A (m,) shaped array of indices into v where m is the number of
 	//     Poisson-disk samples
-	Eigen::VectorXi poisson_disk_downsample(const Eigen::MatrixXd &v,
+	template <typename DerivedV>
+	Eigen::VectorXi poisson_disk_downsample(const Eigen::MatrixBase<DerivedV> &v,
 											int target_num_samples,
 											uint64_t random_seed,
 											double sample_num_tolerance)
 	{
+		using Scalar = typename DerivedV::Scalar;
+		using RowVector3 = Eigen::Matrix<Scalar, 1, 3>;
 
+#ifdef ABS_BUILD_BINARY
+		if (target_num_samples <= 0)
+			throw std::invalid_argument(
+				"Cannot have both num_samples <= 0 and radius <= 0");
+
+		if (sample_num_tolerance > 1.0 || sample_num_tolerance <= 0.0)
+			throw std::invalid_argument("sample_num_tolerance must be in (0, 1]");
+#else
 		if (target_num_samples <= 0)
 			throw pybind11::value_error(
 				"Cannot have both num_samples <= 0 and radius <= 0");
 
 		if (sample_num_tolerance > 1.0 || sample_num_tolerance <= 0.0)
 			throw pybind11::value_error("sample_num_tolerance must be in (0, 1]");
-
+#endif
 		if (random_seed != 0)
 			srand(random_seed);
 
@@ -411,9 +440,9 @@ namespace
 		const size_t num_samples_max =
 			int(double(target_num_samples) * (1 + sample_num_tolerance));
 
-		const Eigen::Vector3d bmin = v.colwise().minCoeff();
-		const Eigen::Vector3d bmax = v.colwise().maxCoeff();
-		const double bbsize = (bmax - bmin).norm();
+		const RowVector3 bmin = v.colwise().minCoeff();
+		const RowVector3 bmax = v.colwise().maxCoeff();
+		const double bbsize = (bmax - bmin).template cast<double>().norm();
 		double range_min_rad = bbsize / 50.0;
 		double range_max_rad = bbsize / 50.0;
 		size_t range_min_rad_num = -1;
@@ -458,12 +487,17 @@ namespace
 		return ret_i;
 	}
 
+	template <typename DerivedX>
 	void grid_poisson_downsample_radius(
-		const Eigen::MatrixXd &X, // N x 3
-		double r,                 // radius
-		Eigen::VectorXi &XI,      // output indices
+		const Eigen::MatrixBase<DerivedX> &X, // N x 3
+		double r,                             // radius
+		Eigen::VectorXi &XI,                  // output indices
 		uint64_t random_seed)
 	{
+		using Scalar = typename DerivedX::Scalar;
+		using RowVector3 = Eigen::Matrix<Scalar, 1, 3>;
+		using RowArray3 = Eigen::Array<Scalar, 1, 3>;
+
 		using std::vector;
 		const int N = X.rows();
 		if (N == 0)
@@ -473,9 +507,9 @@ namespace
 		}
 
 		// 1. Bounding box
-		Eigen::RowVector3d minv = X.colwise().minCoeff();
-		Eigen::RowVector3d maxv = X.colwise().maxCoeff();
-		Eigen::RowVector3d extent = maxv - minv;
+		RowVector3 minv = X.colwise().minCoeff();
+		RowVector3 maxv = X.colwise().maxCoeff();
+		RowVector3 extent = maxv - minv;
 
 		// 2. Grid dims
 		const double cell_size = r;
@@ -492,7 +526,7 @@ namespace
 		long long grid_size = Nx * Ny * Nz;
 		if (grid_size <= 0 || grid_size > std::numeric_limits<int>::max())
 		{
-			// Fallback – just take everything
+			// Fallback - just take everything
 			XI.setLinSpaced(N, 0, N - 1);
 			return;
 		}
@@ -517,8 +551,8 @@ namespace
 
 		for (int idx : order)
 		{
-			Eigen::RowVector3d p = X.row(idx);
-			Eigen::Array3d rel = (p.array() - minv.array()) * inv_cell;
+			RowVector3 p = X.row(idx);
+			RowArray3 rel = (p.array() - minv.array()) * static_cast<Scalar>(inv_cell);
 
 			int cx = static_cast<int>(std::floor(rel[0]));
 			int cy = static_cast<int>(std::floor(rel[1]));
@@ -549,8 +583,8 @@ namespace
 						if (gidx < 0)
 							continue;
 
-						Eigen::RowVector3d q = X.row(gidx);
-						Eigen::RowVector3d d = p - q;
+						RowVector3 q = X.row(gidx);
+						RowVector3 d = p - q;
 						if (d.squaredNorm() < r2)
 						{
 							ok = false;
@@ -575,12 +609,15 @@ namespace
 		}
 	}
 
+	template <typename DerivedX>
 	Eigen::VectorXi grid_poisson_downsample(
-		const Eigen::MatrixXd &X,
+		const Eigen::MatrixBase<DerivedX> &X,
 		int target_num_samples,
 		uint64_t random_seed,
 		double sample_num_tolerance)
 	{
+		using Scalar = typename DerivedX::Scalar;
+		using RowVector3 = Eigen::Matrix<Scalar, 1, 3>;
 
 		using std::abs;
 		const int N = X.rows();
@@ -599,10 +636,10 @@ namespace
 			srand(random_seed);
 
 		// 1. Rough initial guess for r from bounding box volume
-		Eigen::RowVector3d minv = X.colwise().minCoeff();
-		Eigen::RowVector3d maxv = X.colwise().maxCoeff();
-		Eigen::RowVector3d extent = maxv - minv;
-		double volume = extent[0] * extent[1] * extent[2];
+		RowVector3 minv = X.colwise().minCoeff();
+		RowVector3 maxv = X.colwise().maxCoeff();
+		RowVector3 extent = maxv - minv;
+		double volume = static_cast<double>(extent[0]) * static_cast<double>(extent[1]) * static_cast<double>(extent[2]);
 		if (volume <= 0.0)
 			volume = 1.0; // degenerate case
 
@@ -645,7 +682,7 @@ namespace
 			r *= factor;
 
 			// Clamp r to avoid going crazy
-			double diag = extent.norm();
+			double diag = extent.template cast<double>().norm();
 			double r_min = diag * 1e-4;
 			double r_max = diag;
 			if (r < r_min)
@@ -657,6 +694,179 @@ namespace
 		return best_XI;
 	}
 
+#ifndef ABS_BUILD_BINARY
+	template <typename Scalar, int dim, typename Call>
+	Eigen::VectorXi dispatch_typed_point_array(const pybind11::buffer_info &info, Call &&call)
+	{
+		const auto rows = static_cast<Eigen::Index>(info.shape[0]);
+		if (rows == 0)
+		{
+			PointMatrixRowMajor<Scalar, dim> empty(0, dim);
+			return std::forward<Call>(call)(empty);
+		}
+
+		const auto itemsize = static_cast<pybind11::ssize_t>(sizeof(Scalar));
+		const bool c_contiguous =
+			info.strides[0] == dim * itemsize && info.strides[1] == itemsize;
+		const bool f_contiguous =
+			info.strides[0] == itemsize && info.strides[1] == info.shape[0] * itemsize;
+
+		const Scalar *data = static_cast<const Scalar *>(info.ptr);
+		if (c_contiguous)
+		{
+			Eigen::Map<const PointMatrixRowMajor<Scalar, dim>, Eigen::Unaligned> X(data, rows, dim);
+			return std::forward<Call>(call)(X);
+		}
+		if (f_contiguous)
+		{
+			Eigen::Map<const PointMatrixColMajor<Scalar, dim>, Eigen::Unaligned> X(data, rows, dim);
+			return std::forward<Call>(call)(X);
+		}
+
+		throw pybind11::value_error(
+			"v must be a contiguous float32 or float64 array; use "
+			"np.ascontiguousarray(v) or np.asfortranarray(v)");
+	}
+
+	template <int dim, typename Call>
+	Eigen::VectorXi dispatch_point_array(pybind11::array v, Call &&call)
+	{
+		const pybind11::buffer_info info = v.request();
+		if (info.ndim != 2 || info.shape[1] != dim)
+		{
+			throw pybind11::value_error("v must have shape (n, " + std::to_string(dim) + ")");
+		}
+
+		if (info.itemsize == static_cast<pybind11::ssize_t>(sizeof(double)) && info.format == pybind11::format_descriptor<double>::format())
+		{
+			return dispatch_typed_point_array<double, dim>(info, std::forward<Call>(call));
+		}
+		if (info.itemsize == static_cast<pybind11::ssize_t>(sizeof(float)) && info.format == pybind11::format_descriptor<float>::format())
+		{
+			return dispatch_typed_point_array<float, dim>(info, std::forward<Call>(call));
+		}
+
+		throw pybind11::value_error("v must be a numpy array with dtype float32 or float64");
+	}
+
+	Eigen::VectorXi poisson_disk_downsample_py(
+		pybind11::array v,
+		int target_num_samples,
+		uint64_t random_seed,
+		double sample_num_tolerance)
+	{
+		return dispatch_point_array<3>(v, [&](const auto &X) {
+			return poisson_disk_downsample(X, target_num_samples, random_seed,
+										   sample_num_tolerance);
+		});
+	}
+
+	Eigen::VectorXi poisson_grid_downsample_py(
+		pybind11::array v,
+		int target_num_samples,
+		uint64_t random_seed,
+		double sample_num_tolerance)
+	{
+		return dispatch_point_array<3>(v, [&](const auto &X) {
+			return grid_poisson_downsample(X, target_num_samples, random_seed,
+										   sample_num_tolerance);
+		});
+	}
+#endif
+
+	inline double fast_atan_unit(double z)
+	{
+		// valid for z in [0, 1]
+		const double z2 = z * z;
+
+		// atan(z) minimax-ish odd polynomial
+		return z * ((((-0.0464964749 * z2 + 0.15931422) * z2 - 0.327622764) * z2 + 0.999787841));
+	}
+
+	inline double fast_atan2(double y, double x)
+	{
+		const double ay = std::abs(y);
+		const double ax = std::abs(x);
+
+		if (ax == 0.0 && ay == 0.0)
+			return 0.0;
+
+		double a;
+		if (ax >= ay)
+		{
+			const double z = ay / ax;
+			a = fast_atan_unit(z);
+		}
+		else
+		{
+			const double z = ax / ay;
+			a = M_PI_2 - fast_atan_unit(z);
+		}
+
+		if (x < 0.0)
+			a = M_PI - a;
+
+		if (y < 0.0)
+			a = -a;
+
+		return a;
+	}
+
+	template <typename DerivedP, typename DerivedS>
+	Eigen::VectorXi winding_number_filter(
+		const Eigen::MatrixBase<DerivedP> &uv_points,
+		const Eigen::MatrixBase<DerivedS> &segments)
+	{
+		const int n = uv_points.rows();
+		const int m = segments.rows();
+
+		Eigen::VectorXi inside(n);
+
+		const double inv_twopi = 1.0 / (2.0 * M_PI);
+
+#pragma omp parallel for
+		for (int i = 0; i < n; ++i)
+		{
+			const double px = uv_points(i, 0);
+			const double py = uv_points(i, 1);
+
+			double sum = 0.0;
+
+			for (int j = 0; j < m; ++j)
+			{
+				const double ax = segments(j, 0) - px;
+				const double ay = segments(j, 1) - py;
+				const double bx = segments(j, 2) - px;
+				const double by = segments(j, 3) - py;
+
+				const double det = ax * by - ay * bx;
+				const double dot = ax * bx + ay * by;
+
+#ifdef ABS_EXACT_ATAN2
+				sum += std::atan2(det, dot);
+#else
+				sum += fast_atan2(det, dot);
+#endif
+			}
+
+			inside(i) = (sum * inv_twopi) > 0.5 ? 1 : 0;
+		}
+
+		return inside;
+	}
+
+	Eigen::VectorXi winding_number_filter_py(
+		pybind11::array uv_points,
+		pybind11::array segments)
+
+	{
+
+		return dispatch_point_array<2>(uv_points, [&](const auto &P) {
+			return dispatch_point_array<4>(segments, [&](const auto &S) {
+				return winding_number_filter(P, S);
+			});
+		});
+	}
 } // namespace
 
 class BSpline
@@ -780,6 +990,66 @@ private:
 	std::unique_ptr<nanospline::PatchBase<double, 3>> patch;
 };
 
+#ifdef ABS_BUILD_BINARY
+
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <vector>
+#include <string>
+#include <cstdlib>
+
+int main(int argc, char *argv[])
+{
+	if (argc < 3)
+	{
+		std::cerr << "Usage: " << argv[0] << " points.txt samples" << std::endl;
+		return EXIT_FAILURE;
+	}
+
+	// measure loading time
+	auto start_time = std::chrono::high_resolution_clock::now();
+
+	// Load points
+	Eigen::MatrixXd points;
+	{
+		std::ifstream in(argv[1]);
+		if (!in)
+		{
+			std::cerr << "Failed to open file: " << argv[1] << std::endl;
+			return EXIT_FAILURE;
+		}
+		std::vector<Eigen::Vector3d> point_list;
+		std::string line;
+		while (std::getline(in, line))
+		{
+			std::istringstream iss(line);
+			Eigen::Vector3d p;
+			if (!(iss >> p[0] >> p[1] >> p[2]))
+			{
+				std::cerr << "Invalid line in input file: " << line << std::endl;
+				return EXIT_FAILURE;
+			}
+			point_list.push_back(p);
+		}
+		points = Eigen::Map<Eigen::MatrixXd>(point_list[0].data(), 3, point_list.size()).transpose();
+	}
+	auto end_time = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double> load_duration = end_time - start_time;
+	std::cout << "Loaded " << points.rows() << " points in " << load_duration.count() << " seconds." << std::endl;
+
+	const int target_num_samples = std::stoi(argv[2]);
+	const int random_seed = 0;
+	const double sample_num_tolerance = 0.04;
+	start_time = std::chrono::high_resolution_clock::now();
+	Eigen::VectorXi sample_indices = poisson_disk_downsample(points, target_num_samples, random_seed, sample_num_tolerance);
+	end_time = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double> sample_duration = end_time - start_time;
+	std::cout << "Generated " << sample_indices.size() << " samples in " << sample_duration.count() << " seconds." << std::endl;
+
+	return EXIT_SUCCESS;
+}
+#else
 PYBIND11_MODULE(abspy, m)
 {
 	namespace py = pybind11;
@@ -788,27 +1058,31 @@ PYBIND11_MODULE(abspy, m)
 
 	m.def(
 		"poisson_disk_downsample",
-		[](const Eigen::MatrixXd &v, int target_num_samples, uint64_t random_seed,
-		   double sample_num_tolerance) {
-			return poisson_disk_downsample(v, target_num_samples, random_seed,
-										   sample_num_tolerance);
-		},
+		&poisson_disk_downsample_py,
 		"A (m,) shaped array of indices into v where m is the number of "
 		"Poisson-disk samples",
-		py::arg("v"), py::arg("target_num_samples"), py::arg("random_seed") = 0,
+		py::arg("v").noconvert(), py::arg("target_num_samples"), py::arg("random_seed") = 0,
 		py::arg("sample_num_tolerance") = 0.04);
 
 	m.def(
 		"poisson_grid_downsample",
-		[](const Eigen::MatrixXd &v, int target_num_samples, uint64_t random_seed,
-		   double sample_num_tolerance) {
-			return grid_poisson_downsample(v, target_num_samples, random_seed,
-										   sample_num_tolerance);
-		},
+		&poisson_grid_downsample_py,
 		"A (m,) shaped array of indices into v where m is the number of "
 		"Poisson-grid samples",
-		py::arg("v"), py::arg("target_num_samples"), py::arg("random_seed") = 0,
+		py::arg("v").noconvert(), py::arg("target_num_samples"), py::arg("random_seed") = 0,
 		py::arg("sample_num_tolerance") = 0.04);
+
+	m.def("blue_noise_downsample", [](const Eigen::MatrixXd &v, const double r, uint64_t random_seed) {
+		if (random_seed != 0)
+			srand(random_seed);
+
+		Eigen::VectorXi ret_i;
+		blue_noise_downsample<Eigen::MatrixXd>(v, r, ret_i, generate_default_urbg());
+
+		return ret_i; }, "Downsample points using a blue noise distribution", py::arg("v").noconvert(), py::arg("radius"), py::arg("random_seed") = 0);
+
+	m.def("filter_inside_winding", &winding_number_filter_py, "Filter points inside a winding defined by ax0, ay0, bx0, by0",
+		  py::arg("uv_points"), py::arg("segments"));
 
 	py::class_<BSpline>(m, "BSpline")
 		.def(py::init<int, int, bool, bool,
@@ -827,3 +1101,4 @@ PYBIND11_MODULE(abspy, m)
 		.def("first_derivative", &BSpline::first_derivative, "Sample points on the derivative surface given parameter values", py::arg("params"))
 		.def("second_derivative", &BSpline::second_derivative, "Sample points on the second derivative surface given parameter values", py::arg("params"));
 }
+#endif
