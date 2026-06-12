@@ -24,11 +24,11 @@
 
 namespace
 {
-	template <typename Scalar>
-	using PointMatrixRowMajor = Eigen::Matrix<Scalar, Eigen::Dynamic, 3, Eigen::RowMajor>;
+	template <typename Scalar, int dim>
+	using PointMatrixRowMajor = Eigen::Matrix<Scalar, Eigen::Dynamic, dim, Eigen::RowMajor>;
 
-	template <typename Scalar>
-	using PointMatrixColMajor = Eigen::Matrix<Scalar, Eigen::Dynamic, 3, Eigen::ColMajor>;
+	template <typename Scalar, int dim>
+	using PointMatrixColMajor = Eigen::Matrix<Scalar, Eigen::Dynamic, dim, Eigen::ColMajor>;
 
 	// This file is part of libigl, a simple c++ geometry processing library.
 	//
@@ -295,7 +295,7 @@ namespace
 			((X.rowwise() - Xmin).template cast<double>() / s).template cast<int>();
 		const int w = Xs.maxCoeff() + 1;
 		Eigen::VectorXi SortIdx;
-		PointMatrixRowMajor<Scalar> Xsorted;
+		PointMatrixRowMajor<Scalar, 3> Xsorted;
 		{
 			sortrows(decltype(Xs)(Xs), true, Xs, SortIdx);
 			Xsorted = X.derived()(SortIdx, Eigen::all).eval();
@@ -695,31 +695,31 @@ namespace
 	}
 
 #ifndef ABS_BUILD_BINARY
-	template <typename Scalar, typename Call>
+	template <typename Scalar, int dim, typename Call>
 	Eigen::VectorXi dispatch_typed_point_array(const pybind11::buffer_info &info, Call &&call)
 	{
 		const auto rows = static_cast<Eigen::Index>(info.shape[0]);
 		if (rows == 0)
 		{
-			PointMatrixRowMajor<Scalar> empty(0, 3);
+			PointMatrixRowMajor<Scalar, dim> empty(0, dim);
 			return std::forward<Call>(call)(empty);
 		}
 
 		const auto itemsize = static_cast<pybind11::ssize_t>(sizeof(Scalar));
 		const bool c_contiguous =
-			info.strides[0] == 3 * itemsize && info.strides[1] == itemsize;
+			info.strides[0] == dim * itemsize && info.strides[1] == itemsize;
 		const bool f_contiguous =
 			info.strides[0] == itemsize && info.strides[1] == info.shape[0] * itemsize;
 
 		const Scalar *data = static_cast<const Scalar *>(info.ptr);
 		if (c_contiguous)
 		{
-			Eigen::Map<const PointMatrixRowMajor<Scalar>, Eigen::Unaligned> X(data, rows, 3);
+			Eigen::Map<const PointMatrixRowMajor<Scalar, dim>, Eigen::Unaligned> X(data, rows, dim);
 			return std::forward<Call>(call)(X);
 		}
 		if (f_contiguous)
 		{
-			Eigen::Map<const PointMatrixColMajor<Scalar>, Eigen::Unaligned> X(data, rows, 3);
+			Eigen::Map<const PointMatrixColMajor<Scalar, dim>, Eigen::Unaligned> X(data, rows, dim);
 			return std::forward<Call>(call)(X);
 		}
 
@@ -728,24 +728,22 @@ namespace
 			"np.ascontiguousarray(v) or np.asfortranarray(v)");
 	}
 
-	template <typename Call>
+	template <int dim, typename Call>
 	Eigen::VectorXi dispatch_point_array(pybind11::array v, Call &&call)
 	{
 		const pybind11::buffer_info info = v.request();
-		if (info.ndim != 2 || info.shape[1] != 3)
+		if (info.ndim != 2 || info.shape[1] != dim)
 		{
-			throw pybind11::value_error("v must have shape (n, 3)");
+			throw pybind11::value_error("v must have shape (n, " + std::to_string(dim) + ")");
 		}
 
-		if (info.itemsize == static_cast<pybind11::ssize_t>(sizeof(double)) &&
-			info.format == pybind11::format_descriptor<double>::format())
+		if (info.itemsize == static_cast<pybind11::ssize_t>(sizeof(double)) && info.format == pybind11::format_descriptor<double>::format())
 		{
-			return dispatch_typed_point_array<double>(info, std::forward<Call>(call));
+			return dispatch_typed_point_array<double, dim>(info, std::forward<Call>(call));
 		}
-		if (info.itemsize == static_cast<pybind11::ssize_t>(sizeof(float)) &&
-			info.format == pybind11::format_descriptor<float>::format())
+		if (info.itemsize == static_cast<pybind11::ssize_t>(sizeof(float)) && info.format == pybind11::format_descriptor<float>::format())
 		{
-			return dispatch_typed_point_array<float>(info, std::forward<Call>(call));
+			return dispatch_typed_point_array<float, dim>(info, std::forward<Call>(call));
 		}
 
 		throw pybind11::value_error("v must be a numpy array with dtype float32 or float64");
@@ -757,7 +755,7 @@ namespace
 		uint64_t random_seed,
 		double sample_num_tolerance)
 	{
-		return dispatch_point_array(v, [&](const auto &X) {
+		return dispatch_point_array<3>(v, [&](const auto &X) {
 			return poisson_disk_downsample(X, target_num_samples, random_seed,
 										   sample_num_tolerance);
 		});
@@ -769,13 +767,64 @@ namespace
 		uint64_t random_seed,
 		double sample_num_tolerance)
 	{
-		return dispatch_point_array(v, [&](const auto &X) {
+		return dispatch_point_array<3>(v, [&](const auto &X) {
 			return grid_poisson_downsample(X, target_num_samples, random_seed,
 										   sample_num_tolerance);
 		});
 	}
 #endif
 
+	template <typename DerivedP, typename DerivedS>
+	Eigen::VectorXi winding_number_filter(
+		const Eigen::MatrixBase<DerivedP> &uv_points,
+		const Eigen::MatrixBase<DerivedS> &segments)
+	{
+		const int n = uv_points.rows();
+		const int m = segments.rows();
+
+		Eigen::VectorXi inside(n);
+
+		const double inv_twopi = 1.0 / (2.0 * M_PI);
+
+#pragma omp parallel for
+		for (int i = 0; i < n; ++i)
+		{
+			const double px = uv_points(i, 0);
+			const double py = uv_points(i, 1);
+
+			double sum = 0.0;
+
+			for (int j = 0; j < m; ++j)
+			{
+				const double ax = segments(j, 0) - px;
+				const double ay = segments(j, 1) - py;
+				const double bx = segments(j, 2) - px;
+				const double by = segments(j, 3) - py;
+
+				const double det = ax * by - ay * bx;
+				const double dot = ax * bx + ay * by;
+
+				sum += std::atan2(det, dot);
+			}
+
+			inside(i) = (sum * inv_twopi) > 0.5 ? 1 : 0;
+		}
+
+		return inside;
+	}
+
+	Eigen::VectorXi winding_number_filter_py(
+		pybind11::array uv_points,
+		pybind11::array segments)
+
+	{
+
+		return dispatch_point_array<2>(uv_points, [&](const auto &P) {
+			return dispatch_point_array<4>(segments, [&](const auto &S) {
+				return winding_number_filter(P, S);
+			});
+		});
+	}
 } // namespace
 
 class BSpline
@@ -980,6 +1029,9 @@ PYBIND11_MODULE(abspy, m)
 		"Poisson-grid samples",
 		py::arg("v").noconvert(), py::arg("target_num_samples"), py::arg("random_seed") = 0,
 		py::arg("sample_num_tolerance") = 0.04);
+
+	m.def("filter_inside_winding", &winding_number_filter_py, "Filter points inside a winding defined by ax0, ay0, bx0, by0",
+		  py::arg("uv_points"), py::arg("segments"));
 
 	py::class_<BSpline>(m, "BSpline")
 		.def(py::init<int, int, bool, bool,
