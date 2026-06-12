@@ -774,6 +774,44 @@ namespace
 	}
 #endif
 
+	inline double fast_atan_unit(double z)
+	{
+		// valid for z in [0, 1]
+		const double z2 = z * z;
+
+		// atan(z) minimax-ish odd polynomial
+		return z * ((((-0.0464964749 * z2 + 0.15931422) * z2 - 0.327622764) * z2 + 0.999787841));
+	}
+
+	inline double fast_atan2(double y, double x)
+	{
+		const double ay = std::abs(y);
+		const double ax = std::abs(x);
+
+		if (ax == 0.0 && ay == 0.0)
+			return 0.0;
+
+		double a;
+		if (ax >= ay)
+		{
+			const double z = ay / ax;
+			a = fast_atan_unit(z);
+		}
+		else
+		{
+			const double z = ax / ay;
+			a = M_PI_2 - fast_atan_unit(z);
+		}
+
+		if (x < 0.0)
+			a = M_PI - a;
+
+		if (y < 0.0)
+			a = -a;
+
+		return a;
+	}
+
 	template <typename DerivedP, typename DerivedS>
 	Eigen::VectorXi winding_number_filter(
 		const Eigen::MatrixBase<DerivedP> &uv_points,
@@ -804,7 +842,11 @@ namespace
 				const double det = ax * by - ay * bx;
 				const double dot = ax * bx + ay * by;
 
+#ifdef ABS_EXACT_ATAN2
 				sum += std::atan2(det, dot);
+#else
+				sum += fast_atan2(det, dot);
+#endif
 			}
 
 			inside(i) = (sum * inv_twopi) > 0.5 ? 1 : 0;
