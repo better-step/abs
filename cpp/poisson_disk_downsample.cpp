@@ -1030,6 +1030,15 @@ PYBIND11_MODULE(abspy, m)
 		py::arg("v").noconvert(), py::arg("target_num_samples"), py::arg("random_seed") = 0,
 		py::arg("sample_num_tolerance") = 0.04);
 
+	m.def("blue_noise_downsample", [](const Eigen::MatrixXd &v, const double r, uint64_t random_seed) {
+		if (random_seed != 0)
+			srand(random_seed);
+
+		Eigen::VectorXi ret_i;
+		blue_noise_downsample<Eigen::MatrixXd>(v, r, ret_i, generate_default_urbg());
+
+		return ret_i; }, "Downsample points using a blue noise distribution", py::arg("v").noconvert(), py::arg("radius"), py::arg("random_seed") = 0);
+
 	m.def("filter_inside_winding", &winding_number_filter_py, "Filter points inside a winding defined by ax0, ay0, bx0, by0",
 		  py::arg("uv_points"), py::arg("segments"));
 
