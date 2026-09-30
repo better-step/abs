@@ -119,6 +119,19 @@ class Shape:
 
             # safer indexing (in case trimming_curves is shorter)
             face.trimming_curves_2d = trimming_curves[idx] if idx < len(trimming_curves) else None
+            face.segments = np.ascontiguousarray(
+                np.vstack([
+                    np.column_stack([
+                        c[:-1, 0],
+                        c[:-1, 1],
+                        c[1:, 0],
+                        c[1:, 1],
+                    ])
+                    for c in face.trimming_curves_2d
+                    if len(c) >= 2
+                ]),
+                dtype=np.float64,
+            )
 
             faces.append(face)
 

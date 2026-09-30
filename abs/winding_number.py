@@ -4,18 +4,32 @@ Computations for winding number and related operations for curves/surfaces.
 
 import numpy as np
 
-def winding_number(curve_uv_values, surface_uv_values):
-    """ Compute the winding number for a polyline and surface UV values efficiently. """
-    a_values = curve_uv_values[:-1]
-    b_values = curve_uv_values[1:]
-    a = a_values[:, np.newaxis] - surface_uv_values
-    b = b_values[:, np.newaxis] - surface_uv_values
+def winding_number(curve_uv_values, surface_uv_values, chunk_size=20000):
+        av = curve_uv_values[:-1]
+        bv = curve_uv_values[1:]
+        n = len(surface_uv_values)
+        out = np.empty(n, dtype=np.float64)
 
-    det = a[..., 0] * b[..., 1] - a[..., 1] * b[..., 0]
+        ax0, ax1 = av[:, 0], av[:, 1]
+        bx0, bx1 = bv[:, 0], bv[:, 1]
 
-    dot = np.einsum('ijk,ijk->ij', a, b)
-    winding_number_result = np.sum(np.arctan2(det, dot), axis=0) / (2 * np.pi)
-    return winding_number_result.reshape(-1, 1)
+        for start in range(0, n, chunk_size):
+            end = min(start + chunk_size, n)
+            p = surface_uv_values[start:end]
+            px = p[:, 0][None, :]
+            py = p[:, 1][None, :]
+
+            ax = ax0[:, None] - px
+            ay = ax1[:, None] - py
+            bx = bx0[:, None] - px
+            by = bx1[:, None] - py
+
+            det = ax * by - ay * bx
+            dot = ax * bx + ay * by
+
+            out[start:end] = np.sum(np.arctan2(det, dot), axis=0) / (2 * np.pi)
+
+        return out[:, None]
 
 def find_surface_uv_for_curve(surface_points, surface_uv_values, curve_points):
         """
